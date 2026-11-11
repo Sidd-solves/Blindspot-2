@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useState, type CSSProperties } from 'react';
-import { BookOpen, Brush, Check, ChevronDown, Database, ExternalLink, FileSpreadsheet, Globe2, KeyRound, Lock, PlugZap, RotateCcw, ShoppingBag, Sparkles, Store } from 'lucide-react';
+import { BookOpen, Brush, Check, ChevronDown, Database, Download, ExternalLink, FileSpreadsheet, Globe2, KeyRound, Lock, PlugZap, RotateCcw, ShoppingBag, Sparkles, Store } from 'lucide-react';
 import { post } from '../api';
 import { useStore } from '../store';
 import { Card, CardHead, Chip, Dropdown, Loading, Tabs, stagger } from '../components/ui';
@@ -101,6 +101,13 @@ export default function DataSources() {
           </ol>
           <div className="px-3.5 pb-1.5">
             <UploadZone c={SHOPIFY} compact icon={<ShoppingBag size={20} />} title="Drop your Shopify orders export" hint="We spot Shopify's format automatically" />
+          </div>
+        </Card>
+        <Card c="var(--cyan)" hover={false} className="p-3.5">
+          <div className="flex items-center gap-3">
+            <span className="grid h-9 w-9 flex-none place-items-center rounded-lg tint" style={{ '--c': 'var(--cyan)', color: 'var(--cyan)' } as CSSProperties}><Download size={16} /></span>
+            <div className="min-w-0 flex-1"><div className="text-[12.5px] font-extrabold">No data handy? Try a real file</div><div className="text-[11px] text-[var(--muted)]">23,266 real sales lines from a UK online shop (customers not in the demo). Download it, then drop it below.</div></div>
+            <a className="btn btn-primary flex-none" href="/samples/real-shop-sales-sample.csv" download><Download size={13} />Sample file</a>
           </div>
         </Card>
         <Card c="var(--blue)" hover={false}>

@@ -71,6 +71,11 @@
 ## Phase 7: Buffer (Nov 9–10)
 - Fix anything broken. Nothing new gets added.
 
+## Extra: Next Byte Hacks V5 (due Nov 7, 4pm CST)
+- [ ] Join on Devpost (students 18+, solo OK)
+- [ ] 1–3 min demo video (cut from the main recording)
+- [ ] 2–3 screenshots, public repo link, Devpost page (team, tools, challenges, learnings, future)
+
 ## Phase 8: Reuse (Nov 11–22)
 - [ ] **LaunchPad Hacks (Nov 20):** same product; show work done Oct 16–Nov 20; Devpost page + demo
 - [ ] **SafeSpace Hacks (Nov 22):** reframe as "keeping a small business financially safe" (risk alerts, loss detection); name the user, the risk and the improvement

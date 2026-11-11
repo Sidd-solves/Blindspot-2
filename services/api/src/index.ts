@@ -98,7 +98,8 @@ app.get('/api/crosstab', (req, res) => {
 app.post('/api/dataset/csv', express.text({ type: ['text/csv', 'text/plain'], limit: '15mb' }), (req, res) => {
   const name = z.string().max(120).regex(/^[\w .()-]*$/).catch('Uploaded CSV').parse(req.query.name);
   if (typeof req.body !== 'string' || !req.body.trim()) return res.status(400).json({ error: { code: 'EMPTY', message: 'Send CSV text as the request body.' } });
-  const ds = parseCsv(req.body, name || 'Uploaded CSV');
+  const ds = parseCsv(req.body, name || 'Uploaded CSV', 150_000); // keeps the free server safe; ~150k lines per upload
+  if (ds.rows.length >= 150_000) log('upload capped at 150k rows');
   if (ds.rows.length < 2) return res.status(400).json({ error: { code: 'TOO_FEW_ROWS', message: 'CSV needs a header and at least 2 rows.' } });
   if (!detectFields(ds).measure) return res.status(400).json({ error: { code: 'NO_MEASURE', message: 'CSV needs at least one numeric column.' } });
   sessions.setDataset(sid(req), ds, true);
