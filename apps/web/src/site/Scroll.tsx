@@ -10,6 +10,7 @@ import {
 } from 'framer-motion';
 import { useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { CountUp } from '../components/ui';
+import { Marquee } from './Effects';
 import {
   BadgeCheck,
   BellRing,
@@ -326,6 +327,7 @@ const STATS: { v: number; f?: (n: number) => string; l: string }[][] = [
 ];
 const STEP_ICONS = [FileSpreadsheet, Table2, BadgeCheck, Sparkles];
 const STEP_NAMES = ['upload.review', 'findings.ranked', 'rows.replay', 'analyst.factcheck'];
+const SHORT = ['Drop in a file', '40 checks run', 'Traced to rows', 'AI, fact-checked'];
 
 export function PinnedStory() {
   const ref = useRef<HTMLDivElement>(null);
@@ -481,7 +483,7 @@ export function PinnedStory() {
                     className="text-[11px] font-bold"
                     style={{ color: k === step ? 'var(--text)' : 'var(--faint)' }}
                   >
-                    {s.t.split(' ').slice(0, 3).join(' ')}
+                    {SHORT[k]}
                   </span>
                 </div>
               );
@@ -724,5 +726,55 @@ function GalleryCard({
         <CardVisual v={c.v} c={c.c} />
       </div>
     </motion.div>
+  );
+}
+
+/** A thin band between sections: real, checked results drifting past, tied to the next section by a glowing line. */
+export function ProofTicker() {
+  const items = [
+    { t: '£93,531.25 recalculated by separate code, to the penny', c: 'var(--emerald)' },
+    { t: '12 of 12 figures confirmed in a live AI briefing', c: 'var(--fuchsia)' },
+    { t: 'Flagged customers stayed away 32% vs 8% (p = 0.004)', c: 'var(--amber)' },
+    { t: '1 false alarm in 1,530 simulated product histories', c: 'var(--cyan)' },
+    { t: '261,658 real rows from a UK gift shop', c: 'var(--violet)' },
+    { t: '256 automated tests + 5 browser tests', c: 'var(--sky)' },
+  ];
+  return (
+    <section className="relative py-8">
+      <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 md:px-6">
+        <motion.span
+          className="h-px flex-1"
+          style={{ background: 'linear-gradient(90deg, transparent, var(--violet))', originX: 1 }}
+          initial={{ scaleX: 0 }}
+          whileInView={{ scaleX: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.9 }}
+        />
+        <span className="label flex items-center gap-1.5" style={{ color: 'var(--emerald)' }}>
+          <BadgeCheck size={12} /> Checked, not claimed
+        </span>
+        <motion.span
+          className="h-px flex-1"
+          style={{ background: 'linear-gradient(90deg, var(--violet), transparent)', originX: 0 }}
+          initial={{ scaleX: 0 }}
+          whileInView={{ scaleX: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.9 }}
+        />
+      </div>
+      <div className="mt-3">
+        <Marquee items={items} />
+      </div>
+      <div className="mt-4 flex justify-center">
+        <span className="relative h-12 w-px overflow-hidden bg-[var(--line)]">
+          <motion.span
+            className="absolute inset-x-0 h-4"
+            style={{ background: 'linear-gradient(transparent, var(--amber), transparent)' }}
+            animate={{ y: [-16, 48] }}
+            transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+          />
+        </span>
+      </div>
+    </section>
   );
 }

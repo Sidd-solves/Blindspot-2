@@ -18,7 +18,7 @@ import { useStore } from '../store';
 import { CountUp, Reveal, Ring } from '../components/ui';
 import { Aurora, BeamCard, Marquee } from './Effects';
 import { Scene } from './Scene';
-import { HorizontalGallery, KineticTitle, Magnetic, PinnedStory } from './Scroll';
+import { HorizontalGallery, KineticTitle, Magnetic, PinnedStory, ProofTicker } from './Scroll';
 import { SampleNotice } from './SampleNotice';
 import { CATCHES } from './content';
 import { openApp, siteGo } from './SiteLayout';
@@ -245,6 +245,7 @@ export default function Home() {
       </section>
 
       <PinnedStory />
+      <ProofTicker />
       <HorizontalGallery />
 
       {/* Problem: bento with varied shapes */}
