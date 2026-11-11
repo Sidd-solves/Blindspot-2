@@ -42,8 +42,8 @@ const STEPS = [
 
 const LAYERS = [
   { icon: Brush, c: 'var(--amber)', t: 'Cleans your data', d: 'Removes duplicate lines, separates returns and fees, flags sales with no customer, and shows exactly what changed.', ex: 'Found 34,335 duplicate lines in a real shop.' },
-  { icon: Search, c: 'var(--cyan)', t: 'Checks what matters to shops', d: 'Returns, repeat buyers, lost customers, products that stopped selling, order size, seasonality, money-losing products.', ex: 'Found 43 best customers who had stopped ordering.' },
-  { icon: Layers, c: 'var(--rose)', t: 'Scans everything else', d: 'Compares every product, customer and country with the business as a whole, so it catches problems nobody thought to check.', ex: 'A best-seller down 51% while the shop grew 10%.' },
+  { icon: Search, c: 'var(--cyan)', t: 'Checks what matters to shops', d: 'Returns, repeat buyers, lost customers, products that stopped selling, order size, seasonality, money-losing products.', ex: 'Found 42 best customers who had stopped ordering.' },
+  { icon: Layers, c: 'var(--rose)', t: 'Scans everything else', d: 'Compares every product, customer and country with the business as a whole, so it catches problems nobody thought to check.', ex: 'A best-seller down 51% while the shop grew 5%.' },
   { icon: FlaskConical, c: 'var(--fuchsia)', t: 'Tests ideas with math', d: 'Business theories, built-in or suggested by AI, are tested and labeled true, false or not enough evidence.', ex: 'Proved growth was coming from old customers, not new ones.' },
 ];
 

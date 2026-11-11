@@ -41,6 +41,8 @@ export function explainChange(rows: Row[], fm: FieldMap, opts: { days?: number; 
   if (!w) return null;
   const m = fm.measure, d = fm.date;
   const dims = (opts.dims ?? [...fm.dims, ...fm.highCardDims]).filter((x, i, a) => a.indexOf(x) === i && x !== 'Order' && x !== 'IsReturn');
+  // Revenue means sales, excluding returns (returns are their own finding), so every view agrees.
+  if ('IsReturn' in (rows[0] ?? {})) rows = rows.filter((r) => r.IsReturn !== 1);
   let base = 0, cur = 0;
   const per = dims.map(() => new Map<string, [number, number]>());
   const orders: [Set<string>, Set<string>] = [new Set(), new Set()];
@@ -151,6 +153,16 @@ export function storeFindings(ds: Dataset, fm: FieldMap): Draft[] {
       });
     }
   }
+
+  // Orders reversed within 2 days (removed from sales and returns while cleaning)
+  if (ds.prep && gross && ds.prep.cancelledPairValue / gross >= 0.01) out.push({
+    id: 'store-cancelled-orders', category: 'returns', title: `${ds.prep.cancelledPairs.toLocaleString()} orders were cancelled within 2 days of being placed (${$(ds.prep.cancelledPairValue)})`,
+    severity: ds.prep.cancelledPairValue / gross >= 0.03 ? 'high' : 'medium', confidence: 0.95, metric: 'Order lines reversed within 2 days',
+    explanation: `${pctStr(ds.prep.cancelledPairValue / gross)} of sales value was ordered and then cancelled almost immediately, often a mistaken quantity or a failed payment. Blindspot removed these from both sales and returns so they don't distort the numbers.`,
+    evidence: { cancelledPairs: ds.prep.cancelledPairs, value: ds.prep.cancelledPairValue, share: round(ds.prep.cancelledPairValue / gross, 4) },
+    impactUsd: ds.prep.cancelledPairValue, impactBasis: 'Value of orders reversed within 2 days',
+    nextAction: 'Add a confirmation step for unusually large quantities and check payment failures at checkout.',
+  });
 
   // Customers with no identity
   const known = orders.filter((o) => !UNKNOWN.has(o.customer));

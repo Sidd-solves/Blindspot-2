@@ -24,8 +24,9 @@ export const buildDashboard = defineTool({
     const v = ctx.state.view(), fm = detectFields(v);
     if (!v.rows.length) throw new ToolError('NO_DATA', 'No rows match the current filters.');
     const { kpis, charts } = memo(v.rows, `dash:${dimension ?? ''}`, () => {
-    const rev = v.rows.reduce((s, r) => s + num(r[fm.measure]), 0);
-    const prof = fm.profit ? v.rows.reduce((s, r) => s + num(r[fm.profit!]), 0) : 0;
+      const rows = v.rows[0] && 'IsReturn' in v.rows[0] ? v.rows.filter((r) => r.IsReturn !== 1) : v.rows;
+    const rev = rows.reduce((s, r) => s + num(r[fm.measure]), 0);
+    const prof = fm.profit ? rows.reduce((s, r) => s + num(r[fm.profit!]), 0) : 0;
     // Order-level KPIs when rows are order lines (real store data); row-level otherwise.
     const tx = 'Order' in v.rows[0];
     const orderIds = tx ? new Set(v.rows.filter((r) => r.IsReturn !== 1).map((r) => String(r.Order))) : null;
@@ -40,15 +41,15 @@ export const buildDashboard = defineTool({
     const dim = dimension ?? fm.dims[0];
     const charts: { id: string; type: string; title: string; data: Record<string, unknown>[] }[] = [];
     if (fm.date) {
-      const monthly = aggregate(v.rows.map((r) => ({ ...r, __m: typeof r[fm.date!] === 'string' ? monthKey(r[fm.date!] as string) : null })), '__m', fm.measure, 'sum', 120, true);
+      const monthly = aggregate(rows.map((r) => ({ ...r, __m: typeof r[fm.date!] === 'string' ? monthKey(r[fm.date!] as string) : null })), '__m', fm.measure, 'sum', 120, true);
       // Flag an unfinished last month (data ending before the 28th) so it isn't compared like a full month.
       let maxDay = '';
       for (const r of v.rows) { const d = r[fm.date!]; if (typeof d === 'string' && d > maxDay) maxDay = d; }
       if (monthly.length && Number(maxDay.slice(8, 10)) < 28) (monthly[monthly.length - 1] as any).partial = true;
       charts.push({ id: 'trend', type: 'line', title: `${fm.measure} by month`, data: monthly });
     }
-    if (dim) charts.push({ id: 'segments', type: 'bar', title: `${fm.measure} by ${dim}`, data: aggregate(v.rows, dim, fm.measure, 'sum', 12, false) });
-    charts.push({ id: 'detail', type: 'table', title: 'Top orders', data: [...v.rows].sort((a, b) => num(b[fm.measure]) - num(a[fm.measure])).slice(0, 10) });
+    if (dim) charts.push({ id: 'segments', type: 'bar', title: `${fm.measure} by ${dim}`, data: aggregate(rows, dim, fm.measure, 'sum', 12, false) });
+    charts.push({ id: 'detail', type: 'table', title: 'Top orders', data: [...rows].sort((a, b) => num(b[fm.measure]) - num(a[fm.measure])).slice(0, 10) });
       return { kpis, charts };
     });
     const id = ctx.state.nextId('dash');

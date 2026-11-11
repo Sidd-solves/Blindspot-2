@@ -21,14 +21,18 @@ export interface GenericHypothesis {
 }
 
 const UNKNOWN = new Set(['Unknown customer', 'Guest checkout', '']);
+const ISO = /^\d{4}-\d{2}(-\d{2})?/;
 const match = (r: Row, fs: Filter[]) => fs.every((f) => {
-  const v = r[f.field], n = Number(v);
+  const v = r[f.field];
+  // Dates compare as ISO strings ("2011-11-01" < "2011-12-01"); everything else numerically.
+  const isDate = typeof v === 'string' && ISO.test(v);
+  const n: any = isDate ? v : Number(v), cmp = (x: unknown) => (isDate ? String(x) : Number(x));
   switch (f.op) {
     case 'eq': return String(v) === String(f.value); case 'neq': return String(v) !== String(f.value);
     case 'in': return Array.isArray(f.value) && f.value.map(String).includes(String(v)); case 'nin': return Array.isArray(f.value) && !f.value.map(String).includes(String(v));
-    case 'gt': return n > Number(f.value); case 'gte': return n >= Number(f.value); case 'lt': return n < Number(f.value); case 'lte': return n <= Number(f.value);
+    case 'gt': return n > cmp(f.value); case 'gte': return n >= cmp(f.value); case 'lt': return n < cmp(f.value); case 'lte': return n <= cmp(f.value);
     case 'contains': return String(v ?? '').toLowerCase().includes(String(f.value).toLowerCase());
-    case 'between': return Array.isArray(f.value) && n >= Number(f.value[0]) && n <= Number(f.value[1]);
+    case 'between': return Array.isArray(f.value) && n >= cmp(f.value[0]) && n <= cmp(f.value[1]);
   }
 });
 
@@ -55,8 +59,10 @@ export function testGeneric(ds: Dataset, h: GenericHypothesis, id = 'ai'): Hypot
   const agg = (v: number[]) => (h.metric === 'avg' ? mean(v) : h.metric === 'sum' ? sum(v) : v.length);
   const ga = agg(va), gb = agg(vb), effect = gb ? (ga - gb) / Math.abs(gb) : 0;
   const t = h.metric === 'avg' ? welch(va, vb) : h.metric === 'count' ? propZ(va.length, va.length + vb.length, vb.length, va.length + vb.length) : (va.length >= 30 && vb.length >= 30 ? 2.5 * Math.sign(effect) : 0);
+  if (!va.length || !vb.length) return { id, claim: h.claim, source: 'ai', verdict: 'inconclusive', summary: `Couldn't test: no orders matched "${!va.length ? h.a.label : h.b.label}".`, stat: null, evidence: { a: va.length, b: vb.length } };
   const verdict = va.length < 20 || vb.length < 20 ? 'inconclusive' : judge(effect, t, h.expect === 'a>b', h.minEffect ?? 0.05);
-  const $ = (n: number) => (h.metric === 'count' ? n.toLocaleString() : money(n, ds.currency));
+  const isMoney = /sales|revenue|amount|profit|price|total|value/i.test(h.measure);
+  const $ = (n: number) => (h.metric === 'count' ? n.toLocaleString() : isMoney ? money(n, ds.currency) : (Math.round(n * 10) / 10).toLocaleString());
   return { id, claim: h.claim, source: 'ai', verdict, summary: `${h.a.label}: ${$(ga)} vs ${h.b.label}: ${$(gb)} (${effect >= 0 ? '+' : ''}${pctStr(effect)}; ${h.metric === 'avg' ? 'Welch t' : 'z'} = ${round(t, 2)}, n = ${va.length} vs ${vb.length}).`, stat: { name: h.metric === 'avg' ? 'welch_t' : 'z', value: round(t, 2) }, evidence: { a: { label: h.a.label, value: round(ga), n: va.length }, b: { label: h.b.label, value: round(gb), n: vb.length }, effect: round(effect, 4) } };
 }
 

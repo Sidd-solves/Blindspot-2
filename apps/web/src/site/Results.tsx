@@ -10,11 +10,12 @@ import { FinalCta } from './Home';
 // Verified on the FULL dataset (1,067,371 rows) by an independent Python script: docs/FACT_CHECK.md
 const FACTS = [
   ['Exact duplicate lines', '34,335', '34,335'],
-  ['Returned / cancelled value', '£716,426 (3.6%)', '£716,426 (3.6%)'],
-  ['Sales with no customer attached', '13.1%', '13.1%'],
-  ['First order vs repeat order', '£407 vs £478', '£407 vs £478'],
-  ['UK vs international order', '£428 vs £860', '£428 vs £860'],
-  ['Best-selling cake stand vs whole shop', '−50.9% vs +10.4%', '−50.9% vs +10.4%'],
+  ['Orders reversed within 2 days', '1,978 (£392,675)', '1,978 (£392,675)'],
+  ['Genuine returns', '£323,751 (1.7%)', '£323,751 (1.7%)'],
+  ['Sales with no customer attached', '13.4%', '13.4%'],
+  ['First order vs repeat order', '£413 vs £467', '£413 vs £467'],
+  ['UK vs international order', '£419 vs £862', '£419 vs £862'],
+  ['Best-selling cake stand vs whole shop', '−50.8% vs +5.3%', '−50.8% vs +5.3%'],
 ];
 
 export default function Results() {
@@ -43,7 +44,7 @@ export default function Results() {
       </section>
 
       <section className="mx-auto max-w-6xl px-4 pb-14 md:px-6">
-        <Reveal><h2 className="text-[24px] font-extrabold tracking-tight md:text-[30px]">What it found</h2>{real && <p className="mt-1 text-[12px] text-[var(--muted)]">Live from the demo, which runs on a 25% random sample of the shop's customers, so money totals are about a quarter of the full data.</p>}</Reveal>
+        <Reveal><h2 className="text-[24px] font-extrabold tracking-tight md:text-[30px]">What it found</h2>{real && <p className="mt-1 text-[12px] text-[var(--muted)]">Live from the demo, which runs on a 25% sample of the shop's customers (the slice whose overall trend matches the full data), so money totals are about a quarter of the full figures.</p>}</Reveal>
         <div className="mt-5 grid gap-2.5 md:grid-cols-2">
           {findings.slice(0, 8).map((f, i) => (
             <Reveal key={f.id}><BeamCard c={SEV[f.severity].c} className="h-full p-4">

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { generateSampleDataset, analyzeSmart, interpretConcentration, profileData, simulateScenario, analyzeColors, generatePalette, auditDashboard, parseCsv, baselineOf } from '@blindspot/analytics';
+import { testGeneric, generateSampleDataset, analyzeSmart, interpretConcentration, profileData, simulateScenario, analyzeColors, generatePalette, auditDashboard, parseCsv, baselineOf } from '@blindspot/analytics';
 
 const ds = generateSampleDataset();
 describe('analytics engine', () => {
@@ -45,5 +45,26 @@ describe('analytics engine', () => {
   it('parses csv and computes baseline', () => {
     const d = parseCsv('Sales,Profit,Region\n100,10,A\n200,20,B');
     expect(baselineOf(d)).toEqual({ revenue: 300, profit: 30 });
+  });
+  it('removes orders reversed within 2 days from both sales and returns', () => {
+    const csv = ['Invoice,StockCode,Description,Quantity,InvoiceDate,Price,Customer ID,Country',
+      '1001,111,BIRDIE,80995,2011-12-09 09:15,2.08,16446,United Kingdom',
+      'C1002,111,BIRDIE,-80995,2011-12-09 09:27,2.08,16446,United Kingdom',
+      '1003,222,MUG,6,2011-12-01 10:00,2.5,12345,France',
+      'C1004,222,MUG,-6,2011-12-20 10:00,2.5,12345,France'].join('\n');
+    const d = parseCsv(csv, 't');
+    expect(d.prep!.cancelledPairs).toBe(1);
+    expect(d.prep!.cancelledPairValue).toBe(Math.round(80995 * 2.08));
+    expect(d.rows.some((r) => r.Product === 'BIRDIE')).toBe(false);
+    expect(d.rows.filter((r) => r.IsReturn === 1)).toHaveLength(1); // the 19-day-later return is a genuine return
+  });
+  it('hypothesis tester handles date filters and formats non-money measures plainly', () => {
+    const rows = Array.from({ length: 200 }, (_, i) => ({ OrderDate: `2011-${i < 100 ? '03' : '11'}-${String(1 + (i % 28)).padStart(2, '0')}`, Quantity: i < 100 ? 2 + (i % 3) : 6 + (i % 4), Sales: 10 }));
+    const d = { name: 'x', source: 'csv' as const, label: 'x', rows };
+    const h = testGeneric(d, { claim: 'Nov orders have more units than Mar', level: 'row', metric: 'avg', measure: 'Quantity', a: { label: 'Nov', filters: [{ field: 'OrderDate', op: 'between', value: ['2011-11-01', '2011-11-30'] }] }, b: { label: 'Mar', filters: [{ field: 'OrderDate', op: 'between', value: ['2011-03-01', '2011-03-31'] }] }, expect: 'a>b' });
+    expect(h.verdict).toBe('supported');
+    expect(h.summary).not.toMatch(/\$/);
+    const none = testGeneric(d, { claim: 'x', level: 'row', metric: 'avg', measure: 'Quantity', a: { label: 'Jan', filters: [{ field: 'OrderDate', op: 'between', value: ['2011-01-01', '2011-01-31'] }] }, b: { label: 'Mar', filters: [] }, expect: 'a>b' });
+    expect(none.summary).toMatch(/no orders matched/);
   });
 });

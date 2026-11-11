@@ -10,6 +10,8 @@ export interface PrepReport {
   returnLines: number; returnValue: number;
   duplicateRows: number; feeLines: number; feeValue: number;
   zeroPriceRows: number; missingCustomerRows: number; missingCustomerSales: number;
+  /** Orders cancelled within 2 days of being placed (e.g. a mistaken bulk order): removed from both sales and returns. */
+  cancelledPairs: number; cancelledPairValue: number;
   feeCodes: string[];
 }
 
@@ -33,7 +35,7 @@ export function detectTransactionColumns(rows: Row[]): Map | null {
 export function prepareTransactions(rows: Row[], name: string, opts: { currency?: string; label?: string } = {}): Dataset | null {
   const m = detectTransactionColumns(rows);
   if (!m) return null;
-  const rep: PrepReport = { inputRows: rows.length, keptRows: 0, returnLines: 0, returnValue: 0, duplicateRows: 0, feeLines: 0, feeValue: 0, zeroPriceRows: 0, missingCustomerRows: 0, missingCustomerSales: 0, feeCodes: [] };
+  const rep: PrepReport = { inputRows: rows.length, keptRows: 0, returnLines: 0, returnValue: 0, duplicateRows: 0, feeLines: 0, feeValue: 0, zeroPriceRows: 0, missingCustomerRows: 0, missingCustomerSales: 0, cancelledPairs: 0, cancelledPairValue: 0, feeCodes: [] };
   const seen = new Set<string>(), fees = new Set<string>(), out: Row[] = [];
   for (const r of rows) {
     const key = JSON.stringify(Object.values(r));
@@ -57,6 +59,24 @@ export function prepareTransactions(rows: Row[], name: string, opts: { currency?
       Sales: Math.round(value * 100) / 100, IsReturn: isReturn ? 1 : 0,
     });
   }
+  // A cancellation that exactly mirrors a sale (same customer, product, quantity and price) within 2 days
+  // is a reversed order, not a sale plus a return. Remove both so neither inflates the analysis.
+  const DAYMS = 86400000, open = new Map<string, number[]>(), drop = new Set<number>();
+  out.forEach((r, i) => { if (r.IsReturn !== 1 && r.Customer !== 'Unknown customer') { const k = `${r.Customer}|${r.Product}|${r.Quantity}|${(r.Sales as number) / (r.Quantity as number)}`; (open.get(k) ?? open.set(k, []).get(k)!).push(i); } });
+  out.forEach((r, i) => {
+    if (r.IsReturn !== 1 || r.Customer === 'Unknown customer') return;
+    const q = -(r.Quantity as number), k = `${r.Customer}|${r.Product}|${q}|${(r.Sales as number) / (r.Quantity as number)}`;
+    const cands = open.get(k); if (!cands) return;
+    const rt = Date.parse(String(r.OrderDate));
+    const j = cands.findIndex((si) => { const st = Date.parse(String(out[si].OrderDate)); return !drop.has(si) && st <= rt && rt - st <= 2 * DAYMS; });
+    if (j < 0) return;
+    const si = cands.splice(j, 1)[0];
+    drop.add(si); drop.add(i);
+    rep.cancelledPairs++; rep.cancelledPairValue += out[si].Sales as number;
+    rep.returnLines--; rep.returnValue -= Math.abs(r.Sales as number);
+  });
+  if (drop.size) { let w = 0; for (let i = 0; i < out.length; i++) if (!drop.has(i)) out[w++] = out[i]; out.length = w; }
+  rep.cancelledPairValue = Math.round(rep.cancelledPairValue);
   rep.keptRows = out.length; rep.returnValue = Math.round(rep.returnValue); rep.feeValue = Math.round(rep.feeValue);
   rep.missingCustomerSales = Math.round(rep.missingCustomerSales); rep.feeCodes = [...fees].slice(0, 12);
   return { name, source: 'csv', label: opts.label ?? 'Uploaded transaction log (cleaned)', rows: out, currency: opts.currency, prep: rep };
