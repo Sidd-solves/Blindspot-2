@@ -16,17 +16,23 @@
 | AI | Claude chat grounded in tool results, untrusted-data isolation, guardrails | Done, tested live |
 | Output | Business health score, ranked findings, simulator, report with fixed topic checklist + roadmap | Done |
 | Platform | Private per-visitor sessions, rate limits, payload caps, admin gate, 0 npm vulnerabilities | Done |
-| Platform | 34 tools over REST and MCP | Done, MCP tested with the official client |
+| Platform | 40 tools over REST and MCP | Done, MCP tested with the official client |
 | Platform | Live deploy (Render, auto-deploy), warm start | Done |
-| Optional | Tableau extension + WebSocket bridge | Bridge tested with a simulated extension; **unverified** in Tableau |
-| Optional | Dashboard screenshot vision review | Built; needs an image upload, not exercised in tests |
+| Optional | Tableau extension + WebSocket bridge (hidden in the app) | Bridge tested with a simulated extension; **unverified** in Tableau |
+| Analysis | Sales forecast: 4 methods replayed on past months, chosen from past errors only, 80% range from real misses | Done, tested (incl. no look-ahead) |
+| Analysis | Customer Radar: early warning (validated on past data) and win-back list matching the lost-customer finding to the penny | Done, tested on the real data |
+| Analysis | Stock & Cash: likely stock-outs (Poisson + BH) and seasonal cash-crunch months | Done, tested |
+| Analysis | Prove It: promo test vs the same weeks last year with a placebo check; fact-check builder | Done, tested |
+| Output | Proof replay animation, confidence meter, guided tour | Done, checked in the browser |
+| Output | Screenshot audit: chart colors read from any image, contrast and color-blind checks, color-blind preview | Done, palette extraction tested |
+| Optional | AI vision review of a screenshot (Claude) | Built as an explicit button; not exercised in tests (uses credits) |
 
-**Tests:** `npm test` → 187 passed. **Fact check:** 7/7 match on the full dataset.
+**Tests:** `npm test` → 220 passed. **Fact check:** 7/7 match on the full dataset.
 
 ## Known limitations
 1. The real case study is a public dataset from 2009–2011, not the team's own store; "tested on real business data", not "used by a business".
 2. The live demo uses a 25% customer sample (memory limits on the free server); its totals are about a quarter of the full data.
-3. Free hosting sleeps after 15 minutes idle; the first visit after that takes ~30–60 s.
+3. The free server is kept awake by pinging itself every 10 minutes; the first visit right after a redeploy can still take ~30–60 s.
 4. Simulator rates (churn, conversion, waste, opex) are user-editable assumptions, and recommendation benefits are estimates.
 5. Guardrails are pattern-based plus data isolation; not a complete defense.
 6. Sessions live in server memory; a restart clears uploaded data.
