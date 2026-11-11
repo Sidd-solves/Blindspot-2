@@ -10,7 +10,7 @@ An AI analyst for small businesses: you connect your Shopify store or drop in a 
 Small shops run on gut feeling. Big companies pay data teams to find problems like lost customers, products that stopped selling, or returns piling up. Small shops can't afford that, so those problems slowly drain money until it shows up in the totals, and by then it's too late.
 
 **3. Who is it for?**
-Small online store owners, especially on Shopify. I run a Shopify store myself, which is why I built it.
+Small online store owners, especially on Shopify, Etsy and similar platforms, who sell enough to have real data but can't afford an analyst.
 
 **4. Why not just use a dashboard or Shopify's own reports?**
 Dashboards show what happened. You still have to spot the problem yourself. Blindspot does the hunting: it checks each sizeable product and country plus your best customers, tells you which problems hold up statistically, and what each one costs.
@@ -56,4 +56,4 @@ More connectors (WooCommerce, Square, Stripe), weekly alerts by email, and compa
 I used Claude Code as a coding partner. I made the product decisions: focusing on small businesses, Shopify, the design, what to test and which problems mattered. The AI helped write and debug the code, and we disclose that openly.
 
 **17. Where did the idea come from?**
-I run a Shopify store and never knew which numbers to worry about. Big companies pay data teams to find problems in their sales; I wanted that for small shops, and I wanted every number to be provable.
+Small shop owners never know which numbers to worry about. Big companies pay data teams to find problems in their sales; I wanted that for small shops, and I wanted every number to be provable.

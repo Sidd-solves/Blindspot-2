@@ -147,7 +147,7 @@ export function FinalCta() {
         <Aurora />
         <div className="relative">
           <h2 className="text-glow text-[28px] font-extrabold leading-tight tracking-tight md:text-[40px]">Dashboards show what happened.<br /><span className="grad-text">Blindspot shows what you're missing.</span></h2>
-          <p className="mt-3 text-[13px] text-[var(--muted)]">Built by a Shopify store owner, for store owners.</p>
+          <p className="mt-3 text-[13px] text-[var(--muted)]">Built for the store owners who can't afford an analyst.</p>
           <div className="mt-6 flex flex-wrap justify-center gap-2">
             <motion.button whileTap={{ scale: 0.95 }} whileHover={{ scale: 1.04 }} className="btn btn-primary !h-11 !px-6 text-[13px]" onClick={() => sample.open('overview')}><Eye size={15} />See it on a real shop</motion.button>
             <motion.button whileTap={{ scale: 0.95 }} whileHover={{ scale: 1.04 }} className="btn !h-11 !px-6 text-[13px]" onClick={() => openApp()}><ShoppingBag size={15} style={{ color: 'var(--emerald)' }} />Connect your store</motion.button>

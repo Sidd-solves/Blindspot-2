@@ -38,7 +38,7 @@ react, typescript, node.js, express, claude, claude-code, anthropic, model-conte
 Solo.
 
 ## If Devpost shows the optional story sections
-- **Inspiration:** I run a Shopify store and never knew which numbers to worry about. Big companies have data teams to spot problems in their sales; I wanted that for small shops.
+- **Inspiration:** Small shop owners can see how much they sold, but not why. Big companies have data teams to spot problems in their sales; small shops have a spreadsheet and a hunch. I wanted to give them the analyst they can't afford to hire.
 - **Challenges:** Real data is messy. Holiday rushes looked like growth until we compared with the same months last year. One mistaken giant order inflated sales and returns until we detected orders reversed within two days. The AI itself caught that returns were counted differently in two places.
 - **What I learned:** An AI is most useful when it's checked. Letting it propose ideas and making code verify them gave answers I could trust.
 - **What's next:** More live connectors (WooCommerce, Square, Stripe), weekly email alerts, and comparing your store with similar stores.

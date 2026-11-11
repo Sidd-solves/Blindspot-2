@@ -32,7 +32,7 @@
 
 ### 0:15 – 0:35 · Inspiration and the real problem
 🎬 Slide 2 (Inspiration), then Slide 4 (The real problem).
-🎙️ "I run a Shopify store. I could see how much I sold, but never why. And that blind spot is expensive. One in five new businesses closes in its first year, and winning a new customer costs five to twenty-five times more than keeping one. The warning signs are already in your sales. Nobody is reading them."
+🎙️ "Every small shop can see how much it sold. Almost none can see why. And that blind spot is expensive. One in five new businesses closes in its first year, and winning a new customer costs five to twenty-five times more than keeping one. The warning signs are already in your sales. Nobody is reading them."
 
 ### 0:35 – 0:45 · Totals lie
 🎬 Slide 5 (Totals lie).
@@ -71,7 +71,7 @@
 🎙️ "Every small shop has a blind spot. Not because the owner isn't working hard, but because the numbers don't explain themselves. Your totals tell you what happened. They never tell you why. I'm going to show you **Blindspot**, an AI analyst that reads your sales and tells you exactly what's costing you money."
 
 ### 0:30 – 1:05 · Inspiration (Slide 2)
-🎙️ "I run a Shopify store. Every day I could see how much I sold. But I couldn't answer the questions that actually matter. Which customers stopped coming back? Which product is quietly dying? What should I fix first? I didn't need more data. I needed someone to read it. So I built Blindspot."
+🎙️ "Every small shop can see how much it sold. But owners can't answer the questions that actually matter. Which customers stopped coming back? Which product is quietly dying? What should be fixed first? They don't need more data. They need someone to read it. So I built Blindspot."
 
 ### 1:05 – 1:45 · The problem (Slides 3 and 4)
 🎙️ "Small shops fly blind. Totals hide the problems, a data analyst costs over seventy thousand dollars a year, and dashboards show numbers without the reason behind them."
