@@ -11,6 +11,7 @@ import {
   Sparkles,
   Wrench,
   X,
+  Compass,
 } from 'lucide-react';
 import { CAT, SEV, tool, usd, VERDICT, impactColor } from '../api';
 import { useStore } from '../store';
@@ -198,6 +199,15 @@ export default function Home() {
               >
                 <ShoppingBag size={15} style={{ color: 'var(--emerald)' }} />
                 Connect your store
+              </motion.button>
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                whileHover={{ scale: 1.03 }}
+                className="btn !h-11 !px-4 text-[13px]"
+                onClick={() => sample.open('overview?tour=1')}
+              >
+                <Compass size={15} style={{ color: 'var(--cyan)' }} />
+                60-second tour
               </motion.button>
             </motion.div>
             <motion.div

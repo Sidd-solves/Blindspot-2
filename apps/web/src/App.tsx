@@ -41,6 +41,7 @@ import { ReadReview } from './components/ReadReview';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import SiteLayout, { type SiteId } from './site/SiteLayout';
 import SiteHome from './site/Home';
+import { Tour, startTour } from './components/Tour';
 const SiteHow = lazy(() => import('./site/How'));
 const SiteFeatures = lazy(() => import('./site/Features'));
 const SiteResults = lazy(() => import('./site/Results'));
@@ -397,6 +398,24 @@ export default function App() {
                 <RefreshCw size={14} className={loading ? 'spin' : ''} />
               </button>
               <ThemeToggle />
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={startTour}
+                className="btn !h-8 text-[11.5px]"
+                style={{ borderColor: 'color-mix(in srgb, var(--cyan) 45%, var(--line))' }}
+              >
+                <span className="relative flex h-2 w-2">
+                  <span
+                    className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-60"
+                    style={{ background: 'var(--cyan)' }}
+                  />
+                  <span
+                    className="relative inline-flex h-2 w-2 rounded-full"
+                    style={{ background: 'var(--cyan)' }}
+                  />
+                </span>
+                Tour
+              </motion.button>
             </div>
           </header>
           {/* Enter-only transition: an exit animation would block navigation whenever the browser throttles frames. */}
@@ -415,6 +434,7 @@ export default function App() {
           </motion.div>
         </main>
       </div>
+      <Tour />
     </div>
   );
 }
