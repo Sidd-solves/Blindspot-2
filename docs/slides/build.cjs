@@ -16,8 +16,8 @@ const notes = [
   "It's private, safe and responsible: read-only Shopify access, keys never stored, each visitor's data private, the AI never calculates numbers, and the data license and open-source tools are credited.",
   "Challenges: messy real data, including an 80,995-unit mistaken order; holidays that faked growth; PDFs that don't store tables; and a tiny free server. The AI even caught bugs in my own math.",
   "What I learned: AI is best when it's checked, real data beats demo data, showing your work builds trust, and you should test with the ugliest files you can find.",
-  "I built this solo. I run a Shopify store and built the tool I needed. Here are the tools I used; Claude Code was my coding partner, and the product decisions, design and testing are mine.",
-  "Next: more live connectors, weekly alerts, and comparing your store with similar shops. Try it live: scan the code or go to blindspot-8lr1.onrender.com. Thank you!",
+  "I built this solo. I run a Shopify store, so I built the tool I needed. Here are the tools I used: React, TypeScript, Node, Claude, the Shopify API and more.",
+  "It's ready today: connect Shopify live, upload any file in any language, and see every amount in 30 currencies. Try it live: scan the code or go to blindspot-8lr1.onrender.com. Thank you!",
 ];
 for (let i = 1; i <= 15; i++) {
   const s = pres.addSlide();
