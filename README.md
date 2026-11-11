@@ -6,6 +6,8 @@
 
 Live: **https://blindspot-8lr1.onrender.com** · Fact check: [docs/FACT_CHECK.md](docs/FACT_CHECK.md)
 
+[![Blindspot overview on a real UK online shop's sales](docs/screenshots/overview.jpg)](https://blindspot-8lr1.onrender.com)
+
 Small business owners make big decisions on gut feeling, because analysts and BI tools are built for big companies. Blindspot connects to a **Shopify store** or a **CSV / Excel file** and, in seconds:
 
 - **Cleans** the data: duplicates, returns, fees, orders reversed within 2 days, sales with no customer
@@ -19,19 +21,46 @@ Every number comes from deterministic code. The AI (Claude) explains results and
 ## Tested on real data
 UCI **Online Retail II**: a real UK online gift shop, 1,067,371 sales lines (Dec 2009 – Dec 2011), CC BY 4.0. Blindspot found, among others: a best-selling product down 51% while the shop grew 5%, 42 best customers who stopped ordering (£301K a year), new customers coming back less (49% → 40%), 1,978 orders reversed within 2 days, and 34,335 duplicate lines. **Seven headline numbers were recomputed by independent Python code; all match** ([docs/FACT_CHECK.md](docs/FACT_CHECK.md)). The live demo runs on a 25% customer sample whose trend matches the full data.
 
-## Architecture
+## How it works
+```mermaid
+flowchart LR
+  subgraph Browser["Browser (React + TypeScript)"]
+    F["CSV · Excel · PDF"] --> X["Excel via SheetJS<br/>PDF via pdf.js:<br/>rows rebuilt from word positions"]
+  end
+  S["Shopify<br/>(read-only)"] --> R
+  X --> R["Reader<br/>column roles in 8 languages,<br/>dates, numbers, currency"]
+  R --> C["Cleaner<br/>duplicates, returns, fees,<br/>reversed orders"]
+  C --> K["Store checks<br/>lost customers, repeat rate,<br/>returns, seasonality"]
+  C --> A["Anomaly scan<br/>weekly-share Welch t-tests<br/>+ Benjamini–Hochberg"]
+  K --> FD["Findings<br/>ranked by money,<br/>each with a replayable drill"]
+  A --> FD
+  FD --> UI["Dashboard · Risk · Simulator<br/>Reports · Source Data"]
+  FD --> T["34 typed tools (Zod)"]
+  T --> AI["Claude: picks from 15 read-only tools,<br/>explains results, proposes ideas"]
+  AI -- "every idea" --> H["Hypothesis engine<br/>statistical test before it's shown"]
+  H --> UI
+  T --> MCP["MCP server<br/>(Claude Desktop, VS Code)"]
 ```
- apps/web (React, Vite, Tailwind, Framer Motion, Recharts)
-   ├─ Showcase site: Home · How it works · Features · Real results
-   └─ App: Overview · Data Sources · AI Analyst · Risk · Simulator · Audit · Reports · Settings
-          │  REST + SSE, private per-visitor sessions
- services/api (Express) ── Shopify Admin API (client credentials or token), Claude (Sonnet 5.5 default)
-          │
- packages/tool-contracts  34 Zod-validated tools, guardrails, session state
- packages/analytics       cleaning, stats, Pareto/HHI, Welch t-tests, driver analysis, anomaly scan,
-                          store checks, hypothesis engine, query engine, scenarios, reports
- services/mcp-server      the same 34 tools over MCP (Claude Desktop / VS Code)
-```
+Every number comes from deterministic code. The model never calculates; it calls tools, and the tools do the math.
+
+| Folder | What's in it |
+|---|---|
+| [`apps/web`](apps/web/src) | React 18, Vite, Tailwind, Framer Motion, Recharts: the showcase site and the app (Overview, Data Sources, Source Data, AI Analyst, Risk, Simulator, Audit, Reports) |
+| [`services/api`](services/api/src) | Express server: [routes](services/api/src/routes), private per-visitor [sessions](services/api/src/sessions.ts), Shopify, [Claude tool loop](services/api/src/llm.ts) |
+| [`packages/analytics`](packages/analytics/src) | The engine: [file reader](packages/analytics/src/ingest), [cleaning](packages/analytics/src/retail.ts), [statistics](packages/analytics/src/stats.ts), [store checks](packages/analytics/src/insights.ts), [findings](packages/analytics/src/findings.ts), [hypotheses](packages/analytics/src/hypotheses.ts), [scenarios](packages/analytics/src/scenario.ts), [reports](packages/analytics/src/report.ts) |
+| [`packages/tool-contracts`](packages/tool-contracts/src) | 34 Zod-validated tools, [guardrails](packages/tool-contracts/src/guardrails.ts), session state |
+| [`services/mcp-server`](services/mcp-server/src) | The same 34 tools over the Model Context Protocol |
+
+## Hard problems we solved
+1. **PDFs don't contain tables.** A PDF stores words at x/y positions. [`pdfLayout.ts`](apps/web/src/lib/pdfLayout.ts#L102) groups words into printed lines, merges lines that wrapped inside one row (using the gap between rows), finds the header row and sets column edges halfway between headings, so right-aligned numbers land in the right column. Tested with real PDFs printed by Chrome, including cells that wrap, and a 68-page sample report.
+2. **Every store exports different columns.** [`detectRoles`](packages/analytics/src/ingest/columns.ts#L527) scores each column twice: by its name in eight languages, including non-Latin scripts ([`NATIVE`](packages/analytics/src/ingest/columns.ts#L465)), and by its values ([`fits`](packages/analytics/src/ingest/columns.ts#L490): dates, money, emails, IDs). Known platform layouts (Shopify, WooCommerce, Etsy, Amazon, Square, Stripe) are recognized first, and month-per-column crosstabs (e.g. from Tableau) are unpivoted. The person sees how every column was read and can fix any of them in one click.
+3. **Holiday rushes and luck can fake a problem.** [`scanAnomalies`](packages/analytics/src/insights.ts#L168) compares each product's and country's *share* of weekly revenue with the same weeks a year earlier. Weeks are the unit of evidence, so many lines from one order don't count as independent proof. It uses a one-sided [Welch t-test](packages/analytics/src/stats.ts#L130) with [Benjamini–Hochberg](packages/analytics/src/stats.ts#L228) correction across everything scanned. Signals that don't survive the correction are shown as "not confirmed".
+4. **"Trust me" isn't good enough.** Every finding stores how it was calculated (which values, row type and date windows). [`/api/rows`](services/api/src/routes/rows.ts#L95) replays that on the raw rows and adds it up in integer pennies, so the check matches the finding **to the penny**, not "within 0.1%".
+5. **The AI must not make up numbers.** In the [chat loop](services/api/src/llm.ts#L121), Claude can only call [15 read-only tools](services/api/src/llm.ts#L29), checked against an allow-list on every call. Uploaded text is treated as untrusted and [screened](packages/tool-contracts/src/guardrails.ts#L33), and secrets are [redacted](packages/tool-contracts/src/guardrails.ts#L74) from logs. When Claude proposes an idea, [`testGeneric`](packages/analytics/src/hypotheses.ts#L127) turns it into a statistical test, and it's labeled supported, not supported or not enough evidence *before* anyone sees it.
+6. **Real data is messy.** In the UCI file, an 80,995-unit order (£168K) was placed and canceled the same day. [`prepareTransactions`](packages/analytics/src/retail.ts#L99) pairs a sale with its exact reversal (same customer, product, quantity and price within two days) and removes both, because that money was never real. It also removes exact duplicate lines and sets aside fees and postage.
+7. **A free 512 MB server.** The case study is pre-cleaned at build time ([`build-case-study.ts`](scripts/build-case-study.ts)), uploads are capped per request, and the server [pings itself](services/api/src/uptime.ts) so the free plan never puts it to sleep.
+
+Design decisions and their trade-offs: [docs/DESIGN.md](docs/DESIGN.md).
 
 ## Run it
 Needs **Node.js 22+** and npm.

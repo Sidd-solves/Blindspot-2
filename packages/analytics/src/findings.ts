@@ -143,8 +143,8 @@ function analyzeUncached(ds: Dataset): Finding[] {
         id: `conc-${dim}`,
         category: 'concentration',
         title: geo
-          ? `${pct(c.top1Share)} of ${fm.measure} comes from one ${dim.toLowerCase()} (${top[0]?.key})`
-          : `${pct(c.top5Share)} of ${fm.measure} comes from your top ${Math.min(5, c.groupCount)} ${plural(dim)}`,
+          ? `${pct(c.top1Share)} of ${fm.measure.toLowerCase()} comes from one ${dim.toLowerCase()} (${top[0]?.key})`
+          : `${pct(c.top5Share)} of ${fm.measure.toLowerCase()} comes from your top ${Math.min(5, c.groupCount)} ${plural(dim)}`,
         severity: geo ? 'low' : c.risk === 'high' ? 'high' : 'medium',
         confidence: 1,
         basis: 'measured',
