@@ -6,11 +6,12 @@ import { useStore, type Drill } from '../store';
 import { Card, CardHead, Chip, CountUp, Loading, stagger, fadeUp } from '../components/ui';
 import { go } from '../App';
 
-interface Recon { expect: { value: number; what: string } | null; actual: number; windows: { label: string; actual: number; expect: number | null }[] }
-interface Rows { recon: Recon | null; columns: string[]; total: number; matched: number; rows: Record<string, unknown>[]; measure: string; currency: string; totals: { sales: number; returns: number; orders: number; customers: number; lines: number } }
+interface Recon { expect: { value: number; what: string } | null; expectCents: number | null; actual: number; actualCents: number; windows: { label: string; actual: number; actualCents: number; expect: number | null; expectCents: number | null }[] }
+interface Totals { sales: number; returns: number; orders: number; customers: number; lines: number }
+interface Rows { recon: Recon | null; columns: string[]; total: number; matched: number; rows: Record<string, unknown>[]; measure: string; currency: string; totals: Totals; searchTotals: Totals | null; search: string | null }
 const PAGE = 50;
 
-function CheckTile({ label, mine, shown, money, c, i }: { label: string; mine: number; shown: number | undefined; money?: boolean; c: string; i: number }) {
+function CheckTile({ label, mine, shown, money, c, i, search, scopeLabel }: { label: string; mine: number; shown: number | undefined; money?: boolean; c: string; i: number; search?: number; scopeLabel: string }) {
   const ok = shown == null || Math.abs(mine - shown) <= Math.max(1, Math.abs(shown) * 0.0005);
   const fmt = (n: number) => (money ? usd(n) : Math.round(n).toLocaleString());
   return (
@@ -20,14 +21,14 @@ function CheckTile({ label, mine, shown, money, c, i }: { label: string; mine: n
         {shown != null && <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.4 + i * 0.1, type: 'spring' }}>{ok ? <Chip c="var(--emerald)"><BadgeCheck size={11} />Match</Chip> : <Chip c="var(--rose)"><TriangleAlert size={11} />Differs</Chip>}</motion.span>}
       </div>
       <CountUp value={mine} format={fmt} className="mono mt-1 block text-[19px] font-semibold" />
-      <div className="mt-1 flex items-center justify-between text-[11.5px] text-[var(--faint)]"><span>Counted from these rows</span>{shown != null && <span>Overview shows <span className="mono text-[var(--muted)]">{fmt(shown)}</span></span>}</div>
+      <div className="mt-1 flex items-center justify-between text-[11.5px] text-[var(--faint)]"><span>{scopeLabel}</span>{search != null ? <span>Your search: <span className="mono text-[var(--muted)]">{fmt(search)}</span></span> : shown != null && <span>Overview shows <span className="mono text-[var(--muted)]">{fmt(shown)}</span></span>}</div>
     </motion.div>
   );
 }
 
-function Recon({ label, actual, expect }: { label: string; actual: number; expect: number | null }) {
-  const ok = expect == null || Math.abs(actual - expect) <= Math.max(1, Math.abs(expect) * 0.001);
-  return <Chip c={ok ? 'var(--emerald)' : 'var(--amber)'}>{ok ? <BadgeCheck size={11} /> : <TriangleAlert size={11} />}{label}: <span className="mono">{usd(actual)}</span>{expect != null && (ok ? ' matches' : <> vs finding <span className="mono">{usd(expect)}</span></>)}</Chip>;
+function Recon({ label, actualCents, expectCents }: { label: string; actualCents: number; expectCents: number | null }) {
+  const ok = expectCents == null || actualCents === expectCents, diff = expectCents == null ? 0 : (actualCents - expectCents) / 100;
+  return <Chip c={ok ? 'var(--emerald)' : 'var(--amber)'}>{ok ? <BadgeCheck size={11} /> : <TriangleAlert size={11} />}{label}: <span className="mono">{usd(actualCents / 100)}</span>{expectCents != null && (ok ? ' matches to the penny' : <> differs from the finding by <span className="mono">{usd(diff)}</span></>)}</Chip>;
 }
 
 export default function SourceData() {
@@ -53,10 +54,10 @@ export default function SourceData() {
     <motion.div variants={stagger} initial="hidden" animate="show" className="space-y-3">
       <motion.div variants={stagger} className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
         {data ? <>
-          <CheckTile i={0} label={`Total ${data.measure.toLowerCase()}`} mine={data.totals.sales} shown={drill ? undefined : dash?.kpis[0]?.value} money c="var(--violet)" />
-          <CheckTile i={1} label="Orders" mine={data.totals.orders} shown={drill ? undefined : kpi('Orders')} c="var(--cyan)" />
-          <CheckTile i={2} label="Customers" mine={data.totals.customers} shown={drill ? undefined : kpi('Customers')} c="var(--fuchsia)" />
-          <CheckTile i={3} label="Rows analysed" mine={data.totals.lines} shown={drill ? undefined : dataset?.rows} c="var(--emerald)" />
+          <CheckTile i={0} label={`Total ${data.measure.toLowerCase()}`} mine={data.totals.sales} search={data.searchTotals?.sales} scopeLabel={drill ? (scope === 'exact' ? 'Rows behind the finding' : 'All related history') : 'Every row analysed'} shown={drill ? undefined : dash?.kpis[0]?.value} money c="var(--violet)" />
+          <CheckTile i={1} label="Orders" mine={data.totals.orders} search={data.searchTotals?.orders} scopeLabel={drill ? (scope === 'exact' ? 'Rows behind the finding' : 'All related history') : 'Every row analysed'} shown={drill ? undefined : kpi('Orders')} c="var(--cyan)" />
+          <CheckTile i={2} label="Customers" mine={data.totals.customers} search={data.searchTotals?.customers} scopeLabel={drill ? (scope === 'exact' ? 'Rows behind the finding' : 'All related history') : 'Every row analysed'} shown={drill ? undefined : kpi('Customers')} c="var(--fuchsia)" />
+          <CheckTile i={3} label="Rows analysed" mine={data.totals.lines} search={data.searchTotals?.lines} scopeLabel={drill ? (scope === 'exact' ? 'Rows behind the finding' : 'All related history') : 'Every row analysed'} shown={drill ? undefined : dataset?.rows} c="var(--emerald)" />
         </> : [0, 1, 2, 3].map((i) => <div key={i} className="panel h-[88px] animate-pulse" />)}
       </motion.div>
 
@@ -72,8 +73,8 @@ export default function SourceData() {
       </motion.div>}</AnimatePresence>
       {drill && scope === 'exact' && data?.recon && (data.recon.expect || data.recon.windows.length > 0) && <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="flex flex-wrap items-center gap-1.5 text-[11.5px]">
         <span className="label mr-1">Reconciles to the finding</span>
-        {data.recon.windows.map((w) => <Recon key={w.label} label={w.label} actual={w.actual} expect={w.expect} />)}
-        {data.recon.expect && !data.recon.windows.some((w) => w.expect === data.recon!.expect!.value) && <Recon label={data.recon.expect.what} actual={data.recon.actual} expect={data.recon.expect.value} />}
+        {data.recon.windows.map((w) => <Recon key={w.label} label={w.label} actualCents={w.actualCents} expectCents={w.expectCents} />)}
+        {data.recon.expect && !data.recon.windows.some((w) => w.expectCents === data.recon!.expectCents) && <Recon label={data.recon.expect.what} actualCents={data.recon.actualCents} expectCents={data.recon.expectCents} />}
       </motion.div>}
       <div className="flex flex-wrap gap-1.5 text-[11.5px] text-[var(--muted)]">
         <span className="chip" style={{ '--c': 'var(--violet)' } as any}>Sales = every sale line, before returns</span>
@@ -85,7 +86,7 @@ export default function SourceData() {
       <Card c="var(--sky)" hover={false}>
         <CardHead icon={<Table2 size={13} />} title="Every row Blindspot analysed" c="var(--sky)" right={<div className="flex items-center gap-1.5">
           {dataset?.prep && <button className="btn !h-7 text-[11px]" onClick={() => go('data')}>What was cleaned</button>}
-          <a className="btn btn-primary !h-7 text-[11px]" href={`/api/rows.csv?sid=${SID}${dq}`} download><Download size={12} />Download CSV</a>
+          <a className="btn btn-primary !h-7 text-[11px]" href={`/api/rows.csv?sid=${SID}${dq}${term ? `&q=${encodeURIComponent(term)}` : ''}`} download title={term ? 'Downloads only the rows matching your search' : 'Downloads every row in this view'}><Download size={12} />{term ? `Download ${data?.matched.toLocaleString() ?? ''} matching rows` : 'Download CSV'}</a>
         </div>} />
         <div className="flex flex-wrap items-center gap-2 px-3.5 pb-2.5">
           <div className="relative min-w-[200px] flex-1">

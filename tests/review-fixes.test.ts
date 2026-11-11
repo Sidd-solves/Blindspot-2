@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { analyzeSmart, baselineOf, testGeneric, toMs, type Dataset, type Finding, type Row } from '@blindspot/analytics';
+import { analyzeSmart, baselineOf, testGeneric, toMs, reportTopics, simulateScenario, corrTest, recommend, type Dataset, type Finding, type Row } from '@blindspot/analytics';
 import { SessionState } from '@blindspot/tool-contracts';
 import { loadCaseStudy } from '../services/api/src/case-study';
 
@@ -14,7 +14,8 @@ function exactRows(rows: Row[], d: NonNullable<Finding['drill']>) {
     return true;
   });
 }
-const total = (rows: Row[]) => rows.reduce((s, r) => s + Math.abs((r.Sales as number) || 0), 0);
+/** In pence, like the server: Math.round(x * 100) per row. */
+const total = (rows: Row[]) => rows.reduce((s, r) => s + Math.abs(Math.round(((r.Sales as number) || 0) * 100)), 0) / 100;
 
 describe('review fixes (real case study)', () => {
   const ds = loadCaseStudy();
@@ -25,7 +26,7 @@ describe('review fixes (real case study)', () => {
     expect(withExpect.length).toBeGreaterThanOrEqual(3);
     for (const f of withExpect) {
       const got = total(exactRows(ds.rows, f.drill!));
-      expect(Math.abs(got - f.drill!.expect!.value), f.id).toBeLessThanOrEqual(Math.max(1, f.drill!.expect!.value * 0.001));
+      expect(Math.abs(got - f.drill!.expect!.value), f.id).toBeLessThan(0.006);
       expect(f.drill!.values.length, `${f.id} values not truncated`).toBe(f.drill!.totalValues ?? f.drill!.values.length);
     }
   });
@@ -35,7 +36,7 @@ describe('review fixes (real case study)', () => {
       for (const w of f.drill!.windows!) {
         if (w.expect == null) continue;
         const got = total(exactRows(ds.rows, { ...f.drill!, windows: [w] }));
-        expect(Math.abs(got - w.expect), `${f.id} ${w.label}`).toBeLessThanOrEqual(Math.max(1, w.expect * 0.001));
+        expect(Math.abs(got - w.expect), `${f.id} ${w.label}`).toBeLessThan(0.006);
       }
     }
   });
@@ -88,5 +89,69 @@ describe('review fixes (synthetic edge cases)', () => {
     expect(r.pTwoSided).toBeCloseTo(Math.min(1, 2 * r.p!), 3);
     if (r.verdict === 'supported') expect(r.p!).toBeLessThan(0.05);
     expect(r.summary).toContain('one-sided');
+  });
+});
+
+describe('review fixes, round 3', () => {
+  const mk = (rows: Row[]): Dataset => ({ name: 't', label: 't', source: 'upload', rows } as unknown as Dataset);
+  const groups = (a: number, b: number) => {
+    const rows: Row[] = [];
+    for (let i = 0; i < 40; i++) rows.push({ Group: 'A', Sales: a + (a ? (i % 5) : 0) }, { Group: 'B', Sales: b + (b ? (i % 5) : 0) });
+    return mk(rows);
+  };
+  const claim = (ds: Dataset) => testGeneric(ds, { claim: 'A > B', level: 'row', metric: 'avg', measure: 'Sales', a: { label: 'A', filters: [{ field: 'Group', op: 'eq', value: 'A' }] }, b: { label: 'B', filters: [{ field: 'Group', op: 'eq', value: 'B' }] }, expect: 'a>b' });
+
+  it('a positive group vs a zero baseline is material, with the percentage marked undefined', () => {
+    const r = claim(groups(100, 0));
+    expect(r.verdict).toBe('supported');
+    expect(r.summary).toMatch(/percentage change undefined from zero/);
+    expect(r.evidence.effect).toBeNull();
+  });
+  it('zero vs zero is not a finding', () => {
+    expect(claim(groups(0, 0)).verdict).toBe('inconclusive');
+  });
+  it('a negative baseline uses its magnitude', () => {
+    const r = claim(groups(-50, -100));
+    expect(r.verdict).toBe('supported');
+    expect(r.evidence.effect).toBeCloseTo(0.5, 1);
+  });
+
+  it('dependence is "not judged" with six customers, one product and 40 order IDs', () => {
+    const rows: Row[] = [];
+    for (let i = 0; i < 40; i++) rows.push({ Order: `o${i}`, Customer: `c${i % 6}`, Product: 'Mug', OrderDate: `2025-0${1 + (i % 6)}-01`, Sales: 10 + i, Quantity: 1, IsReturn: 0 });
+    const ds = mk(rows), topics = reportTopics(ds, analyzeSmart(ds));
+    const dep = topics.find((t) => t.key === 'customers')!;
+    expect(dep.status).not.toBe('clear');
+    expect(dep.note).toMatch(/Not judged/);
+    expect((dep as any).check.ran).toBe(false);
+  });
+
+  it('a short observed period scales annual churn to that period', () => {
+    const tenDays = 10 / 365.25;
+    const r = simulateScenario({ revenue: 1000, profit: null, years: tenDays, basis: 'observed', period: 'over 10 days' }, { churnReductionPct: 5 }, { annualChurnRate: 0.2 });
+    expect(r.horizonYears).toBeCloseTo(tenDays, 3);
+    expect(r.delta.revenue).toBeLessThan(1);              // not £10: 20% a year is ~0.6% over 10 days
+    expect(r.delta.revenue).toBeGreaterThan(0.2);
+  });
+
+  it('anomaly and watch findings label their value as a BH-adjusted q, with the raw p kept', () => {
+    for (const f of analyzeSmart(loadCaseStudy()).filter((x) => x.category === 'anomaly')) {
+      expect(f.pKind).toBe('q');
+      expect(f.pRaw).not.toBeNull();
+      expect(f.pRaw!).toBeLessThanOrEqual(f.pValue! + 1e-9);
+    }
+  });
+
+  it('perfect correlation is certain in direction, with no fake statistic', () => {
+    const t = corrTest(1, 30);
+    expect(t.stat).toBeNull();
+    expect(t.pGreater).toBe(0);
+  });
+
+  it('one action per intervention; the planning assumption travels with the benefit', () => {
+    const acts = recommend(analyzeSmart(loadCaseStudy()));
+    const names = acts.map((a) => a.intervention);
+    expect(new Set(names).size).toBe(names.length);
+    for (const a of acts.filter((x) => x.expectedBenefitUsd)) expect(a.recoveryPct).toBeGreaterThan(0);
   });
 });

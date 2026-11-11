@@ -10,7 +10,7 @@ export const runScenario = defineTool({
     levers: z.object({ churnReductionPct: z.number().min(0).max(100).default(5), conversionLiftPts: z.number().min(0).max(20).default(0), wasteReductionPct: z.number().min(0).max(100).default(0), opexReductionPct: z.number().min(0).max(100).default(0) }).prefault({}),
     assumptions: z.object({ annualChurnRate: z.number().min(0).max(1), baselineConversion: z.number().min(0.0001).max(1), wasteRateOfCogs: z.number().min(0).max(1), opexRateOfRevenue: z.number().min(0).max(1), assumedMargin: z.number().min(0).max(1) }).partial().prefault({}),
   }),
-  output: z.object({ hypothetical: z.literal(true), baseline: z.record(z.string(), z.union([z.number(), z.boolean(), z.string()])), profitChangePct: z.number().nullable(), scenario: z.record(z.string(), z.number()), delta: z.record(z.string(), z.number()), contributions: z.record(z.string(), z.number()), assumptions: z.record(z.string(), z.number()), levers: z.record(z.string(), z.number()), formulas: z.array(z.string()), disclaimer: z.string() }),
+  output: z.object({ hypothetical: z.literal(true), horizonYears: z.number(), baseline: z.record(z.string(), z.union([z.number(), z.boolean(), z.string()])), profitChangePct: z.number().nullable(), scenario: z.record(z.string(), z.number()), delta: z.record(z.string(), z.number()), contributions: z.record(z.string(), z.number()), assumptions: z.record(z.string(), z.number()), levers: z.record(z.string(), z.number()), formulas: z.array(z.string()), disclaimer: z.string() }),
   async handler(ctx, i) { return simulateScenario(baselineOf(ctx.state.view()), i.levers, i.assumptions); },
 });
 
@@ -18,7 +18,7 @@ export const recommendActions = defineTool({
   name: 'recommend-actions', category: 'Business Intelligence', core: false,
   description: 'Translate findings into actions with intervention, expected benefit (labeled hypothetical), effort, risks and evidence, ranked by benefit-to-effort.',
   input: z.object({ top: z.number().int().min(1).max(20).default(6) }),
-  output: z.object({ actions: z.array(z.object({ findingId: z.string(), problem: z.string(), intervention: z.string(), expectedBenefitUsd: z.number().nullable(), benefitKind: z.enum(['profit', 'revenue']), benefitBasis: z.string(), effort: z.enum(['low', 'medium', 'high']), risks: z.string(), severity: z.string(), benefitToEffort: z.number().nullable(), evidence: z.record(z.string(), z.unknown()) })) }),
+  output: z.object({ actions: z.array(z.object({ findingId: z.string(), problem: z.string(), intervention: z.string(), expectedBenefitUsd: z.number().nullable(), benefitKind: z.enum(['profit', 'revenue']), benefitBasis: z.string(), recoveryPct: z.number().nullable().optional(), benefitPeriod: z.string().nullable().optional(), findingIds: z.array(z.string()).optional(), effort: z.enum(['low', 'medium', 'high']), risks: z.string(), severity: z.string(), benefitToEffort: z.number().nullable(), evidence: z.record(z.string(), z.unknown()) })) }),
   async handler(ctx, { top }) { return { actions: recommend(analyzeSmart(ctx.state.view()).slice(0, top)) }; },
 });
 

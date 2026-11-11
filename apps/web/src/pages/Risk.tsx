@@ -3,13 +3,13 @@ import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { Bar, CartesianGrid, Cell, ComposedChart, Line, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis, ZAxis } from 'recharts';
 import { BarChart3, Crosshair, Grid3x3, MessageSquareText, ScatterChart as ScatterIcon, ShieldAlert, Target , Table2 } from 'lucide-react';
 import { useStore, type Finding } from '../store';
-import { CAT, SEV, get, pct, tool, usd, evidenceText, exposureText, BASIS, fmtP } from '../api';
+import { CAT, SEV, get, pct, tool, usd, evidenceText, exposureText, BASIS, fmtP, fmtPV, fmtQ } from '../api';
 import { Card, CardHead, Chip, CountUp, Dropdown, Empty, Meter, Reveal, Ring, Tabs, stagger } from '../components/ui';
 import { ChartTip, axis } from '../components/charts';
 import { go } from '../App';
 
 /** Plain names and the right format for every evidence value: money, percent, count, p-value or plain number. */
-type Kind = 'money' | 'pct' | 'count' | 'num' | 'p' | 'text';
+type Kind = 'money' | 'pct' | 'count' | 'num' | 'p' | 'q' | 'text';
 const EV: Record<string, [string, Kind]> = {
   top5Share: ['Share from the top 5', 'pct'], top1Share: ['Share from the largest', 'pct'], hhi: ['Concentration index (HHI)', 'num'], groupsFor80Pct: ['How many make 80% of sales', 'count'],
   returnRate: ['Return rate', 'pct'], returnedValue: ['Value returned', 'money'], grossSales: ['Sales before returns', 'money'],
@@ -19,13 +19,13 @@ const EV: Record<string, [string, Kind]> = {
   stoppedProducts: ['Products at zero now', 'count'], lostRevenue: ['Their sales last year', 'money'], shareOfBaseline: ['Share of last year', 'pct'],
   before: ['Average order before', 'money'], after: ['Average order now', 'money'], ordersBefore: ['Orders before', 'count'], ordersAfter: ['Orders now', 'count'], t: ['Test statistic', 'num'],
   window: ['Period compared', 'text'], top3Share: ['Share in the top 3 months', 'pct'], baseline: ['Before', 'money'], current: ['Now', 'money'], changePct: ['Change', 'pct'], overallChangePct: ['Whole-business change', 'pct'],
-  gapPts: ['Gap vs the business (points)', 'num'], p: ['p-value', 'p'], q: ['Adjusted p-value (q)', 'p'], impact: ['Beyond the overall trend', 'money'], segmentsScanned: ['Segments compared', 'count'],
+  gapPts: ['Gap vs the business (points)', 'num'], p: ['Raw p-value (before adjusting)', 'p'], q: ['Adjusted for many comparisons', 'q'], impact: ['Beyond the overall trend', 'money'], segmentsScanned: ['Segments compared', 'count'],
   dimension: ['Category', 'text'], segment: ['Segment', 'text'], topOrders: ['Largest orders', 'count'], orders: ['Orders', 'count'], threshold: ['Order size cutoff', 'money'], count: ['How many', 'count'],
   nulls: ['Empty cells', 'count'], nullPct: ['Empty (%)', 'num'], pearson: ['Correlation (r)', 'num'], margin: ['Margin', 'pct'], profit: ['Profit', 'money'], sales: ['Sales', 'money'],
   inputRows: ['Rows read', 'count'], keptRows: ['Rows analysed', 'count'], duplicateRows: ['Duplicate rows', 'count'], returnLines: ['Return lines', 'count'], returnValue: ['Value returned', 'money'],
   feeLines: ['Fee and shipping lines', 'count'], feeValue: ['Fees and shipping', 'money'], zeroPriceRows: ['Zero-value rows', 'count'], missingCustomerRows: ['Rows with no customer', 'count'], missingCustomerSales: ['Sales with no customer', 'money'], cancelledPairValue: ['Value reversed', 'money'],
 };
-const fmtEv = (kind: Kind, v: any) => typeof v !== 'number' ? String(v) : kind === 'money' ? usd(v) : kind === 'pct' ? pct(v) : kind === 'count' ? Math.round(v).toLocaleString() : kind === 'p' ? fmtP(v) : (Math.round(v * 100) / 100).toLocaleString();
+const fmtEv = (kind: Kind, v: any) => typeof v !== 'number' ? String(v) : kind === 'money' ? usd(v) : kind === 'pct' ? pct(v) : kind === 'count' ? Math.round(v).toLocaleString() : kind === 'p' ? fmtP(v) : kind === 'q' ? fmtQ(v) : (Math.round(v * 100) / 100).toLocaleString();
 const guess = (k: string): [string, Kind] => {
   const label = k.replace(/([a-z])([A-Z0-9])/g, '$1 $2').replace(/^./, (c) => c.toUpperCase());
   return [label, /share|rate|margin|pct$|change/i.test(k) ? 'pct' : /sales|revenue|value|profit|amount/i.test(k) ? 'money' : /customers|orders|products|rows|lines|count|pairs/i.test(k) ? 'count' : 'num'];
@@ -55,7 +55,7 @@ function Detail({ f }: { f: Finding }) {
       <div className="flex items-center gap-3">
         <div className="w-[132px] flex-none rounded-xl px-2.5 py-2" style={{ background: `color-mix(in srgb, ${BASIS[f.basis]?.c} 12%, transparent)`, border: `1px solid color-mix(in srgb, ${BASIS[f.basis]?.c} 35%, transparent)` }} title={BASIS[f.basis]?.hint}>
           <div className="text-[11.5px] font-bold uppercase tracking-wider" style={{ color: BASIS[f.basis]?.c }}>{BASIS[f.basis]?.label}</div>
-          <div className="mono mt-0.5 text-[12px] font-semibold">{f.basis === 'tested' && f.pValue != null ? fmtP(f.pValue) : f.basis === 'measured' ? 'Exact count' : 'Threshold'}</div>
+          <div className="mono mt-0.5 text-[12px] font-semibold">{f.basis === 'tested' && f.pValue != null ? fmtPV(f) : f.basis === 'measured' ? 'Exact count' : 'Threshold'}</div>
         </div>
         <div className="flex-1">
           <div className="label">Money involved{exposureText(f) ? ` · ${exposureText(f)}` : ''}</div>
@@ -124,7 +124,7 @@ function Pareto() {
   return (
     <Card c="var(--violet)" hover={false}>
       <CardHead icon={<BarChart3 size={13} />} title="Pareto concentration" c="var(--violet)" right={<Dropdown width={130} value={dim} options={[...new Set(dims)]} onChange={setDim} placeholder={d ?? 'Dimension'} />} />
-      {data && <div className="flex flex-wrap gap-1.5 px-3.5"><Chip c="var(--violet)">Top 1 {pct(data.top1Share)}</Chip><Chip c="var(--fuchsia)">Top 5 {pct(data.top5Share)}</Chip><Chip c="var(--cyan)">80% from {data.groupsFor80Pct}/{data.groupCount}</Chip><span title="Herfindahl index: 10,000 means everything comes from one; shown for reference, not a risk verdict"><Chip c="var(--sky)">Concentration index {data.hhi.toLocaleString()}</Chip></span></div>}
+      {data && <div className="flex flex-wrap gap-1.5 px-3.5"><Chip c="var(--violet)">Top 1 {pct(data.top1Share)}</Chip><Chip c="var(--fuchsia)">Top {Math.min(5, data.groupCount)} {pct(data.top5Share)}</Chip><Chip c="var(--cyan)">80% from {data.groupsFor80Pct}/{data.groupCount}</Chip><span title="Herfindahl index: 10,000 means everything comes from one; shown for reference, not a risk verdict"><Chip c="var(--sky)">Concentration index {data.hhi.toLocaleString()}</Chip></span></div>}
       <div className="h-[210px] px-1 pb-2 pt-1">
         <ResponsiveContainer>
           <ComposedChart data={(data?.groups ?? []).map((g: any) => ({ ...g, sh: g.share * 100, cum: g.cumShare * 100 }))} margin={{ top: 6, right: 10, left: -18, bottom: 0 }}>

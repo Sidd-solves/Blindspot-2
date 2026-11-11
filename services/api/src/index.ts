@@ -154,33 +154,44 @@ app.get('/api/rows', (req, res) => {
   const all = drillRows(v.rows, drill, q.scope);
   const columns = all.length ? Object.keys(all[0]) : [];
   const matched = needle ? all.filter((r) => columns.some((c) => String(r[c] ?? '').toLowerCase().includes(needle))) : all;
-  const fm = detectFields(v), tx = all[0] && 'IsReturn' in all[0];
-  let sales = 0, returns = 0;
-  const orders = new Set<string>(), customers = new Set<string>();
-  for (const r of all) {
-    const m = typeof r[fm.measure] === 'number' ? (r[fm.measure] as number) : 0;
-    if (tx && r.IsReturn === 1) { returns += m; continue; }
-    sales += m;
-    if ('Customer' in r && r.Customer && r.Customer !== 'Unknown customer' && r.Customer !== 'Guest checkout') customers.add(String(r.Customer));
-    if ('Order' in r) orders.add(String(r.Order));
-  }
-  // Reconciliation: what these rows add up to, per date window, next to the figure the finding reported.
+  const fm = detectFields(v), tx = !!all[0] && 'IsReturn' in all[0], hasOrders = !!all[0] && 'Order' in all[0];
+  /** Money is summed in integer minor units (pence/cents) so a reconciliation can be exact, not "within 0.1%". */
+  const cents = (x: unknown) => (typeof x === 'number' ? Math.round(x * 100) : 0);
+  const totalsOf = (rs: any[]) => {
+    let sales = 0, returns = 0;
+    const orders = new Set<string>(), customers = new Set<string>();
+    for (const r of rs) {
+      const m = cents(r[fm.measure]);
+      if (tx && r.IsReturn === 1) { returns += m; continue; }
+      sales += m;
+      if ('Customer' in r && r.Customer && r.Customer !== 'Unknown customer' && r.Customer !== 'Guest checkout') customers.add(String(r.Customer));
+      if (hasOrders) orders.add(String(r.Order));
+    }
+    // Orders = orders with at least one sale line; a returns-only view has 0 orders. Files without order IDs count sale lines.
+    const saleLines = tx ? rs.filter((r) => r.IsReturn !== 1).length : rs.length;
+    return { sales: Math.round(sales / 100), returns: Math.round(returns / 100), salesCents: sales, returnsCents: returns, orders: hasOrders ? orders.size : saleLines, customers: customers.size, lines: rs.length };
+  };
+  const totals = totalsOf(all);
+  // Reconciliation: what these rows add up to (to the penny), per date window, next to the figure the finding reported.
   const recon = drill && q.scope === 'exact' ? {
     expect: drill.expect ?? null,
-    actual: Math.round(drill.rowType === 'return' ? Math.abs(returns) : sales),
+    expectCents: drill.expect ? Math.round(drill.expect.value * 100) : null,
+    actualCents: drill.rowType === 'return' ? Math.abs(totals.returnsCents) : totals.salesCents,
+    actual: Math.round((drill.rowType === 'return' ? Math.abs(totals.returnsCents) : totals.salesCents) / 100),
     windows: drill.dateField ? (drill.windows ?? []).map((w) => {
       let t = 0;
-      for (const r of all) { const ms = toMs(r[drill.dateField!]), m = r[fm.measure]; if (ms >= w.from && ms < w.to && typeof m === 'number') t += Math.abs(m); }
-      return { label: w.label, actual: Math.round(t), expect: w.expect ?? null };
+      for (const r of all) { const ms = toMs(r[drill.dateField!]); if (ms >= w.from && ms < w.to) t += Math.abs(cents(r[fm.measure])); }
+      return { label: w.label, actualCents: t, actual: Math.round(t / 100), expectCents: w.expect == null ? null : Math.round(w.expect * 100), expect: w.expect ?? null };
     }) : [],
   } : null;
   res.json({ columns, total: all.length, recon, matched: matched.length, rows: matched.slice(q.offset, q.offset + q.limit), measure: fm.measure, currency: v.currency ?? 'USD',
-    totals: { sales: Math.round(sales), returns: Math.round(returns), orders: orders.size || all.length, customers: customers.size, lines: all.length } });
+    totals, searchTotals: needle ? totalsOf(matched) : null, search: needle || null });
 });
 
 app.get('/api/rows.csv', (req, res) => {
-  const v0 = sessions.get(sid(req)).view(), f = z.object({ drill: z.string().max(400_000).optional(), scope: z.enum(['exact', 'history']).default('exact') }).parse(req.query);
-  const v = { ...v0, rows: drillRows(v0.rows, parseDrill(f.drill), f.scope) }, cols = v.rows.length ? Object.keys(v.rows[0]) : [];
+  const v0 = sessions.get(sid(req)).view(), f = z.object({ drill: z.string().max(400_000).optional(), scope: z.enum(['exact', 'history']).default('exact'), q: z.string().max(100).default('') }).parse(req.query);
+  const scoped = drillRows(v0.rows, parseDrill(f.drill), f.scope), needle = f.q.trim().toLowerCase(), keys = scoped.length ? Object.keys(scoped[0]) : [];
+  const v = { ...v0, rows: needle ? scoped.filter((r) => keys.some((c) => String(r[c] ?? '').toLowerCase().includes(needle))) : scoped }, cols = v.rows.length ? Object.keys(v.rows[0]) : [];
   const esc = (x: unknown) => { const t = x == null ? '' : String(x); return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t; };
   res.set({ 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': `attachment; filename="${v.name.replace(/[^\w -]/g, '').trim() || 'data'}.csv"` });
   res.write(cols.join(',') + '\n');

@@ -60,7 +60,7 @@ function IdeasCard() {
           <motion.div key={h.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }} className="rounded-lg px-2 py-1.5" style={{ background: 'var(--line)', borderLeft: `3px solid ${VERDICT[h.verdict]?.c}` }}>
             <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider" style={{ color: VERDICT[h.verdict]?.c }}>{h.verdict === 'supported' ? <Check size={11} /> : <X size={11} />}{VERDICT[h.verdict]?.label}</div>
             <div className="text-[11.5px] font-bold leading-snug">{h.claim}</div>
-            <div className="truncate text-[11.5px] text-[var(--muted)]" title={h.summary}>{h.summary}</div>
+            <div className="line-clamp-2 text-[12px] leading-snug text-[var(--muted)]" title={h.summary}>{h.summary}</div>
           </motion.div>
         ))}
       </div>
@@ -165,10 +165,10 @@ export default function Overview() {
           {Object.entries(CAT).filter(([k]) => findings.some((f) => f.category === k)).map(([k, c], i) => {
             const f = findings.find((x) => x.category === k)!;
             return (
-              <motion.button key={k} onClick={() => go('risk', `?f=${encodeURIComponent(f.id)}`)} initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 + i * 0.06 }} className="row-hover flex w-full items-center gap-2 rounded-md px-1 py-0.5 text-left text-[11.5px]">
-                <span className="h-5 w-1 flex-none rounded-full" style={{ background: c.c, boxShadow: `0 0 6px ${c.c}` }} />
+              <motion.button key={k} onClick={() => go('risk', `?f=${encodeURIComponent(f.id)}`)} initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 + i * 0.06 }} className="row-hover flex w-full items-start gap-2 rounded-md px-1 py-1 text-left text-[12px]">
+                <span className="mt-0.5 h-4 w-1 flex-none rounded-full" style={{ background: c.c }} />
                 <span className="w-24 flex-none font-bold" style={{ color: c.c }}>{c.label}</span>
-                <span className="truncate text-[var(--muted)]">{f.title}</span>
+                <span className="line-clamp-2 leading-snug text-[var(--muted)]" title={f.title}>{f.title}</span>
               </motion.button>
             );
           })}
@@ -189,10 +189,10 @@ export default function Overview() {
       </Card>
 
       <Card c="var(--violet)" className="md:col-span-3 xl:col-span-3">
-        <CardHead icon={<PieChart size={13} />} title={conc ? `Who your sales depend on` : 'Who your sales depend on'} c="var(--violet)" right={conc && <span title="Based on how much comes from the largest and the top 5"><Chip c={conc.risk === 'high' ? 'var(--rose)' : conc.risk === 'medium' ? 'var(--amber)' : 'var(--emerald)'}>{conc.risk} dependency</Chip></span>} />
+        <CardHead icon={<PieChart size={13} />} title="Sales dependence" c="var(--violet)" right={conc && <span title="Based on how much comes from the largest and the top 5"><Chip c={conc.risk === 'high' ? 'var(--rose)' : conc.risk === 'medium' ? 'var(--amber)' : 'var(--emerald)'}>{conc.risk}</Chip></span>} />
         {conc ? (
           <>
-            <div className="flex items-baseline gap-1.5 px-3.5"><CountUp value={conc.top5Share * 100} format={(n) => `${n.toFixed(1)}%`} className="text-[20px] font-semibold" /><span className="text-[11px] text-[var(--muted)]">of sales from your top 5 {conc.dimension.toLowerCase()}s</span></div>
+            <div className="flex items-baseline gap-1.5 px-3.5"><CountUp value={conc.top5Share * 100} format={(n) => `${n.toFixed(1)}%`} className="text-[20px] font-semibold" /><span className="text-[11px] text-[var(--muted)]">of sales from your top {Math.min(5, conc.groupCount)} {conc.dimension.toLowerCase()}{Math.min(5, conc.groupCount) === 1 ? '' : 's'}</span></div>
             <div className="h-[118px] px-1">
               <ResponsiveContainer>
                 <ComposedChart data={conc.groups.slice(0, 10).map((g: any) => ({ ...g, cum: g.cumShare * 100, sh: g.share * 100 }))} margin={{ top: 6, right: 8, left: -22, bottom: 0 }}>
@@ -216,7 +216,7 @@ export default function Overview() {
           {actions.slice(0, 3).map((a, i) => (
             <motion.div key={a.findingId} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 * i }} className="tint rounded-lg p-2" style={{ '--c': 'var(--emerald)' } as CSSProperties}>
               <div className="flex items-center justify-between gap-2"><span className="mono grid h-5 w-5 flex-none place-items-center rounded-md text-[11.5px] font-bold" style={{ background: 'var(--emerald)', color: 'white' }}>{i + 1}</span><span className="flex-1 text-[12px] font-bold leading-snug">{a.intervention}</span></div>
-              <div className="mt-1 flex flex-wrap items-center gap-1.5 pl-7 text-[11.5px]">{a.expectedBenefitUsd ? <Chip c="var(--emerald)">could win back {usd(a.expectedBenefitUsd, true)}</Chip> : null}<Chip c={a.effort === 'low' ? 'var(--cyan)' : a.effort === 'medium' ? 'var(--amber)' : 'var(--rose)'}>{a.effort === 'low' ? 'easy' : a.effort === 'medium' ? 'moderate' : 'hard'}</Chip><span className="text-[var(--faint)]">estimate</span></div>
+              <div className="mt-1 flex flex-wrap items-center gap-1.5 pl-7 text-[11.5px]">{a.expectedBenefitUsd ? <Chip c="var(--emerald)">could win back {usd(a.expectedBenefitUsd, true)}</Chip> : null}<Chip c={a.effort === 'low' ? 'var(--cyan)' : a.effort === 'medium' ? 'var(--amber)' : 'var(--rose)'}>{a.effort === 'low' ? 'easy' : a.effort === 'medium' ? 'moderate' : 'hard'}</Chip><span className="text-[var(--faint)]">{a.recoveryPct != null ? `planning scenario: ${a.recoveryPct}% recovered${a.benefitPeriod ? `, ${a.benefitPeriod}` : ''}` : 'estimate'}</span></div>
             </motion.div>
           ))}
         </div>

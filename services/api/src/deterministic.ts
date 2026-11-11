@@ -89,7 +89,7 @@ export async function deterministicAnswer(ctx: ToolContext, q: string) {
     const r = await run('analyze-dashboard-smart', { top: 5 });
     // The biggest risk is the top problem that actually puts money at stake, not a data-cleaning note.
     const top = r.findings.find((f: any) => f.exposure === 'lost' || f.exposure === 'at-risk') ?? r.findings[0];
-    answer = top ? `Biggest risk: ${top.title} (${top.severity}; ${top.basis === 'tested' ? `statistically tested, p ${top.pValue < 0.001 ? '< 0.001' : `= ${top.pValue}`}` : top.basis === 'measured' ? 'measured directly' : 'rule of thumb'}).\n\n${top.explanation}\n\n` + r.findings.filter((f: any) => f !== top).slice(0, 3).map((f: any) => `- ${f.title}`).join('\n') + `\n\nNext step: ${top.nextAction}` : 'No significant issues detected.';
+    answer = top ? `Biggest risk: ${top.title} (${top.severity}; ${top.basis === 'tested' ? `statistically tested, ${top.pKind === 'q' ? 'BH-adjusted q' : 'p'} ${top.pValue < 0.001 ? '< 0.001' : `= ${top.pValue}`}` : top.basis === 'measured' ? 'measured directly' : 'rule of thumb'}).\n\n${top.explanation}\n\n` + r.findings.filter((f: any) => f !== top).slice(0, 3).map((f: any) => `- ${f.title}`).join('\n') + `\n\nNext step: ${top.nextAction}` : 'No significant issues detected.';
   }
   return { answer, evidence: ev, mode: 'deterministic' as const, note: `Deterministic mode (no AI key). Data: ${ctx.state.view().label}.` };
 }

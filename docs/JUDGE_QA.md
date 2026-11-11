@@ -26,7 +26,7 @@ Two rules. We compare with the same period last year, so a holiday rush never lo
 The AI explains results in plain English, answers questions, and suggests ideas worth testing. It never makes up numbers. Every number comes from calculations, and every AI idea gets tested by the math before it's shown.
 
 **8. Is it fast?**
-A million real sales in about 6 seconds. A normal store's data takes a second or two.
+The full 1.07 million rows read and clean in about 34 seconds and analyse in about 5 on a 2020 Intel laptop; an 800-row store export takes about a tenth of a second. The public site accepts up to 100,000 rows per upload.
 
 ## Evidence
 **9. How do you know the numbers are right?**

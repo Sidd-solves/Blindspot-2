@@ -50,7 +50,7 @@ h2 { font-size: 76px; font-weight: 800; letter-spacing: -.03em; line-height: 1.0
       <div style="font-size:36px;color:var(--muted);font-weight:600;margin-top:34px">The AI analyst for small online stores</div>
       <div class="row" style="margin-top:50px;gap:16px;flex-wrap:wrap">
         <span class="chip" style="--c:var(--emerald)"><i data-lucide="radio"></i>Live demo</span>
-        <span class="chip" style="--c:var(--cyan)"><i data-lucide="file-spreadsheet"></i>Any store's data</span>
+        <span class="chip" style="--c:var(--cyan)"><i data-lucide="file-spreadsheet"></i>Your store's export</span>
         <span class="chip" style="--c:var(--fuchsia)"><i data-lucide="sparkles"></i>Claude AI</span>
       </div>
       <div class="mono" style="margin-top:44px;font-size:28px;color:var(--violet)">blindspot-8lr1.onrender.com</div>
@@ -135,28 +135,28 @@ h2 { font-size: 76px; font-weight: 800; letter-spacing: -.03em; line-height: 1.0
   <div class="orb" style="width:800px;height:800px;left:-200px;top:-250px;background:var(--emerald);opacity:.35"></div>
   <div class="orb" style="width:800px;height:800px;right:-250px;bottom:-300px;background:var(--rose);opacity:.4"></div>
   <div class="z">
-    <div class="kicker" style="color:var(--amber)">Real UK online shop · 2 years · 1M+ sales lines</div>
+    <div class="kicker" style="color:var(--amber)">Real UK online shop · full 2-year dataset · 1M+ sales lines</div>
     <h2 style="margin-top:22px">Totals <span class="grad3">lie.</span></h2>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:36px;margin-top:64px">
       <div class="card tint glow" style="--c:var(--emerald);padding:46px 52px;display:flex;align-items:center;gap:40px">
         <i data-lucide="trending-up" style="width:110px;height:110px;color:var(--emerald)"></i>
-        <div><div class="num" style="font-size:130px;color:var(--emerald)">+5%</div><div class="lab" style="font-size:32px">Total sales: looks healthy</div></div>
+        <div><div class="num" style="font-size:130px;color:var(--emerald)">+5%</div><div class="lab" style="font-size:32px">Total sales, last 90 days vs a year earlier</div></div>
       </div>
       <div class="card tint glow" style="--c:var(--rose);padding:46px 52px;display:flex;align-items:center;gap:40px">
         <i data-lucide="trending-down" style="width:110px;height:110px;color:var(--rose)"></i>
-        <div><div class="num" style="font-size:130px;color:var(--rose)">−51%</div><div class="lab" style="font-size:32px">Its best-selling product</div></div>
+        <div><div class="num" style="font-size:130px;color:var(--rose)">−51%</div><div class="lab" style="font-size:32px">A best-seller, same 90 days (measured)</div></div>
       </div>
       <div class="card tint glow" style="--c:var(--amber);padding:46px 52px;display:flex;align-items:center;gap:40px">
         <i data-lucide="user-x" style="width:110px;height:110px;color:var(--amber)"></i>
-        <div><div class="num" style="font-size:110px;color:var(--amber)">42</div><div class="lab" style="font-size:32px">best customers quietly left<br><b style="color:var(--text)">≈ £300K a year</b></div></div>
+        <div><div class="num" style="font-size:110px;color:var(--amber)">42</div><div class="lab" style="font-size:32px">best customers went quiet<br><b style="color:var(--text)">≈ £300K a year</b> <span style="font-size:22px">(3+ orders, none in 90 days)</span></div></div>
       </div>
       <div class="card tint glow" style="--c:var(--fuchsia);padding:46px 52px;display:flex;align-items:center;gap:40px">
         <i data-lucide="repeat" style="width:110px;height:110px;color:var(--fuchsia)"></i>
-        <div><div class="num" style="font-size:110px;color:var(--fuchsia)">49→40%</div><div class="lab" style="font-size:32px">New customers coming back</div></div>
+        <div><div class="num" style="font-size:110px;color:var(--fuchsia)">49→40%</div><div class="lab" style="font-size:32px">New customers reordering within 90 days</div></div>
       </div>
     </div>
   </div>
-  <div class="foot"><span>Source: UCI Machine Learning Repository, Online Retail II (CC BY 4.0)</span><span>Found by Blindspot</span></div>
+  <div class="foot"><span>Source: UCI Online Retail II (CC BY 4.0), full dataset; re-checked in Python, 7/7 match</span><span>The live demo uses a 25% customer sample, so its figures differ</span></div>
 </section>
 
 <!-- 3b QUOTE -->
@@ -166,10 +166,11 @@ h2 { font-size: 76px; font-weight: 800; letter-spacing: -.03em; line-height: 1.0
   <div class="orb" style="width:600px;height:600px;right:-200px;top:-250px;background:var(--fuchsia);opacity:.35"></div>
   <div class="z" style="text-align:center">
     <i data-lucide="quote" style="width:110px;height:110px;color:var(--violet)"></i>
-    <div style="font-size:112px;font-weight:800;letter-spacing:-.04em;line-height:1.05;margin-top:30px">Your totals tell you <span style="color:var(--muted)">what.</span><br>Blindspot tells you <span class="grad">why.</span></div>
+    <div style="font-size:112px;font-weight:800;letter-spacing:-.04em;line-height:1.05;margin-top:30px">Your totals tell you <span style="color:var(--muted)">what.</span><br>Blindspot shows you <span class="grad">where.</span></div>
     <div class="row" style="justify-content:center;gap:18px;margin-top:60px">
-      <span class="chip" style="--c:var(--emerald);font-size:30px;padding:16px 30px">Don't guess.</span>
-      <span class="chip" style="--c:var(--fuchsia);font-size:30px;padding:16px 30px">Assess.</span>
+      <span class="chip" style="--c:var(--emerald);font-size:30px;padding:16px 30px">Which customers</span>
+      <span class="chip" style="--c:var(--cyan);font-size:30px;padding:16px 30px">Which products</span>
+      <span class="chip" style="--c:var(--fuchsia);font-size:30px;padding:16px 30px">How much money</span>
     </div>
   </div>
 </section>
@@ -197,7 +198,7 @@ h2 { font-size: 76px; font-weight: 800; letter-spacing: -.03em; line-height: 1.0
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:24px">
       <div class="card tint" style="--c:var(--amber);padding:24px 28px"><div style="display:flex;justify-content:space-between;align-items:center"><span class="chip" style="--c:var(--amber);font-size:18px;padding:6px 14px">Tested · p = 0.002</span><span class="mono" style="font-size:28px;color:var(--amber);font-weight:700">51% → 42%</span></div><div style="font-size:24px;font-weight:700;margin-top:14px">Fewer new customers come back for a second order</div></div>
       <div class="card tint" style="--c:var(--emerald);padding:24px 28px"><div style="display:flex;justify-content:space-between;align-items:center"><span class="chip" style="--c:var(--emerald);font-size:18px;padding:6px 14px">Rule of thumb</span><span class="mono" style="font-size:28px;color:var(--emerald);font-weight:700">£94K/yr</span></div><div style="font-size:24px;font-weight:700;margin-top:14px">10 best customers stopped ordering</div></div>
-      <div class="card tint" style="--c:var(--lime);padding:24px 28px"><div style="display:flex;justify-content:space-between;align-items:center"><span class="chip" style="--c:var(--lime);font-size:18px;padding:6px 14px">Measured</span><span class="mono" style="font-size:28px;color:var(--lime);font-weight:700">£36K</span></div><div style="font-size:24px;font-weight:700;margin-top:14px">23 products went to zero sales</div></div>
+      <div class="card tint" style="--c:var(--lime);padding:24px 28px"><div style="display:flex;justify-content:space-between;align-items:center"><span class="chip" style="--c:var(--lime);font-size:18px;padding:6px 14px">Rule of thumb</span><span class="mono" style="font-size:28px;color:var(--lime);font-weight:700">£36K</span></div><div style="font-size:24px;font-weight:700;margin-top:14px">23 products went to zero sales</div></div>
     </div>
   </div>
 </section>
@@ -209,7 +210,7 @@ h2 { font-size: 76px; font-weight: 800; letter-spacing: -.03em; line-height: 1.0
   <div class="z" style="display:grid;grid-template-columns:700px 1fr;gap:60px;height:100%">
     <div>
       <div class="kicker" style="color:var(--emerald)">Step 1 · Upload</div>
-      <h2 style="margin-top:22px">Any file.<br><span class="grad2">Any store.</span></h2>
+      <h2 style="margin-top:22px">Your export,<br><span class="grad2">as it is.</span></h2>
       <div class="row" style="gap:14px;margin-top:46px;flex-wrap:wrap">
         <span class="chip" style="--c:var(--emerald)">CSV</span><span class="chip" style="--c:var(--emerald)">Excel</span><span class="chip" style="--c:var(--sky)">PDF</span><span class="chip" style="--c:var(--emerald)">Numbers</span>
       </div>
@@ -217,11 +218,11 @@ h2 { font-size: 76px; font-weight: 800; letter-spacing: -.03em; line-height: 1.0
         <span class="chip" style="--c:var(--emerald)"><i data-lucide="shopping-bag"></i>Shopify</span><span class="chip" style="--c:var(--fuchsia)"><i data-lucide="shopping-cart"></i>WooCommerce</span>
         <span class="chip" style="--c:var(--orange)"><i data-lucide="store"></i>Etsy</span><span class="chip" style="--c:var(--amber)"><i data-lucide="package"></i>Amazon</span>
         <span class="chip" style="--c:var(--sky)"><i data-lucide="square"></i>Square</span><span class="chip" style="--c:var(--violet)"><i data-lucide="credit-card"></i>Stripe</span>
-        <span class="chip" style="--c:var(--cyan)"><i data-lucide="bar-chart-3"></i>Tableau</span><span class="chip" style="--c:var(--blue)"><i data-lucide="sheet"></i>Any sheet</span>
+        <span class="chip" style="--c:var(--cyan)"><i data-lucide="bar-chart-3"></i>Tableau</span><span class="chip" style="--c:var(--blue)"><i data-lucide="sheet"></i>Spreadsheets</span>
       </div>
       <div class="card" style="margin-top:34px;padding:26px 32px;display:flex;align-items:center;gap:22px">
         <i data-lucide="languages" style="width:44px;height:44px;color:var(--cyan)"></i>
-        <div style="font-size:28px;font-weight:700">Any language <span class="mono" style="color:var(--cyan);margin-left:10px">Fecha · Datum · 日付</span></div>
+        <div style="font-size:28px;font-weight:700">Headers tested in 8 languages <span class="mono" style="color:var(--cyan);margin-left:10px">Fecha · Datum · 日付</span></div>
       </div>
     </div>
     <div style="position:relative">
@@ -261,7 +262,7 @@ h2 { font-size: 76px; font-weight: 800; letter-spacing: -.03em; line-height: 1.0
         <div class="card" style="padding:24px 30px;display:flex;align-items:center;gap:24px"><div class="icon" style="--c:var(--violet);width:64px;height:64px"><i data-lucide="wrench"></i></div><div style="font-size:32px;font-weight:800">Claude calls <span style="color:var(--violet)">34 analysis tools</span></div></div>
         <div class="card" style="padding:24px 30px;display:flex;align-items:center;gap:24px"><div class="icon" style="--c:var(--amber);width:64px;height:64px"><i data-lucide="lightbulb"></i></div><div style="font-size:32px;font-weight:800">Proposes new business ideas</div></div>
         <div class="card" style="padding:24px 30px;display:flex;align-items:center;gap:24px"><div class="icon" style="--c:var(--emerald);width:64px;height:64px"><i data-lucide="flask-conical"></i></div><div style="font-size:32px;font-weight:800">Every idea <span style="color:var(--emerald)">tested with statistics</span></div></div>
-        <div class="card tint" style="--c:var(--cyan);padding:24px 30px;display:flex;align-items:center;gap:24px"><div class="icon" style="--c:var(--cyan);width:64px;height:64px"><i data-lucide="shield-check"></i></div><div style="font-size:32px;font-weight:800">Never invents a number</div></div>
+        <div class="card tint" style="--c:var(--cyan);padding:24px 30px;display:flex;align-items:center;gap:24px"><div class="icon" style="--c:var(--cyan);width:64px;height:64px"><i data-lucide="shield-check"></i></div><div style="font-size:32px;font-weight:800">Numbers come from tools, not the model</div></div>
       </div>
     </div>
     <div style="position:relative">
@@ -282,7 +283,7 @@ h2 { font-size: 76px; font-weight: 800; letter-spacing: -.03em; line-height: 1.0
     <div><img class="shot" src="../deck/06_risk.jpg" style="width:100%;border-color:rgba(251,113,133,.5);box-shadow:0 30px 90px -30px rgba(251,113,133,.7)"><div style="display:flex;align-items:center;gap:18px;margin-top:28px"><div class="icon" style="--c:var(--rose);width:64px;height:64px"><i data-lucide="target"></i></div><div><div style="font-size:34px;font-weight:800">Risk map</div><div class="lab">Every problem by money × how it was proven</div></div></div></div>
     <div><img class="shot" src="../deck/07_simulator.jpg" style="width:100%;border-color:rgba(52,211,153,.5);box-shadow:0 30px 90px -30px rgba(52,211,153,.7)"><div style="display:flex;align-items:center;gap:18px;margin-top:28px"><div class="icon" style="--c:var(--emerald);width:64px;height:64px"><i data-lucide="sliders-horizontal"></i></div><div><div style="font-size:34px;font-weight:800">What-if simulator</div><div class="lab">Profit from each fix: conservative → stretch</div></div></div></div>
   </div>
-  <div class="z card tint" style="--c:var(--sky);margin-top:34px;padding:22px 30px;display:flex;align-items:center;gap:20px"><div class="icon" style="--c:var(--sky);width:56px;height:56px"><i data-lucide="file-text"></i></div><div style="font-size:30px;font-weight:800">One-page report</div><div class="lab">9 topics checked · roadmap: 30 / 90 / 180 days · PDF or Markdown</div></div>
+  <div class="z card tint" style="--c:var(--sky);margin-top:34px;padding:22px 30px;display:flex;align-items:center;gap:20px"><div class="icon" style="--c:var(--sky);width:56px;height:56px"><i data-lucide="file-text"></i></div><div style="font-size:30px;font-weight:800">One-page report</div><div class="lab">10 topics checked · roadmap: 30 / 90 / 180 days · PDF or Markdown</div></div>
 </section>
 
 <!-- 9 HOW IT'S BUILT -->
@@ -304,7 +305,7 @@ h2 { font-size: 76px; font-weight: 800; letter-spacing: -.03em; line-height: 1.0
     <div style="display:grid;gap:20px;align-content:start">
       <div class="card" style="padding:26px 30px"><div style="font-size:30px;font-weight:800;color:var(--emerald)">Math separate from AI</div><div class="lab" style="margin-top:6px">Fast, free, same answer every time</div></div>
       <div class="card" style="padding:26px 30px"><div style="font-size:30px;font-weight:800;color:var(--cyan)">Year-over-year</div><div class="lab" style="margin-top:6px">Holiday rushes can't fake growth</div></div>
-      <div class="card" style="padding:26px 30px"><div style="font-size:30px;font-weight:800;color:var(--amber)">Universal file reader</div><div class="lab" style="margin-top:6px">7 platforms, any language, PDFs</div></div>
+      <div class="card" style="padding:26px 30px"><div style="font-size:30px;font-weight:800;color:var(--amber)">Flexible file reader</div><div class="lab" style="margin-top:6px">7 platform layouts, 8 languages, text PDFs</div></div>
       <div class="card" style="padding:26px 30px"><div style="font-size:30px;font-weight:800;color:var(--violet)">Fits a free 512 MB server</div><div class="lab" style="margin-top:6px">Pre-cleaned data, memory budget</div></div>
     </div>
   </div>
@@ -329,7 +330,7 @@ h2 { font-size: 76px; font-weight: 800; letter-spacing: -.03em; line-height: 1.0
     <div class="card tint glow" style="--c:var(--emerald);padding:44px;text-align:center"><div class="num" style="font-size:150px;color:var(--emerald)">7/7</div><div style="font-size:32px;font-weight:800;margin-top:14px">numbers match</div><div class="lab">an independent Python check</div></div>
     <div class="card tint glow" style="--c:var(--violet);padding:44px;text-align:center"><div class="num" style="font-size:150px;color:var(--violet)">171</div><div style="font-size:32px;font-weight:800;margin-top:14px">automated tests</div><div class="lab">all passing</div></div>
     <div class="card tint glow" style="--c:var(--cyan);padding:44px;text-align:center"><div class="num" style="font-size:150px;color:var(--cyan)">≤5¢</div><div style="font-size:32px;font-weight:800;margin-top:14px">from true totals</div><div class="lab">1,500-order files in 5 platform layouts</div></div>
-    <div class="card tint glow" style="--c:var(--amber);padding:36px 44px;display:flex;align-items:center;gap:30px;grid-column:span 2"><i data-lucide="zap" style="width:90px;height:90px;color:var(--amber)"></i><div><div class="num" style="font-size:96px;color:var(--amber)">1M rows · 6 s</div><div class="lab">A normal store's file: one or two seconds</div></div></div>
+    <div class="card tint glow" style="--c:var(--amber);padding:36px 44px;display:flex;align-items:center;gap:30px;grid-column:span 2"><i data-lucide="zap" style="width:90px;height:90px;color:var(--amber)"></i><div><div class="num" style="font-size:96px;color:var(--amber)">1.07M rows</div><div class="lab">Read + clean 34 s, analysis 5 s (2020 Intel i5 laptop). An 800-row store export: 0.1 s. Public site: up to 100K rows per upload.</div></div></div>
     <div class="card tint glow" style="--c:var(--fuchsia);padding:36px 40px;display:flex;align-items:center;gap:24px"><i data-lucide="database" style="width:80px;height:80px;color:var(--fuchsia)"></i><div><div style="font-size:36px;font-weight:800">Real data</div><div class="lab">UCI Online Retail II</div></div></div>
   </div>
 </section>
@@ -345,7 +346,7 @@ h2 { font-size: 76px; font-weight: 800; letter-spacing: -.03em; line-height: 1.0
   <div class="z" style="display:grid;grid-template-columns:repeat(4,1fr);gap:28px;margin-top:70px">
     <div class="card tint glow" style="--c:var(--emerald);padding:52px 40px;height:560px"><div class="icon"><i data-lucide="lock"></i></div><div style="font-size:38px;font-weight:800;margin-top:40px">Read-only</div><div class="lab" style="margin-top:14px">Shopify access can't change your store. Keys used once, never stored.</div></div>
     <div class="card tint glow" style="--c:var(--sky);padding:52px 40px;height:560px"><div class="icon"><i data-lucide="eye-off"></i></div><div style="font-size:38px;font-weight:800;margin-top:40px">Private</div><div class="lab" style="margin-top:14px">Each visitor's data is theirs alone and isn't kept.</div></div>
-    <div class="card tint glow" style="--c:var(--fuchsia);padding:52px 40px;height:560px"><div class="icon"><i data-lucide="scale"></i></div><div style="font-size:38px;font-weight:800;margin-top:40px">AI checked</div><div class="lab" style="margin-top:14px">AI never calculates numbers. Its ideas are verified before you see them.</div></div>
+    <div class="card tint glow" style="--c:var(--fuchsia);padding:52px 40px;height:560px"><div class="icon"><i data-lucide="scale"></i></div><div style="font-size:38px;font-weight:800;margin-top:40px">AI checked</div><div class="lab" style="margin-top:14px">The AI doesn't do the math: numbers come from tested tools, and its ideas are checked with statistics first.</div></div>
     <div class="card tint glow" style="--c:var(--amber);padding:52px 40px;height:560px"><div class="icon"><i data-lucide="scroll-text"></i></div><div style="font-size:38px;font-weight:800;margin-top:40px">Credited</div><div class="lab" style="margin-top:14px">Data CC BY 4.0. Open source credited. AI-assisted coding disclosed.</div></div>
   </div>
   <div class="z row" style="gap:16px;margin-top:36px;flex-wrap:wrap">
@@ -477,7 +478,7 @@ h2 { font-size: 76px; font-weight: 800; letter-spacing: -.03em; line-height: 1.0
     <div class="kicker" style="color:var(--emerald)">Ready today</div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:28px;margin-top:40px">
       <div class="card tint" style="--c:var(--emerald);padding:34px;display:flex;gap:22px;align-items:center"><div class="icon"><i data-lucide="plug-zap"></i></div><div><div style="font-size:32px;font-weight:800">Shopify, live</div><div class="lab">Connect read-only in a minute</div></div></div>
-      <div class="card tint" style="--c:var(--cyan);padding:34px;display:flex;gap:22px;align-items:center"><div class="icon"><i data-lucide="files"></i></div><div><div style="font-size:32px;font-weight:800">Any file</div><div class="lab">CSV · Excel · PDF, any language</div></div></div>
+      <div class="card tint" style="--c:var(--cyan);padding:34px;display:flex;gap:22px;align-items:center"><div class="icon"><i data-lucide="files"></i></div><div><div style="font-size:32px;font-weight:800">Any file</div><div class="lab">CSV · Excel · text PDFs · 8 languages tested</div></div></div>
       <div class="card tint" style="--c:var(--amber);padding:34px;display:flex;gap:22px;align-items:center"><div class="icon"><i data-lucide="coins"></i></div><div><div style="font-size:32px;font-weight:800">30 currencies</div><div class="lab">Every amount, today's rate</div></div></div>
     </div>
   </div>

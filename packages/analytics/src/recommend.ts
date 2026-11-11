@@ -17,6 +17,20 @@ const PLAYBOOK: Record<Finding['category'], { intervention: string; recovery: nu
 const COST = { low: 1, medium: 2, high: 3 } as const;
 
 export function recommend(findings: Finding[]) {
+  // One row per action: findings that call for the same intervention are merged (their benefits add up).
+  const rows = recommendEach(findings), byAction = new Map<string, (typeof rows)[number]>();
+  for (const r of rows) {
+    const prev = byAction.get(r.intervention);
+    if (!prev) { byAction.set(r.intervention, { ...r, findingIds: [r.findingId] }); continue; }
+    const benefit = prev.expectedBenefitUsd === null && r.expectedBenefitUsd === null ? null : round((prev.expectedBenefitUsd ?? 0) + (r.expectedBenefitUsd ?? 0));
+    byAction.set(r.intervention, { ...prev, findingIds: [...(prev.findingIds ?? [prev.findingId]), r.findingId], problem: `${prev.problem}; ${r.problem}`,
+      expectedBenefitUsd: benefit, benefitBasis: prev.expectedBenefitUsd !== null ? prev.benefitBasis : r.benefitBasis, benefitPeriod: prev.benefitPeriod ?? r.benefitPeriod,
+      benefitToEffort: benefit === null ? null : round(benefit / COST[r.effort] ** 2, 0) });
+  }
+  return [...byAction.values()].sort((a, b) => (b.benefitToEffort ?? -1) - (a.benefitToEffort ?? -1));
+}
+
+function recommendEach(findings: Finding[]) {
   // Unconfirmed signals ("Possible: …") are for watching, not for acting on or putting a money figure on.
   return findings.filter((f) => !f.id.startsWith('watch-')).map((f) => {
     const p = PLAYBOOK[f.category];
@@ -29,9 +43,12 @@ export function recommend(findings: Finding[]) {
       /** Profitability fixes recover profit; concentration/trend/outlier benefits are revenue protected or recovered. */
       benefitKind: f.category === 'profitability' || f.category === 'pricing' ? ('profit' as const) : ('revenue' as const),
       benefitBasis: benefit === null ? (recoverable ? 'No money figure to recover from this data' : 'Nothing to recover: this money was never earned or lost') : `${Math.round(p.recovery * 100)}% of it is won back (${f.impactBasis?.replace(/\.$/, '')}; a planning assumption, not a measured result)`,
+      /** The planning assumption behind the benefit (share recovered) and the period the money covers. */
+      recoveryPct: benefit === null ? null : Math.round(p.recovery * 100), benefitPeriod: f.period,
+      findingIds: undefined as string[] | undefined,
       effort: p.effort, risks: p.risks, evidence: f.evidence, severity: f.severity,
       /** A ranking score (scenario benefit ÷ effort weight), not a return on investment: real costs aren't in the data. */
       benefitToEffort: benefit === null ? null : round(benefit / COST[p.effort] ** 2, 0),
     };
-  }).sort((a, b) => (b.benefitToEffort ?? -1) - (a.benefitToEffort ?? -1));
+  });
 }

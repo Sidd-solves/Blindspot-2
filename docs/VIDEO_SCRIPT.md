@@ -51,7 +51,7 @@
 
 ### 1:50 – 2:25 · How AI is used
 🎬 Click **AI Analyst** → click the suggested question **"Why did revenue change?"** → wait for the answer → scroll to **Ideas, checked by math**.
-🎙️ "Here's how AI is used: **AI suggests. Math checks.** Ask anything in plain English. Claude calls thirty-four analysis tools and explains the real numbers. It even proposes new business ideas, but every idea is tested with statistics before you see it. The AI never invents a number."
+🎙️ "Here's how AI is used: **AI suggests. Math checks.** Ask anything in plain English. Claude calls thirty-four analysis tools and explains the real numbers. It even proposes new business ideas, but every idea is tested with statistics before you see it. The numbers come from the tools, not the model."
 
 ### 2:25 – 2:45 · Proof
 🎬 Click **Source Data** (the four **Match** badges), then show Slide 13 (Proof, not promises).
@@ -103,11 +103,11 @@
 
 ### 4:20 – 5:10 · AI Analyst
 🎬 **AI Analyst** → click **"Why did revenue change?"** → show the answer → point at **Agentic workflow** → click **AI ideas** (or scroll to **Ideas, checked by math**).
-🎙️ "This is where AI comes in. **AI suggests. Math checks.** I ask in plain English. Claude decides which of thirty-four analysis tools to call, runs them, and explains the real results. You can see every tool it used. Then I ask for new ideas. Claude proposes business theories, and Blindspot tests each one with statistics: supported, not supported, or not enough evidence. **Ideas from AI. Proof from math.** It never invents a number."
+🎙️ "This is where AI comes in. **AI suggests. Math checks.** I ask in plain English. Claude decides which of thirty-four analysis tools to call, runs them, and explains the real results. You can see every tool it used. Then I ask for new ideas. Claude proposes business theories, and Blindspot tests each one with statistics: supported, not supported, or not enough evidence. **Ideas from AI. Proof from math.** The numbers come from the tools, not the model."
 
 ### 5:10 – 5:50 · Decide what to fix
 🎬 **Risk Intelligence** (point at the risk map), then **Scenario Simulator** (move one lever, e.g. Keep more customers), then **Executive Reports**.
-🎙️ "Risk Intelligence maps every problem by money and confidence: top right means fix first. The Simulator answers what-if: keep a few more customers, and here's the profit. And the one-page report checks nine areas of the business, with a thirty, ninety and hundred-eighty-day roadmap you can send to a partner or investor."
+🎙️ "Risk Intelligence maps every problem by money and how it was proven: top right means fix first. The Simulator answers what-if: keep a few more customers, and here's the profit. And the one-page report checks nine areas of the business, with a thirty, ninety and hundred-eighty-day roadmap you can send to a partner or investor."
 
 ### 5:50 – 6:15 · Trust
 🎬 **Source Data**.
@@ -125,7 +125,7 @@
 ---
 
 ## Lines to keep in your pocket (say them with energy)
-- "Your totals tell you what. Blindspot tells you why."
+- "Your totals tell you what happened. Blindspot shows you where."
 - "Don't guess. Assess."
 - "What you can't see can sink you."
 - "AI suggests. Math checks."

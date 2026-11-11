@@ -71,7 +71,10 @@ export const BASIS: Record<string, { c: string; label: string; hint: string }> =
 };
 export const fmtP = (p: number) => (p < 0.001 ? 'p < 0.001' : `p = ${p < 0.01 ? p.toFixed(3) : p.toFixed(2)}`);
 /** "Measured", "Tested · p = 0.003", "Rule of thumb". */
-export const evidenceText = (f: { basis?: string; pValue?: number | null }) => (f.basis === 'tested' && f.pValue != null ? `Tested · ${fmtP(f.pValue)}` : BASIS[f.basis ?? '']?.label ?? '');
+/** "p = 0.002", or "adjusted q = 0.27" when the value is a Benjamini–Hochberg q-value. */
+export const fmtPV = (f: { pValue?: number | null; pKind?: 'p' | 'q' }) => (f.pValue == null ? '' : f.pKind === 'q' ? fmtQ(f.pValue) : fmtP(f.pValue));
+export const fmtQ = (q: number) => (q < 0.001 ? 'BH-adjusted q < 0.001' : `BH-adjusted q = ${q.toFixed(3)}`);
+export const evidenceText = (f: { basis?: string; pValue?: number | null; pKind?: 'p' | 'q' }) => (f.basis === 'tested' && f.pValue != null ? `Tested · ${fmtPV(f)}` : BASIS[f.basis ?? '']?.label ?? '');
 const EXPOSURE: Record<string, string> = { lost: 'Lost', 'at-risk': 'At risk', reversed: 'Reversed (never earned)', untracked: 'Untracked (not lost)' };
 /** "At risk · per year", "Lost · last 180 days". */
 export const exposureText = (f: { exposure?: string | null; period?: string | null }) => [f.exposure ? EXPOSURE[f.exposure] : null, f.period].filter(Boolean).join(' · ');

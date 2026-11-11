@@ -44,6 +44,9 @@ export interface Finding {
   basis: 'measured' | 'tested' | 'rule';
   /** p-value of the test (false-discovery-rate adjusted for scans); null unless basis is "tested". */
   pValue: number | null;
+  /** What pValue is: a raw p-value ('p', default) or a Benjamini–Hochberg adjusted q-value ('q', with the raw p in pRaw). */
+  pKind?: 'p' | 'q';
+  pRaw?: number | null;
   /** The period the money figure covers, e.g. "whole file", "per year", "last 180 days". */
   period: string | null;
   /** What the money figure is: lost (already gone), at-risk (could be lost), reversed (cancelled, never earned), untracked (sales not linked to a customer). */

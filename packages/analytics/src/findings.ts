@@ -53,7 +53,7 @@ function analyzeUncached(ds: Dataset): Finding[] {
     const top = c.groups.slice(0, 3), geo = GEO.test(dim);
     out.push(mk({
       id: `conc-${dim}`, category: 'concentration',
-      title: geo ? `${pct(c.top1Share)} of ${fm.measure} comes from one ${dim.toLowerCase()} (${top[0]?.key})` : `${pct(c.top5Share)} of ${fm.measure} comes from your top 5 ${plural(dim)}`,
+      title: geo ? `${pct(c.top1Share)} of ${fm.measure} comes from one ${dim.toLowerCase()} (${top[0]?.key})` : `${pct(c.top5Share)} of ${fm.measure} comes from your top ${Math.min(5, c.groupCount)} ${plural(dim)}`,
       severity: geo ? 'low' : c.risk === 'high' ? 'high' : 'medium',
       confidence: 1, basis: 'measured', pValue: null, period: 'whole file', exposure: geo ? null : 'at-risk',
       metric: `${dim} concentration (top-5 share)`,
@@ -118,7 +118,7 @@ function analyzeUncached(ds: Dataset): Finding[] {
       out.push(mk({
         id: `anomaly-${a.dimension}-${a.segment}`, category: 'anomaly',
         title: `${a.dimension} ${a.segment}: ${a.changePct < 0 ? 'down' : 'up'} ${pct(Math.abs(a.changePct))} while the business ${a.overallChangePct >= 0 ? 'grew' : 'fell'} ${pct(Math.abs(a.overallChangePct))}`,
-        severity: a.gapPts <= -50 ? 'high' : 'medium', confidence: round(Math.min(0.999, Math.max(0.5, 1 - a.q)), 3), basis: 'tested', pValue: a.q, period: scan!.windows.label.split(' vs ')[0], exposure: 'lost',
+        severity: a.gapPts <= -50 ? 'high' : 'medium', confidence: round(Math.min(0.999, Math.max(0.5, 1 - a.q)), 3), basis: 'tested', pValue: a.q, pKind: 'q', pRaw: a.p, period: scan!.windows.label.split(' vs ')[0], exposure: 'lost',
         metric: `${a.dimension} vs overall, ${scan!.windows.label}`,
         explanation: `Found by comparing ${scan!.coverage}. Tested: its share of weekly revenue fell from ${pct(a.shareBefore)} to ${pct(a.shareNow)} (${scan!.method}, adjusted ${fmtP(a.q).replace('p', 'q')}). Described, not separately tested: sales went from ${$(a.baseline)} to ${$(a.current)}, ${Math.abs(a.gapPts)} points worse than the business overall.`,
         evidence: { ...a, window: scan!.windows.label, segmentsScanned: scan!.scanned },
@@ -131,7 +131,7 @@ function analyzeUncached(ds: Dataset): Finding[] {
       out.push(mk({
         id: `watch-${a.dimension}-${a.segment}`, category: 'anomaly',
         title: `Possible: ${a.dimension} ${a.segment} down ${pct(Math.abs(a.changePct))} while the business ${a.overallChangePct >= 0 ? 'grew' : 'fell'} ${pct(Math.abs(a.overallChangePct))} (not confirmed)`,
-        severity: 'low', confidence: 0.5, basis: 'tested', pValue: a.q, period: scan!.windows.label.split(' vs ')[0], exposure: 'at-risk',
+        severity: 'low', confidence: 0.5, basis: 'tested', pValue: a.q, pKind: 'q', pRaw: a.p, period: scan!.windows.label.split(' vs ')[0], exposure: 'at-risk',
         metric: `${a.dimension} vs overall, ${scan!.windows.label}`,
         explanation: `Worth watching, not yet proven. Its share of weekly revenue fell from ${pct(a.shareBefore)} to ${pct(a.shareNow)} (${scan!.method}, ${fmtP(a.p)} on its own), but after adjusting for the ${scan!.scanned} segments compared it is not significant (${fmtP(a.q).replace('p', 'q')}). Sales went from ${$(a.baseline)} to ${$(a.current)}.`,
         evidence: { ...a, window: scan!.windows.label, segmentsScanned: scan!.scanned },

@@ -41,6 +41,7 @@ export function toStory(f: Finding, currency = 'USD') {
 
 /** The fixed report template: every topic always appears, with what was found or why it couldn't be checked. */
 const GEO_ID = /^conc-(country|region|state|province|city|market)/i;
+const GEO_ID_COL = /^(country|region|state|province|city|market)/i;
 export const REPORT_TOPICS = [
   { key: 'customers', label: 'Customer and product dependence', cats: ['concentration'] },
   { key: 'markets', label: 'Market reach', cats: ['concentration'] },
@@ -63,16 +64,25 @@ export function reportTopics(ds: Dataset, findings: Finding[]) {
   // Some checks only run with enough data; say so instead of reporting "no problem found".
   const cols = Object.keys(rows[0] ?? {});
   const UNKNOWN_VALUES = new Set(['Unknown', 'Unknown customer', 'Guest checkout', 'Unspecified', '(none)', 'N/A', 'n/a', '-']);
+  // Which dependence checks actually ran: concentration runs on non-ID, non-geography high-cardinality columns
+  // (see findings.ts). Customer and product coverage are evaluated separately; order IDs never count.
+  const ranDims = new Set(fm.highCardDims.filter((d) => !/^(order|invoice|transaction)/i.test(d) && !GEO_ID_COL.test(d)));
+  const distinct = (col: string) => new Set(rows.map((r) => String(r[col] ?? '')).filter((v) => v && !UNKNOWN_VALUES.has(v))).size;
+  const depCols = [cols.find((k) => /customer|client|buyer/i.test(k)), cols.find((k) => /^(product|item|sku|title|description)/i.test(k) || /product/i.test(k))].filter((c): c is string => !!c);
+  const dependence = {
+    ran: depCols.filter((c) => ranDims.has(c)),
+    notRun: depCols.filter((c) => !ranDims.has(c)).map((c) => { const n = distinct(c); return { col: c, why: `only ${n} distinct ${c.toLowerCase()} value${n === 1 ? '' : 's'}, too few to measure dependence` }; }),
+  };
+  const orderCount = tx ? new Set(rows.filter((r) => r.IsReturn !== 1).map((r) => String(r.Order))).size : 0;
+  /** Note shown when a topic was checked and nothing was found, naming any part that was not judged. */
+  const checkedNote: Record<string, string | null> = {
+    customers: dependence.ran.length && dependence.notRun.length ? `Checked ${dependence.ran.map((c) => c.toLowerCase()).join(' and ')}: no problem found. ${dependence.notRun.map((x) => `${x.col}: not judged (${x.why})`).join('; ')}.` : null,
+  };
   let knownCustomers = 0;
   if (tx) { const s = new Set<string>(); for (const r of rows) if (r.IsReturn !== 1 && !['Unknown customer', 'Guest checkout', ''].includes(String(r.Customer))) s.add(String(r.Customer)); knownCustomers = s.size; }
   const thin: Record<string, string | null> = {
-    customers: (() => {
-      // Dependence is only judged when there are enough buyers/products to compare; otherwise say it wasn't judged.
-      const col = cols.find((k) => /^(customer|product)$/i.test(k) || /customer|client|buyer|product|item|sku/i.test(k));
-      if (!col || fm.highCardDims.length) return null;
-      const n = new Set(rows.map((r) => String(r[col] ?? '')).filter((v) => v && !UNKNOWN_VALUES.has(v))).size;
-      return `Not judged: only ${n} distinct ${col.toLowerCase()} value${n === 1 ? '' : 's'}, too few to measure dependence.`;
-    })(),
+    customers: dependence.ran.length ? null : dependence.notRun.length ? `Not judged: ${dependence.notRun.map((x) => x.why).join('; ')}.` : null,
+    orders: tx && orderCount < 200 ? `Not judged: only ${orderCount.toLocaleString()} orders; the large-order check needs 200+.` : null,
     markets: (() => {
       const col = cols.find((k) => /country|region|state|province|market/i.test(k));
       if (!col) return null;
@@ -83,7 +93,7 @@ export function reportTopics(ds: Dataset, findings: Finding[]) {
     trend: fm.date && months >= 6 && months < 15 ? 'Checked against the previous period only; year-over-year needs 15+ months.' : null,
   };
   const missing: Record<string, string | null> = {
-    customers: fm.highCardDims.length || cols.some((k) => /customer|client|buyer|product|item|sku/i.test(k)) ? null : 'Needs a customer or product column.',
+    customers: depCols.length ? null : 'Needs a customer or product column.',
     markets: cols.some((k) => /country|region|state|province|city|market/i.test(k)) ? null : 'Needs a country or region column.',
     profit: fm.profit ? null : 'Needs a profit or product-cost column.',
     trend: fm.date ? (months >= 6 ? null : 'Needs at least 6 months of dated sales.') : 'Needs a date column.',
@@ -91,14 +101,15 @@ export function reportTopics(ds: Dataset, findings: Finding[]) {
     returns: hasReturns ? null : 'Needs returns or cancellations in the data.',
     products: tx && months >= 15 ? null : 'Needs order lines with products and 15+ months of history.',
     seasonality: fm.date && months >= 12 ? null : 'Needs at least 12 months of dated sales.',
-    orders: null, data: null,
+    orders: tx ? null : 'Needs order IDs.', data: null,
   };
   return REPORT_TOPICS.map((t) => {
     const hits = findings.filter((f) => (t.cats as readonly string[]).includes(f.category) && (t.key === 'markets' ? GEO_ID.test(f.id) : t.key === 'customers' ? !GEO_ID.test(f.id) : true));
     // Unconfirmed signals ("Possible: …") count as something to watch, not a confirmed problem.
     const confirmed = hits.filter((f) => !f.id.startsWith('watch-'));
     const status = confirmed.length ? 'issue' : hits.length ? 'watch' : missing[t.key] ? 'not-in-data' : thin[t.key] ? 'not-enough' : 'clear';
-    return { key: t.key, label: t.label, status, note: hits.length ? hits[0].title : missing[t.key] ?? thin[t.key] ?? 'Checked: no problem found.', count: hits.length, severity: hits[0]?.severity ?? null };
+    return { key: t.key, label: t.label, status, note: hits.length ? hits[0].title : missing[t.key] ?? thin[t.key] ?? checkedNote[t.key] ?? 'Checked: no problem found.',
+      check: { eligible: !missing[t.key], ran: !missing[t.key] && !(thin[t.key]?.startsWith('Not judged')), reason: missing[t.key] ?? thin[t.key] ?? null }, count: hits.length, severity: hits[0]?.severity ?? null };
   });
 }
 
@@ -126,7 +137,7 @@ export function executiveSummary(ds: Dataset, findings: Finding[]) {
     `> Data: ${ds.label}. Figures are computed from ${ds.rows.length.toLocaleString()} rows; scenarios are hypothetical.`,
     '', `**Revenue ${base.period}** ${usd(base.revenue)} | **Profit** ${base.profit === null ? 'not in your data (no cost or profit column)' : `${usd(base.profit)} ${base.basis === 'observed' ? 'in total' : 'per year'} | **Margin** ${base.revenue ? ((base.profit / base.revenue) * 100).toFixed(1) : '0'}%`}`,
     '', '## Top 3 findings',
-    ...top.map((f, i) => `${i + 1}. **${f.title}** [${f.severity}; ${f.basis === 'tested' && f.pValue !== null ? `statistically tested, ${f.pValue < 0.001 ? 'p < 0.001' : `p = ${f.pValue.toFixed(3)}`}` : f.basis === 'measured' ? 'measured' : 'rule of thumb'}${f.period ? `; ${f.period}` : ''}]. ${f.explanation}`),
+    ...top.map((f, i) => `${i + 1}. **${f.title}** [${f.severity}; ${f.basis === 'tested' && f.pValue !== null ? `statistically tested, ${f.pKind === 'q' ? 'BH-adjusted q' : 'p'} ${f.pValue < 0.001 ? '< 0.001' : `= ${f.pValue.toFixed(3)}`}` : f.basis === 'measured' ? 'measured' : 'rule of thumb'}${f.period ? `; ${f.period}` : ''}]. ${f.explanation}`),
     '', '## Priority recommendations',
     ...recs.slice(0, 3).map((r, i) => `${i + 1}. ${r.intervention} (effort: ${r.effort}; ${r.expectedBenefitUsd !== null ? `scenario: ${usd(r.expectedBenefitUsd)} ${r.benefitKind} if ${r.benefitBasis}` : r.benefitBasis}).`),
     '', `## Financial assumptions (illustrative, ${base.basis === 'observed' ? 'over the file' : 'per year'})`,

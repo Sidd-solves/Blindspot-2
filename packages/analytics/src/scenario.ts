@@ -24,7 +24,11 @@ export function simulateScenario(base: ScenarioBaseline, levers: Partial<Scenari
   const margin = profitKnown ? (base.revenue ? base.profit! / base.revenue : 0) : as.assumedMargin;
   const baseProfit = profitKnown ? base.profit! : base.revenue * margin;
   const cogs = base.revenue - baseProfit;
-  const churnRevenue = base.revenue * as.annualChurnRate * (l.churnReductionPct / 100);
+  // Churn is an annual rate. When the baseline is a short observed period (not annualised), convert it to that
+  // period: churn over h years = 1 − (1 − annual)^h. Other levers scale with revenue or cost of the same period.
+  const horizon = base.basis === 'observed' ? Math.min(1, Math.max(0, base.years ?? 1)) : 1;
+  const periodChurn = horizon === 1 ? as.annualChurnRate : 1 - Math.pow(1 - as.annualChurnRate, horizon);
+  const churnRevenue = base.revenue * periodChurn * (l.churnReductionPct / 100);
   const convRevenue = base.revenue * (l.conversionLiftPts / 100 / as.baselineConversion);
   const wasteSaving = cogs * as.wasteRateOfCogs * (l.wasteReductionPct / 100);
   const opexSaving = base.revenue * as.opexRateOfRevenue * (l.opexReductionPct / 100);
@@ -35,6 +39,7 @@ export function simulateScenario(base: ScenarioBaseline, levers: Partial<Scenari
   const per = base.basis === 'observed' ? (base.period ?? 'over the file') : 'per year';
   return {
     hypothetical: true as const,
+    horizonYears: round(horizon, 4),
     baseline: { revenue: round(base.revenue), profit: round(baseProfit), margin: round(margin, 4), profitKnown, years: round(base.years ?? 1, 2), basis: base.basis ?? 'average', period: base.period ?? 'per year' },
     /** Percent change is only meaningful against a measured, positive profit baseline. */
     profitChangePct: profitKnown && baseProfit > 0 ? round(profitDelta / baseProfit, 4) : null,
@@ -44,7 +49,7 @@ export function simulateScenario(base: ScenarioBaseline, levers: Partial<Scenari
     scenario: { revenue: round(rev), grossProfit: round(gross), profit: round(prof), margin: round(rev ? gross / rev : 0, 4) },
     delta: { revenue: round(revenueDelta), grossProfit: round(grossDelta), opexSaving: round(opexSaving), profit: round(profitDelta) },
     formulas: [
-      'churn revenue = revenue x churnRate x churnReduction%; profit = x baseline margin',
+      horizon === 1 ? 'churn revenue = revenue x churnRate x churnReduction%; profit = x baseline margin' : `churn revenue = revenue x periodChurn x churnReduction%, where periodChurn = 1 − (1 − ${as.annualChurnRate})^${round(horizon, 3)} years = ${round(periodChurn, 4)}; profit = x baseline margin`,
       'conversion revenue = revenue x (liftPts / baselineConversion); profit = x baseline margin',
       'waste saving = COGS x wasteRate x wasteReduction%',
       'opex saving = revenue x opexRate x opexReduction%',
