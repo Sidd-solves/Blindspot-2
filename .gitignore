@@ -7,3 +7,6 @@ dist/
 .DS_Store
 /data/
 apps/web/public/test-fixtures/
+docs/slides/node_modules/
+docs/slides/png/
+docs/slides/qa/
