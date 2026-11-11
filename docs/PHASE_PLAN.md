@@ -29,6 +29,8 @@
 - **Done when:** you can explain each page in one sentence
 
 ## Phase 2: Make it winning-grade (Oct 31 – Nov 3) · ME (you supply keys)
+
+**Status (Oct 31):** done, plus more than planned: real-data case study with 4 analysis layers, AI tested live, fact check 7/7, showcase site, per-visitor sessions, 0 vulnerabilities, phone layout. Still open: real Shopify keys test (optional).
 - [ ] **Churn prediction model:** predict which customers won't come back, with measured accuracy on held-out data (scores technical + rigor)
 - [ ] **Your real Shopify data:** you create the Dev Dashboard app and connect it yourself; I check the insights make sense
 - [ ] **Privacy mode:** mask customer names so real data can be shown safely in slides and video
@@ -37,7 +39,7 @@
 - [ ] Re-run the full test suite and a browser check of every page
 - **Done when:** all tests pass and every page is verified with screenshots
 
-## Phase 3: Live demo link (Nov 4) · ME guides, YOU click
+## Phase 3: Live demo link · DONE (https://blindspot-8lr1.onrender.com)
 - [ ] New GitHub repo (I push the code; you create the repo)
 - [ ] Deploy on **Render** (one Node service; Vercel can't hold the server open). The public demo uses the **demo shop only**, never your real store data
 - [ ] Set production secrets: BRIDGE_TOKEN, ADMIN_TOKEN, ANTHROPIC_API_KEY
