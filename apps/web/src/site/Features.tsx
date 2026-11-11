@@ -14,6 +14,7 @@ import {
   Sparkles,
   X,
 } from 'lucide-react';
+import { PageHero } from './PageHero';
 import { CAT, SEV, tool, usd, VERDICT, impactColor } from '../api';
 import { useStore } from '../store';
 import { CountUp, Meter, Reveal, Ring } from '../components/ui';
@@ -156,37 +157,65 @@ export default function Features() {
 
   return (
     <>
-      <section className="mx-auto max-w-6xl px-4 pb-8 pt-10 text-center md:px-6">
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="label"
-          style={{ color: 'var(--fuchsia)' }}
-        >
-          Features
-        </motion.div>
-        <motion.h1
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.08 }}
-          className="text-glow mx-auto mt-2 max-w-3xl text-[34px] font-extrabold leading-tight tracking-tight md:text-[48px]"
-        >
-          Everything a data team would do. <span className="grad-text">In one screen.</span>
-        </motion.h1>
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="mt-3 text-[13px] text-[var(--muted)]"
-        >
-          {dataset?.source === 'case-study'
+      <PageHero
+        label="Features"
+        color="var(--fuchsia)"
+        lines={[
+          ['A', 'full', 'analysis', 'pass.'],
+          [
+            <span key="f" className="grad-text">
+              On one screen.
+            </span>,
+          ],
+        ]}
+        sub={
+          dataset?.source === 'case-study'
             ? "Every card below is live, running on a real shop's data right now."
             : dataset?.source === 'csv' || dataset?.source === 'shopify'
               ? 'Every card below is live, running on your file right now.'
-              : 'Every card below is live, running on a demo shop right now.'}
-        </motion.p>
-        <SampleNotice className="mt-3" />
-      </section>
+              : 'Every card below is live, running on a demo shop right now.'
+        }
+        chips={[
+          {
+            icon: <Radar size={14} />,
+            value: `${health}/100`,
+            label: 'business health, live',
+            c: 'var(--violet)',
+            x: 5,
+            y: 28,
+            depth: 1,
+          },
+          {
+            icon: <ShieldAlert size={14} />,
+            value: String(findings.length),
+            label: 'findings on this data',
+            c: 'var(--amber)',
+            x: 80,
+            y: 24,
+            depth: 0.7,
+          },
+          {
+            icon: <Sparkles size={14} />,
+            value: 'Fact-checked',
+            label: 'every AI figure',
+            c: 'var(--fuchsia)',
+            x: 83,
+            y: 68,
+            depth: 1.2,
+          },
+          {
+            icon: <FlaskConical size={14} />,
+            value: String(ideas.length),
+            label: 'beliefs tested with a verdict',
+            c: 'var(--lime)',
+            x: 3,
+            y: 70,
+            depth: 0.8,
+          },
+        ]}
+      >
+        <SampleNotice />
+      </PageHero>
 
       <section className="mx-auto grid max-w-6xl gap-3 px-4 pb-16 md:grid-cols-6 md:px-6">
         {/* Health: tall */}

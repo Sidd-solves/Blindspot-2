@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { useEffect, useState, type CSSProperties } from 'react';
 import { BadgeCheck, Check, Database, Globe2, X } from 'lucide-react';
+import { PageHero } from './PageHero';
 import { CAT, SEV, tool, usd, evidenceText, VERDICT, impactColor } from '../api';
 import { useStore } from '../store';
 import { CountUp, Reveal } from '../components/ui';
@@ -30,24 +31,59 @@ export default function Results() {
 
   return (
     <>
-      <section className="mx-auto max-w-6xl px-4 pb-8 pt-10 md:px-6">
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="label"
-          style={{ color: 'var(--emerald)' }}
-        >
-          Real results
-        </motion.div>
-        <motion.h1
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.08 }}
-          className="text-glow mt-2 max-w-3xl text-[34px] font-extrabold leading-tight tracking-tight md:text-[48px]"
-        >
-          We tested Blindspot on <span className="grad-text">1 million real sales.</span>
-        </motion.h1>
-        <div className="mt-6 grid gap-3 md:grid-cols-[1.4fr_1fr]">
+      <PageHero
+        label="Real results"
+        color="var(--emerald)"
+        lines={[
+          ['We', 'tested', 'it', 'on'],
+          [
+            <span key="r" className="grad-text">
+              1 million real sales.
+            </span>,
+          ],
+        ]}
+        sub="A real UK gift shop's two years of orders, messy the way real shops are. Every headline number was recalculated by separate code."
+        chips={[
+          {
+            icon: <Database size={14} />,
+            value: '1,067,371',
+            label: 'raw rows read',
+            c: 'var(--violet)',
+            x: 5,
+            y: 28,
+            depth: 1,
+          },
+          {
+            icon: <BadgeCheck size={14} />,
+            value: '£93,531.25',
+            label: 'matched to the penny',
+            c: 'var(--emerald)',
+            x: 79,
+            y: 24,
+            depth: 0.7,
+          },
+          {
+            icon: <Globe2 size={14} />,
+            value: '43',
+            label: 'countries of customers',
+            c: 'var(--cyan)',
+            x: 83,
+            y: 68,
+            depth: 1.2,
+          },
+          {
+            icon: <Check size={14} />,
+            value: '32% vs 8%',
+            label: 'flagged vs others stayed away',
+            c: 'var(--amber)',
+            x: 3,
+            y: 70,
+            depth: 0.8,
+          },
+        ]}
+      />
+      <section className="mx-auto max-w-6xl px-4 pb-8 md:px-6">
+        <div className="grid gap-3 md:grid-cols-[1.4fr_1fr]">
           <Reveal>
             <BeamCard on c="var(--violet)" className="h-full p-5">
               <div className="flex items-center gap-2">

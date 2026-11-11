@@ -671,14 +671,52 @@ function CardVisual({ v, c }: { v: string; c: string }) {
   );
 }
 
+const GIANT = 'WHAT THE DASHBOARD MISSED · WHAT THE DASHBOARD MISSED';
+
 export function HorizontalGallery() {
   const ref = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end end'] });
   const x = useTransform(scrollYProgress, [0, 1], ['2%', '-62%']);
+  // Giant outlined words glide the other way, behind the cards.
+  const bx = useTransform(scrollYProgress, [0, 1], ['-28%', '6%']);
+  const bar = useTransform(scrollYProgress, [0, 1], ['4%', '100%']);
+  const fill = useTransform(scrollYProgress, [0, 0.9], ['inset(0 58% 0 0)', 'inset(0 0% 0 0)']);
+  const [n, setN] = useState(1);
+  useMotionValueEvent(scrollYProgress, 'change', (v) =>
+    setN(Math.min(CARDS.length, 1 + Math.floor(v * CARDS.length))),
+  );
+  const cur = CARDS[n - 1];
   return (
-    <section ref={ref} className="relative h-[260vh]">
+    <section ref={ref} className="relative -mt-[18vh] h-[260vh]">
       <div className="sticky top-0 flex h-screen flex-col justify-center overflow-hidden">
-        <div className="mx-auto w-full max-w-6xl px-4 md:px-6">
+        <motion.div
+          aria-hidden
+          style={{ x: bx }}
+          className="pointer-events-none absolute bottom-[3%] whitespace-nowrap text-[17vw] font-extrabold leading-none tracking-tighter"
+        >
+          {/* ghost outline */}
+          <span
+            className="text-transparent"
+            style={{ WebkitTextStroke: '2px color-mix(in srgb, var(--text) 45%, transparent)' }}
+          >
+            {GIANT}
+          </span>
+          {/* gradient fill that sweeps in as you scroll, with a glow */}
+          <motion.span
+            className="absolute inset-0 text-transparent"
+            style={{
+              clipPath: fill,
+              backgroundImage:
+                'linear-gradient(90deg, var(--cyan), var(--amber), var(--orange), var(--lime), var(--fuchsia), var(--violet))',
+              WebkitBackgroundClip: 'text',
+              backgroundClip: 'text',
+              opacity: 0.95,
+            }}
+          >
+            {GIANT}
+          </motion.span>
+        </motion.div>
+        <div className="relative mx-auto w-full max-w-6xl px-4 md:px-6">
           <div className="label" style={{ color: 'var(--amber)' }}>
             What it catches
           </div>
@@ -686,11 +724,46 @@ export function HorizontalGallery() {
             Six ways to see <span className="grad-text">what the dashboard missed.</span>
           </h2>
         </div>
-        <motion.div style={{ x }} className="mt-8 flex gap-4 pl-[max(1rem,calc((100vw-72rem)/2+1.5rem))]">
+        <motion.div
+          style={{ x }}
+          className="relative mt-8 flex gap-4 pl-[max(1rem,calc((100vw-72rem)/2+1.5rem))]"
+        >
           {CARDS.map((c, i) => (
             <GalleryCard key={c.t} c={c} i={i} progress={scrollYProgress} />
           ))}
         </motion.div>
+        <div className="relative z-10 mx-auto mt-8 flex w-full max-w-6xl items-center gap-4 px-4 md:px-6">
+          <span className="mono text-[13px]">
+            <motion.span
+              key={n}
+              initial={{ y: -10, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              className="inline-block font-semibold"
+              style={{ color: cur.c }}
+            >
+              {String(n).padStart(2, '0')}
+            </motion.span>
+            <span className="text-[var(--faint)]"> / {String(CARDS.length).padStart(2, '0')}</span>
+          </span>
+          <span className="relative h-[3px] flex-1 overflow-hidden rounded-full bg-[var(--line)]">
+            <motion.span
+              className="absolute inset-y-0 left-0 rounded-full"
+              style={{
+                width: bar,
+                background:
+                  'linear-gradient(90deg, var(--cyan), var(--amber), var(--orange), var(--lime), var(--fuchsia), var(--violet))',
+              }}
+            />
+          </span>
+          <motion.span
+            key={cur.t}
+            initial={{ opacity: 0, x: 8 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="flex min-w-[150px] items-center justify-end gap-1.5 text-[12px] font-bold"
+          >
+            <cur.ic size={13} style={{ color: cur.c }} /> {cur.t}
+          </motion.span>
+        </div>
       </div>
     </section>
   );

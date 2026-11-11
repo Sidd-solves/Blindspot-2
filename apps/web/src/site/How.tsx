@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import type { CSSProperties } from 'react';
 import { Bot, Brush, Calculator, FlaskConical, Layers, PlugZap, Search, Wrench } from 'lucide-react';
+import { PageHero } from './PageHero';
 import { Reveal } from '../components/ui';
 import { BeamCard } from './Effects';
 import { RULES } from './content';
@@ -131,27 +132,60 @@ const LAYERS = [
 export default function How() {
   return (
     <>
-      <section className="mx-auto max-w-6xl px-4 pb-10 pt-10 text-center md:px-6">
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="label"
-          style={{ color: 'var(--cyan)' }}
-        >
-          How it works
-        </motion.div>
-        <motion.h1
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.08 }}
-          className="text-glow mx-auto mt-2 max-w-3xl text-[34px] font-extrabold leading-tight tracking-tight md:text-[48px]"
-        >
-          From raw sales to <span className="grad-text">a plan you can act on.</span>
-        </motion.h1>
-        <div className="mt-10">
-          <Pipeline />
-        </div>
-      </section>
+      <PageHero
+        label="How it works"
+        color="var(--cyan)"
+        lines={[
+          ['From', 'raw', 'sales'],
+          [
+            'to',
+            <span key="p" className="grad-text">
+              a plan you can act on.
+            </span>,
+          ],
+        ]}
+        sub="Four stages, all in code you can read: clean the file, run every check, prove each amount on its rows, then let Claude explain it, with every figure checked."
+        chips={[
+          {
+            icon: <Layers size={14} />,
+            value: '40',
+            label: 'analysis tools',
+            c: 'var(--cyan)',
+            x: 6,
+            y: 26,
+            depth: 1,
+          },
+          {
+            icon: <Calculator size={14} />,
+            value: '£0.00',
+            label: 'difference on replay',
+            c: 'var(--emerald)',
+            x: 80,
+            y: 22,
+            depth: 0.6,
+          },
+          {
+            icon: <Bot size={14} />,
+            value: '12 / 12',
+            label: 'AI figures confirmed',
+            c: 'var(--fuchsia)',
+            x: 84,
+            y: 66,
+            depth: 1.2,
+          },
+          {
+            icon: <FlaskConical size={14} />,
+            value: 'p = 0.004',
+            label: 'warning back-test',
+            c: 'var(--amber)',
+            x: 4,
+            y: 70,
+            depth: 0.8,
+          },
+        ]}
+      >
+        <Pipeline />
+      </PageHero>
 
       <section className="mx-auto max-w-6xl space-y-3 px-4 pb-16 md:px-6">
         {STEPS.map((s, i) => (

@@ -2,6 +2,10 @@ import { motion } from 'framer-motion';
 import type { ReactNode } from 'react';
 import { ArrowRight, Github } from 'lucide-react';
 import { Spotlight } from './Effects';
+import { Scene } from './Scene';
+
+/** Each page opens in its own scene of the landscape. */
+const SCENE_START: Record<string, number> = { home: 3, how: 1, features: 2, results: 0, start: 1.5 };
 
 export const SITE = [
   { id: 'home', label: 'Home', hash: '#/' },
@@ -49,6 +53,7 @@ export const Logo = ({ size = 15 }: { size?: number }) => (
 export default function SiteLayout({ page, children }: { page: string; children: ReactNode }) {
   return (
     <div className="site-dark relative min-h-screen overflow-x-clip">
+      <Scene key={`scene-${page}`} start={SCENE_START[page] ?? (page.startsWith('guide/') ? 2.5 : 0)} />
       <Spotlight />
       <header className="fixed inset-x-0 top-0 z-40">
         <div

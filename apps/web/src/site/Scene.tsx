@@ -14,16 +14,23 @@ precision highp float;
 precision mediump float;
 #endif
 uniform vec2 r; uniform float t; uniform float s; uniform vec2 m; uniform float sc;
+// ln: x-ray lens (x, y, radius) · ck: last click (x, y, seconds since)
+uniform vec3 ln; uniform vec3 ck;
 // Sine-free hash: stays stable at low precision (sin-based hashes streak on some phone GPUs).
 float h(vec2 p){vec3 q=fract(vec3(p.xyx)*.1031);q+=dot(q,q.yzx+33.33);return fract((q.x+q.y)*q.z);}
 float n(vec2 p){vec2 i=floor(p),f=fract(p);vec2 u=f*f*(3.-2.*f);
   return mix(mix(h(i),h(i+vec2(1.,0.)),u.x),mix(h(i+vec2(0.,1.)),h(i+1.),u.x),u.y);}
 float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*n(p);p=p*2.03+vec2(1.7,9.2);a*=.5;}return v;}
 vec3 pk(vec3 a,vec3 b,vec3 c,vec3 d,vec3 e,float x){
+  x=mod(x,5.);
   float f=smoothstep(0.,1.,fract(x));
-  return x<1.?mix(a,b,f):x<2.?mix(b,c,f):x<3.?mix(c,d,f):x<4.?mix(d,e,f):e;}
+  return x<1.?mix(a,b,f):x<2.?mix(b,c,f):x<3.?mix(c,d,f):x<4.?mix(d,e,f):mix(e,a,f);}
 void main(){
-  vec2 p=(gl_FragCoord.xy-.5*r)/r.y; p+=m*.035;
+  vec2 p0=(gl_FragCoord.xy-.5*r)/r.y;
+  // click shockwave: a ring that bends the scene as it travels out
+  float age=ck.z, cd=length(p0-ck.xy), front=age*.95;
+  float wave=(age<3.)?sin((cd-front)*42.)*exp(-abs(cd-front)*10.)*exp(-age*1.4):0.;
+  vec2 p=p0+m*.035+(cd>0.?(p0-ck.xy)/cd:vec2(0.))*wave*.012;
   vec3 top=pk(vec3(.043,.024,.125),vec3(.008,.075,.145),vec3(.012,.082,.063),vec3(.10,.04,.07),vec3(.008,.012,.04),s);
   vec3 hor=pk(vec3(.23,.10,.35),vec3(.04,.29,.43),vec3(.05,.29,.21),vec3(.48,.18,.07),vec3(.08,.10,.23),s);
   vec3 aur=pk(vec3(.71,.42,1.),vec3(.13,.83,.93),vec3(.20,.83,.60),vec3(.98,.57,.24),vec3(.51,.55,.97),s);
@@ -31,7 +38,8 @@ void main(){
   vec3 glw=pk(vec3(1.,.48,.85),vec3(.22,.74,.97),vec3(.64,.90,.21),vec3(.98,.75,.14),vec3(.88,.91,1.),s);
   vec3 col=mix(hor,top,smoothstep(-.25,.65,p.y+.1));
   // sun / moon
-  vec2 sp=vec2(.38*sin(s*1.25+.6)+m.x*.06,.06+.12*cos(s*.9)+m.y*.03);
+  float sm=mod(s,5.);
+  vec2 sp=vec2(.38*sin(s*1.25+.6)+m.x*.06,-.03+.11*cos(s*.9)+.16*smoothstep(3.3,4.,sm)*(1.-smoothstep(4.2,4.9,sm))+m.y*.03);
   float d=length(p-sp);
   col+=glw*(exp(-d*3.2)*.55+smoothstep(.075,.065,d)*.6);
   // aurora ribbons
@@ -41,19 +49,36 @@ void main(){
     float band=exp(-abs(w)*16.)*(.45+.55*fbm(vec2(p.x*3.5+t*.15,fi*5.)));
     col+=aur*band*(.42-fi*.08);}
   // stars, mostly at night
-  float stars=.15+.85*smoothstep(3.,4.,s)+.4*(1.-smoothstep(0.,.8,s));
+  float stars=.15+.85*smoothstep(3.,4.,sm)*(1.-smoothstep(4.3,5.,sm))+.4*(1.-smoothstep(0.,.8,sm));
   vec2 g=floor(gl_FragCoord.xy/2.);
   float tw=.6+.4*sin(mod(t*2.,6.2832)+h(g)*40.);
   col+=vec3(step(.9975,h(g))*stars*tw*smoothstep(-.1,.4,p.y));
   // hills, far to near, each sliding at its own speed as the page scrolls
+  float edge=0.;
   for(int j=0;j<4;j++){float fj=float(j);
     float hy=-.06-.11*fj+.2*fbm(vec2(p.x*(1.1+fj*.55)+sc*(.25+fj*.45)+fj*7.3,fj*2.));
     float a=smoothstep(hy+.004,hy-.004,p.y);
+    edge=max(edge,exp(-abs(p.y-hy)*140.));
     vec3 rc=mix(hor*.9,rdg,.3+.23*fj);
     rc+=aur*.06*(3.-fj)*exp(-abs(p.y-hy)*25.);
     col=mix(col,rc,a);}
-  // depth haze, vignette, film grain
   col=mix(col,hor,.08);
+  // x-ray lens: around the cursor the landscape shows its hidden data: contour lines, a grid, scan lines
+  float ld=length(p0-ln.xy);
+  float lens=ln.z>.001?smoothstep(ln.z,ln.z*.5,ld):0.;
+  if(lens>0.){
+    float field=fbm(p*2.4+vec2(sc*.35,0.));
+    float contour=smoothstep(.07,0.,abs(fract(field*13.)-.5));
+    vec2 gg=abs(fract(p*22.)-.5);
+    float grid=smoothstep(.46,.5,max(gg.x,gg.y));
+    float scan=.5+.5*sin(p.y*520.-t*6.);
+    vec3 data=col*.28+aur*(contour*1.25+grid*.38+edge*2.2)+glw*.45*exp(-d*6.)+aur*.1*scan;
+    col=mix(col,data,lens);
+  }
+  col+=aur*exp(-abs(ld-ln.z*.78)*110.)*.55*step(.001,ln.z);
+  // shockwave light
+  col+=glw*.35*exp(-abs(cd-front)*28.)*exp(-age*1.6)*step(age,3.);
+  // vignette, film grain
   vec2 q=gl_FragCoord.xy/r;
   col*=.55+.45*pow(16.*q.x*q.y*(1.-q.x)*(1.-q.y),.18);
   col+=(h(gl_FragCoord.xy+fract(t*.37)*97.)-.5)*.025;
@@ -62,8 +87,11 @@ void main(){
 
 const VERT = 'attribute vec2 a;void main(){gl_Position=vec4(a,0.,1.);}';
 
-export function Scene() {
+/** `start` picks the scene a page opens on (0 dusk, 1 ocean, 2 forest, 3 sunset, 4 night); scrolling travels on to night. */
+export function Scene({ start = 0 }: { start?: number }) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const from = useRef(start);
+  from.current = start;
   useEffect(() => {
     // While the scene is up, the site wrapper's solid background steps aside so the scene shows behind the content.
     document.documentElement.classList.add('scene-on');
@@ -95,7 +123,9 @@ export function Scene() {
       ut = U('t'),
       us = U('s'),
       um = U('m'),
-      usc = U('sc');
+      usc = U('sc'),
+      uln = U('ln'),
+      uck = U('ck');
 
     const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
     let w = 0,
@@ -119,12 +149,40 @@ export function Scene() {
       my = 0,
       tx = 0,
       ty = 0;
+    // Lens and shockwave live in the shader's own units: centred, 1 = screen height.
+    const toP = (x: number, y: number) => [
+      (x - innerWidth / 2) / innerHeight,
+      (innerHeight / 2 - y) / innerHeight,
+    ];
+    let lx = 0,
+      ly = 0,
+      ltx = 0,
+      lty = 0,
+      lr = 0,
+      speed = 0,
+      seen = 0,
+      ckx = 0,
+      cky = 0,
+      ckAt = -1e9;
     const move = (e: PointerEvent) => {
       tx = (e.clientX / innerWidth) * 2 - 1;
       ty = -((e.clientY / innerHeight) * 2 - 1);
+      const [a, b] = toP(e.clientX, e.clientY);
+      speed = Math.min(1, speed + Math.hypot(a - ltx, b - lty) * 3);
+      ltx = a;
+      lty = b;
+      seen = performance.now();
     };
+    const down = (e: PointerEvent) => {
+      [ckx, cky] = toP(e.clientX, e.clientY);
+      ckAt = performance.now();
+      move(e);
+    };
+    const out = () => (seen = 0);
     addEventListener('pointermove', move, { passive: true });
-    let scene = 0,
+    addEventListener('pointerdown', down, { passive: true });
+    document.documentElement.addEventListener('pointerleave', out);
+    let scene = from.current,
       raf = 0;
     const t0 = performance.now();
     const frame = () => {
@@ -136,7 +194,8 @@ export function Scene() {
       }
       const max = Math.max(1, document.documentElement.scrollHeight - innerHeight);
       const prog01 = Math.min(1, scrollY / max);
-      scene += (prog01 * 4 - scene) * 0.06; // ease between scenes
+      const target = from.current + prog01 * 4; // wraps on: sunset → night → dusk → ocean → forest
+      scene += (target - scene) * 0.06; // ease between scenes
       mx += (tx - mx) * 0.05;
       my += (ty - my) * 0.05;
       gl.uniform2f(ur, w, hgt);
@@ -144,6 +203,15 @@ export function Scene() {
       gl.uniform1f(us, scene);
       gl.uniform2f(um, still ? 0 : mx, still ? 0 : my);
       gl.uniform1f(usc, scrollY / innerHeight);
+      // The lens trails the cursor, grows with speed, and fades out when the mouse stops for a while or leaves.
+      const now = performance.now();
+      const active = seen && now - seen < 2500 ? 1 : 0;
+      lx += (ltx - lx) * 0.16;
+      ly += (lty - ly) * 0.16;
+      speed *= 0.94;
+      lr += ((active ? 0.13 + speed * 0.1 : 0) - lr) * 0.08;
+      gl.uniform3f(uln, lx, ly, lr);
+      gl.uniform3f(uck, ckx, cky, still ? 99 : (now - ckAt) / 1000);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
       raf = document.hidden ? 0 : requestAnimationFrame(frame);
     };
@@ -156,6 +224,8 @@ export function Scene() {
       cancelAnimationFrame(raf);
       removeEventListener('resize', size);
       removeEventListener('pointermove', move);
+      removeEventListener('pointerdown', down);
+      document.documentElement.removeEventListener('pointerleave', out);
       document.removeEventListener('visibilitychange', vis);
     };
   }, []);
