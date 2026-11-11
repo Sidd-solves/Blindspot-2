@@ -96,7 +96,7 @@ export default function Simulator() {
               <div>
                 <div className="label flex items-center gap-1"><Sparkles size={11} style={{ color: 'var(--fuchsia)' }} />Extra profit per year (estimate)</div>
                 <div className="flex items-baseline gap-1"><span className="text-[30px] font-semibold" style={{ color: 'var(--emerald)' }}>+</span><CountUp value={res.delta.profit} format={(n) => usd(n)} className="grad-text text-[34px] font-semibold tracking-tight" duration={0.6} /></div>
-                <div className="text-[11px] text-[var(--muted)]">{pct(res.delta.profit / Math.max(1, res.baseline.profit))} over baseline {usd(res.baseline.profit, true)}</div>
+                <div className="text-[11px] text-[var(--muted)]">{res.profitChangePct != null ? `${pct(res.profitChangePct)} over yearly profit ${usd(res.baseline.profit, true)}` : `Per year · profit estimated at an assumed ${Math.round(res.baseline.margin * 100)}% margin (no cost data)`}</div>
               </div>
               <div className="grid flex-1 grid-cols-3 gap-2">
                 {[{ l: 'Revenue', v: res.scenario.revenue, d: res.delta.revenue, c: 'var(--violet)' }, { l: 'Profit', v: res.scenario.profit, d: res.delta.profit, c: 'var(--emerald)' }, { l: 'Margin', v: res.scenario.margin, d: res.scenario.margin - res.baseline.margin, c: 'var(--cyan)', p: true }].map((m) => (

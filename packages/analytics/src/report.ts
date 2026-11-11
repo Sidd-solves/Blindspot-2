@@ -7,9 +7,20 @@ import { sum } from './stats';
 
 import { money } from './money';
 
+/**
+ * Yearly baseline for the simulator. Revenue and profit are annualised over the loaded date range, and profit stays
+ * null when the data has no profit column (unknown is not zero).
+ */
 export const baselineOf = (ds: Dataset) => {
   const fm = detectFields(ds);
-  return { revenue: sum(numeric(ds.rows, fm.measure)), profit: fm.profit ? sum(numeric(ds.rows, fm.profit)) : 0 };
+  const rows = 'IsReturn' in (ds.rows[0] ?? {}) ? ds.rows.filter((r) => r.IsReturn !== 1) : ds.rows;
+  let years = 1;
+  if (fm.date) {
+    let lo = Infinity, hi = -Infinity;
+    for (const r of ds.rows) { const t = Date.parse(String(r[fm.date])); if (Number.isFinite(t)) { if (t < lo) lo = t; if (t > hi) hi = t; } }
+    if (Number.isFinite(lo) && hi > lo) years = Math.max(1, (hi - lo) / (365.25 * 86400000));
+  }
+  return { revenue: sum(numeric(rows, fm.measure)) / years, profit: fm.profit ? sum(numeric(rows, fm.profit)) / years : null, years };
 };
 
 export function toStory(f: Finding, currency = 'USD') {
@@ -76,7 +87,7 @@ export function executiveSummary(ds: Dataset, findings: Finding[]) {
   const md = [
     `# Executive Summary: ${ds.name}`,
     `> Data: ${ds.label}. Figures are computed from ${ds.rows.length.toLocaleString()} rows; scenarios are hypothetical.`,
-    '', `**Revenue** ${usd(base.revenue)} | **Profit** ${usd(base.profit)} | **Margin** ${base.revenue ? ((base.profit / base.revenue) * 100).toFixed(1) : '0'}%`,
+    '', `**Revenue per year** ${usd(base.revenue)} | **Profit** ${base.profit === null ? 'not in your data (no cost or profit column)' : `${usd(base.profit)} per year | **Margin** ${base.revenue ? ((base.profit / base.revenue) * 100).toFixed(1) : '0'}%`}`,
     '', '## Top 3 findings',
     ...top.map((f, i) => `${i + 1}. **${f.title}** [${f.severity}, confidence ${Math.round(f.confidence * 100)}%]. ${f.explanation}`),
     '', '## Priority recommendations',

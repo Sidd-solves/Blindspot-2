@@ -44,7 +44,8 @@ describe('analytics engine', () => {
   });
   it('parses csv and computes baseline', () => {
     const d = parseCsv('Sales,Profit,Region\n100,10,A\n200,20,B');
-    expect(baselineOf(d)).toEqual({ revenue: 300, profit: 30 });
+    expect(baselineOf(d)).toMatchObject({ revenue: 300, profit: 30 });
+    expect(baselineOf(parseCsv('Sales,Region\n100,A\n200,B')).profit).toBeNull(); // unknown profit is not zero
   });
   it('removes orders reversed within 2 days from both sales and returns', () => {
     const csv = ['Invoice,StockCode,Description,Quantity,InvoiceDate,Price,Customer ID,Country',
