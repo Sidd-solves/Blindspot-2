@@ -33,12 +33,20 @@ UCI **Online Retail II**: a real UK online gift shop, 1,067,371 sales lines (Dec
 ```
 
 ## Run it
+Needs **Node.js 22+** and npm.
 ```bash
+git clone https://github.com/Sidd-solves/BlindSpot.git && cd BlindSpot
 npm install
-npm run dev     # API on :8787, web on :5173
+npm run dev     # API on :8787, web on :5173 (open http://localhost:5173)
 npm test        # 187 tests: statistics, file reading (incl. real PDFs), analytics, all 34 tools, sessions, API + MCP
 ```
-Add `ANTHROPIC_API_KEY=` to `.env` for Claude answers (optional; without it the analyst answers common questions with real queries). Production: see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+Add `ANTHROPIC_API_KEY=` to `.env` for Claude answers (optional; without it the analyst answers common questions with real queries). Try it with the sample files in `apps/web/public/samples/` (a 68-page PDF report and a CSV), or the **Try a 68-page PDF sales report** button on the start page. Production: see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
+## Credits
+- **Dataset:** Chen, D. (2012). *Online Retail II* [Dataset]. UCI Machine Learning Repository. https://doi.org/10.24432/C5CG6D (CC BY 4.0). The Harbor Coffee and Willow & Wick sample reports are synthetic files made for testing.
+- **Libraries:** React, Vite, Tailwind CSS, Framer Motion, Recharts, lucide-react (icons), pdf.js (`pdfjs-dist`), SheetJS (`xlsx`), Papa Parse, Express, express-rate-limit, cors, ws, Zod, the Anthropic SDK, the Model Context Protocol SDK, Vitest, tsx. Font: Manrope (Google Fonts). Exchange rates: European Central Bank via frankfurter.dev.
+- **AI:** Claude (Anthropic, Sonnet 5.5 by default) powers the in-app analyst. Claude Code was used as a coding assistant while building the project; all design decisions, testing and verification were done by the author.
+- **Pre-existing work:** none. The project was started on 30 October 2026 (see the commit history); everything else is the open-source libraries listed above.
 
 ## Docs
 [Feature matrix and limitations](docs/FEATURE_MATRIX.md) · [Fact check](docs/FACT_CHECK.md) · [Deployment](docs/DEPLOYMENT.md) · [Phase plan](docs/PHASE_PLAN.md) · [Devpost draft](docs/DEVPOST.md) · [Presentation](docs/PRESENTATION.md) · [AI disclosure](docs/AI_DISCLOSURE.md)
