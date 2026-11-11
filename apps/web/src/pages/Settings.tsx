@@ -234,8 +234,7 @@ export default function Settings() {
                 }}
               />
               <div className="text-[11.5px] text-[var(--muted)]">
-                Unlocks Tableau-touching tools when ADMIN_TOKEN is set on the server. Kept in session storage
-                only.
+                Unlocks admin-only tools when ADMIN_TOKEN is set on the server. Kept in session storage only.
               </div>
             </div>
           </Card>

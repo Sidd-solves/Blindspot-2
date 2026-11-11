@@ -416,7 +416,7 @@ const platform = (
     ...steps.map((s) => ({ t: s.t, d: s.d, mock: 'path', path: [app, s.path] as [string, string[]] })),
     fileStep(c),
   ],
-  tips: [...tips, 'Your file is analysed privately and is not stored.'],
+  tips: [...tips, 'Your file is analyzed privately and is not stored.'],
 });
 
 export const GUIDES: Record<string, Guide> = {
@@ -440,14 +440,14 @@ export const GUIDES: Record<string, Guide> = {
       },
       {
         t: 'Drop it into Blindspot',
-        d: "Drag the file onto the box below. Blindspot recognises Shopify's format by itself.",
+        d: "Drag the file onto the box below. Blindspot recognizes Shopify's format by itself.",
         mock: 'drop',
       },
     ],
     tips: [
       'More history means better results: a year or more lets Blindspot compare with the same time last year.',
       "Don't edit the file first. Blindspot cleans duplicates, refunds and fees itself.",
-      'Your file is analysed privately and is not stored.',
+      'Your file is analyzed privately and is not stored.',
     ],
     action: 'upload-shopify',
     link: {
@@ -621,7 +621,7 @@ export const GUIDES: Record<string, Guide> = {
     tips: [
       'The more detailed the sheet, the better. A summary with one row per month can only show trends.',
       "Advanced: Blindspot also has a live Tableau extension that reads dashboards directly. It's in Data Sources under Advanced (beta).",
-      'Your file is analysed privately and is not stored.',
+      'Your file is analyzed privately and is not stored.',
     ],
   },
   spreadsheet: {
@@ -650,7 +650,7 @@ export const GUIDES: Record<string, Guide> = {
       'Works with CSV, Excel, Numbers, Google Sheets and PDF files up to 25 MB (about 150,000 rows).',
       'Excel workbooks with several sheets: Blindspot picks the sheet with the sales and tells you which.',
       'Missing a detail like customers or costs? Add a second file and Blindspot matches it in by order number, SKU or product.',
-      'Your file is analysed privately and is not stored.',
+      'Your file is analyzed privately and is not stored.',
     ],
     action: 'upload-any',
   },

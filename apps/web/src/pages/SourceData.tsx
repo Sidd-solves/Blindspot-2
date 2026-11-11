@@ -219,7 +219,7 @@ export default function SourceData() {
                   ? scope === 'exact'
                     ? 'Rows behind the finding'
                     : 'All related history'
-                  : 'Every row analysed'
+                  : 'Every row analyzed'
               }
               shown={drill ? undefined : dash?.kpis[0]?.value}
               money
@@ -235,7 +235,7 @@ export default function SourceData() {
                   ? scope === 'exact'
                     ? 'Rows behind the finding'
                     : 'All related history'
-                  : 'Every row analysed'
+                  : 'Every row analyzed'
               }
               shown={drill ? undefined : kpi('Orders')}
               c="var(--cyan)"
@@ -250,14 +250,14 @@ export default function SourceData() {
                   ? scope === 'exact'
                     ? 'Rows behind the finding'
                     : 'All related history'
-                  : 'Every row analysed'
+                  : 'Every row analyzed'
               }
               shown={drill ? undefined : kpi('Customers')}
               c="var(--fuchsia)"
             />
             <CheckTile
               i={3}
-              label="Rows analysed"
+              label="Rows analyzed"
               mine={data.totals.lines}
               search={data.searchTotals?.lines}
               scopeLabel={
@@ -265,7 +265,7 @@ export default function SourceData() {
                   ? scope === 'exact'
                     ? 'Rows behind the finding'
                     : 'All related history'
-                  : 'Every row analysed'
+                  : 'Every row analyzed'
               }
               shown={drill ? undefined : dataset?.rows}
               c="var(--emerald)"
@@ -383,7 +383,7 @@ export default function SourceData() {
       <Card c="var(--sky)" hover={false}>
         <CardHead
           icon={<Table2 size={13} />}
-          title="Every row Blindspot analysed"
+          title="Every row Blindspot analyzed"
           c="var(--sky)"
           right={
             <div className="flex items-center gap-1.5">

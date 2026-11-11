@@ -104,20 +104,17 @@ export const setCurrency = (c: string) => {
 };
 export const baseCurrency = () => currency;
 export const shownCurrency = () => (display.to && display.to !== currency ? display.to : currency);
-export const usd = (n: number | null | undefined, compact = false) =>
-  n == null
-    ? '—'
-    : currency === 'XXX'
-      ? new Intl.NumberFormat('en-US', {
-          maximumFractionDigits: compact ? 1 : 0,
-          ...(compact ? { notation: 'compact' as const } : {}),
-        }).format(n)
-      : new Intl.NumberFormat('en-US', {
-          style: 'currency',
-          currency: shownCurrency(),
-          maximumFractionDigits: compact ? 1 : 0,
-          ...(compact ? { notation: 'compact' as const } : {}),
-        }).format(shownCurrency() === currency ? n : n * display.rate);
+export const usd = (n: number | null | undefined, compact = false) => {
+  if (n == null) return '—';
+  const v = currency === 'XXX' || shownCurrency() === currency ? n : n * display.rate;
+  // Compact only shortens thousands and up (£2.3K); smaller amounts are whole units (£621, not £620.7).
+  const short = compact && Math.abs(v) >= 1000;
+  return new Intl.NumberFormat('en-US', {
+    ...(currency === 'XXX' ? {} : { style: 'currency' as const, currency: shownCurrency() }),
+    maximumFractionDigits: short ? 1 : 0,
+    ...(short ? { notation: 'compact' as const } : {}),
+  }).format(v);
+};
 /** Exact amount with pennies, in the data's own currency (reconciliation is done before any conversion). */
 export const usdExact = (n: number) =>
   new Intl.NumberFormat(
@@ -198,3 +195,6 @@ const EXPOSURE: Record<string, string> = {
 /** "At risk · per year", "Lost · last 180 days". */
 export const exposureText = (f: { exposure?: string | null; period?: string | null }) =>
   [f.exposure ? EXPOSURE[f.exposure] : null, f.period].filter(Boolean).join(' · ');
+/** Amount color for a finding: untracked money (e.g. sales with no customer ID) isn't lost, so it is shown muted. */
+export const impactColor = (f: { exposure?: string | null }, c: string) =>
+  f.exposure === 'untracked' ? 'var(--faint)' : c;

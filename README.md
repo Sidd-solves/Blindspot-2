@@ -1,5 +1,7 @@
 # Blindspot
 
+[![CI](https://github.com/Sidd-solves/BlindSpot/actions/workflows/ci.yml/badge.svg)](https://github.com/Sidd-solves/BlindSpot/actions/workflows/ci.yml) ![Tests](https://img.shields.io/badge/tests-187%20passing-34d399) ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6) [![License: MIT](https://img.shields.io/badge/license-MIT-a78bfa)](LICENSE)
+
 **The AI analyst for small businesses. See what your sales data is hiding.**
 
 Live: **https://blindspot-8lr1.onrender.com** · Fact check: [docs/FACT_CHECK.md](docs/FACT_CHECK.md)
@@ -29,7 +31,6 @@ UCI **Online Retail II**: a real UK online gift shop, 1,067,371 sales lines (Dec
  packages/analytics       cleaning, stats, Pareto/HHI, Welch t-tests, driver analysis, anomaly scan,
                           store checks, hypothesis engine, query engine, scenarios, reports
  services/mcp-server      the same 34 tools over MCP (Claude Desktop / VS Code)
- apps/tableau-extension   optional Tableau bridge (beta, unverified in Tableau)
 ```
 
 ## Run it
@@ -39,6 +40,8 @@ git clone https://github.com/Sidd-solves/BlindSpot.git && cd BlindSpot
 npm install
 npm run dev     # API on :8787, web on :5173 (open http://localhost:5173)
 npm test        # 187 tests: statistics, file reading (incl. real PDFs), analytics, all 34 tools, sessions, API + MCP
+npm run typecheck  # strict TypeScript, 0 errors
+npm run format:check
 ```
 Add `ANTHROPIC_API_KEY=` to `.env` for Claude answers (optional; without it the analyst answers common questions with real queries). Try it with the sample files in `apps/web/public/samples/` (a 68-page PDF report and a CSV), or the **Try a 68-page PDF sales report** button on the start page. Production: see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 

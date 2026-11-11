@@ -288,7 +288,7 @@ export default function Start() {
                 <PlugZap size={16} style={{ color: 'var(--cyan)' }} />
                 <span className="text-[15px] font-extrabold">Or connect live</span>
               </div>
-              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              <div className="mt-3 grid gap-2">
                 {[
                   {
                     id: 'shopify-connect',
@@ -297,14 +297,6 @@ export default function Start() {
                     icon: ShoppingBag,
                     c: 'var(--emerald)',
                     tag: 'Live',
-                  },
-                  {
-                    id: 'tableau',
-                    t: 'Tableau',
-                    d: 'Reads a live dashboard through our extension.',
-                    icon: BarChart3,
-                    c: 'var(--cyan)',
-                    tag: 'Beta',
                   },
                 ].map((x) => (
                   <div

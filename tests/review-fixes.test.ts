@@ -103,7 +103,7 @@ describe('review fixes (synthetic edge cases)', () => {
     expect(b.period).toMatch(/run rate/);
   });
 
-  it('under 30 days is not annualised', () => {
+  it('under 30 days is not annualized', () => {
     const b = baselineOf(
       mk([
         { OrderDate: day(1, 1), Sales: 50 },
@@ -351,7 +351,7 @@ describe('review fixes, round 5', () => {
     if (lapsed) {
       expect(lapsed.title).not.toMatch(/a year/);
       expect(lapsed.period).toMatch(/months observed/);
-      expect(lapsed.impactBasis).toMatch(/not annualised/);
+      expect(lapsed.impactBasis).toMatch(/not annualized/);
     }
   });
 

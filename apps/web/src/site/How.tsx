@@ -123,7 +123,7 @@ const LAYERS = [
     icon: FlaskConical,
     c: 'var(--fuchsia)',
     t: 'Tests ideas with math',
-    d: 'Business theories, built-in or suggested by AI, are tested with statistics and labelled supported, not supported, real but small, or not enough evidence, for your data.',
+    d: 'Business theories, built-in or suggested by AI, are tested with statistics and labeled supported, not supported, real but small, or not enough evidence, for your data.',
     ex: 'Found growth was coming from old customers, not new ones.',
   },
 ];

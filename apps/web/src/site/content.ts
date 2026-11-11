@@ -10,10 +10,11 @@ export const CATCHES = [
   { k: 'product', t: 'Products that stopped selling', d: 'Sold this time last year, nothing now.' },
   {
     k: 'anomaly',
-    t: 'Anything falling behind',
-    d: 'Your main products, customers and countries compared with the rest.',
+    t: 'Sales or products falling behind',
+    d: 'Your main products and countries compared with the rest, and with last year.',
   },
-  { k: 'trend', t: 'Shrinking sales or basket size', d: 'Compared with the same period last year.' },
+  { k: 'concentration', t: 'Sales stuck in one market', d: 'When almost every sale comes from one country.' },
+  { k: 'outlier', t: 'Relying on a few huge orders', d: 'When a handful of big orders carry the year.' },
   {
     k: 'seasonality',
     t: 'Seasonal cash crunches',

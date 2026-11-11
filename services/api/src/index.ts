@@ -116,14 +116,12 @@ function requireAdmin(req: Request, res: Response, next: NextFunction) {
   const want = env.ADMIN_TOKEN;
   if (!want)
     return PROD
-      ? res
-          .status(503)
-          .json({
-            error: {
-              code: 'ADMIN_TOKEN_NOT_SET',
-              message: 'Sensitive endpoints are disabled until ADMIN_TOKEN is configured.',
-            },
-          })
+      ? res.status(503).json({
+          error: {
+            code: 'ADMIN_TOKEN_NOT_SET',
+            message: 'Sensitive endpoints are disabled until ADMIN_TOKEN is configured.',
+          },
+        })
       : next();
   const got = (req.headers.authorization ?? '').replace(/^Bearer\s+/i, '');
   if (got.length === want.length && timingSafeEqual(Buffer.from(got), Buffer.from(want))) return next();
@@ -330,7 +328,7 @@ const placeholderCountry = (rows: any[]) => {
   return v;
 };
 
-/** The exact rows being analysed (after cleaning and the visitor's filters), so anyone can check the numbers. */
+/** The exact rows being analyzed (after cleaning and the visitor's filters), so anyone can check the numbers. */
 app.get('/api/rows', (req, res) => {
   const q = z
     .object({
@@ -535,15 +533,13 @@ app.post('/api/dataset/files', express.json({ limit: '40mb' }), (req, res) => {
     if (e instanceof IngestError)
       return res.status(400).json({ error: { code: e.code, message: e.message }, report: e.report ?? null });
     log(`ingest failed: ${e?.message}`);
-    res
-      .status(400)
-      .json({
-        error: {
-          code: 'READ_FAILED',
-          message:
-            "This file couldn't be read. Check that it's a sales export (CSV, Excel or a PDF with a table).",
-        },
-      });
+    res.status(400).json({
+      error: {
+        code: 'READ_FAILED',
+        message:
+          "This file couldn't be read. Check that it's a sales export (CSV, Excel or a PDF with a table).",
+      },
+    });
   }
 });
 
@@ -598,25 +594,21 @@ app.post(
       })
       .safeParse(req.body);
     if (!p.success)
-      return res
-        .status(400)
-        .json({
-          error: {
-            code: 'INVALID_INPUT',
-            message: 'Store address plus an access token (shpat_…) or Client ID + secret are required.',
-          },
-        });
+      return res.status(400).json({
+        error: {
+          code: 'INVALID_INPUT',
+          message: 'Store address plus an access token (shpat_…) or Client ID + secret are required.',
+        },
+      });
     try {
       const { dataset, orders } = await fetchShopifyDataset(p.data);
       if (dataset.rows.length < 2)
-        return res
-          .status(400)
-          .json({
-            error: {
-              code: 'TOO_FEW_ORDERS',
-              message: `Only ${orders} order(s) found in the last ${p.data.days} days.`,
-            },
-          });
+        return res.status(400).json({
+          error: {
+            code: 'TOO_FEW_ORDERS',
+            message: `Only ${orders} order(s) found in the last ${p.data.days} days.`,
+          },
+        });
       sessions.setDataset(sid(req), dataset, true);
       broadcastTo(sid(req), 'state', { dataset: dataset.name, rows: dataset.rows.length });
       log(`shopify connected: ${orders} orders, ${dataset.rows.length} line items`);
@@ -629,15 +621,13 @@ app.post(
             ? 'SHOPIFY_TIMEOUT'
             : 'SHOPIFY_UNREACHABLE';
       log(`shopify connect failed: ${code}`);
-      res
-        .status(400)
-        .json({
-          error: {
-            code,
-            message:
-              e instanceof ShopifyError ? e.message : 'Could not reach Shopify. Check the store address.',
-          },
-        });
+      res.status(400).json({
+        error: {
+          code,
+          message:
+            e instanceof ShopifyError ? e.message : 'Could not reach Shopify. Check the store address.',
+        },
+      });
     }
   },
 );
@@ -650,11 +640,9 @@ app.post('/api/dataset/sample', (req, res) => {
 
 app.post('/api/dataset/case-study', (req, res) => {
   if (!caseStudyAvailable())
-    return res
-      .status(404)
-      .json({
-        error: { code: 'NO_CASE_STUDY', message: 'Case study data is not bundled with this server.' },
-      });
+    return res.status(404).json({
+      error: { code: 'NO_CASE_STUDY', message: 'Case study data is not bundled with this server.' },
+    });
   const ds = caseStudy(); // one shared copy for every visitor
   sessions.setDataset(sid(req), ds, false);
   broadcastTo(sid(req), 'state', { dataset: ds.name, rows: ds.rows.length });
@@ -713,14 +701,12 @@ if (existsSync(dist)) {
 
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   log(`unhandled: ${err?.type ?? ''} ${err?.message ?? err}`);
-  res
-    .status(err?.status ?? 500)
-    .json({
-      error: {
-        code: err?.type === 'entity.too.large' ? 'TOO_LARGE' : 'INTERNAL',
-        message: err?.type === 'entity.too.large' ? 'Payload too large.' : 'Internal error.',
-      },
-    });
+  res.status(err?.status ?? 500).json({
+    error: {
+      code: err?.type === 'entity.too.large' ? 'TOO_LARGE' : 'INTERNAL',
+      message: err?.type === 'entity.too.large' ? 'Payload too large.' : 'Internal error.',
+    },
+  });
 });
 
 const HOST = env.HOST ?? (PROD ? '0.0.0.0' : '127.0.0.1');

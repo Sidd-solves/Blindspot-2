@@ -23,7 +23,6 @@ import { post } from '../api';
 import { useStore } from '../store';
 import { Card, CardHead, Chip, Dropdown, Loading, Tabs, stagger } from '../components/ui';
 import { UploadZone } from '../components/Upload';
-import TableauPanel from './Connection';
 import { go } from '../App';
 
 const RANGES: Record<string, number> = {
@@ -272,7 +271,6 @@ function ShopifyConnect() {
 
 export default function DataSources() {
   const { dataset, refresh, upload, setReviewOpen } = useStore();
-  const [adv, setAdv] = useState(false);
   return (
     <motion.div
       variants={stagger}
@@ -433,7 +431,7 @@ export default function DataSources() {
             <Sparkles size={15} />
           </span>
           <div className="min-w-0 flex-1">
-            <div className="text-[12.5px] font-extrabold">Currently analysing: {dataset?.name}</div>
+            <div className="text-[12.5px] font-extrabold">Currently analyzing: {dataset?.name}</div>
             <div className="text-[11px] text-[var(--muted)]">
               {dataset?.label} · {dataset?.rows.toLocaleString()} rows
             </div>
@@ -464,31 +462,6 @@ export default function DataSources() {
           </button>
         </div>
       </Card>
-
-      <div className="lg:col-span-12">
-        <button
-          onClick={() => setAdv(!adv)}
-          className="flex items-center gap-1.5 text-[12px] font-bold text-[var(--muted)] hover:text-[var(--text)]"
-        >
-          <ChevronDown
-            size={14}
-            style={{ transform: adv ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}
-          />
-          Advanced: Tableau (beta)
-        </button>
-        <AnimatePresence initial={false}>
-          {adv && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="mt-3 overflow-hidden"
-            >
-              <TableauPanel />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
     </motion.div>
   );
 }

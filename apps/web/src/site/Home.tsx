@@ -12,10 +12,11 @@ import {
   Wrench,
   X,
 } from 'lucide-react';
-import { CAT, SEV, tool, usd, VERDICT } from '../api';
+import { CAT, SEV, tool, usd, VERDICT, impactColor } from '../api';
 import { useStore } from '../store';
 import { CountUp, Reveal, Ring } from '../components/ui';
 import { Aurora, BeamCard, Marquee } from './Effects';
+import { SampleNotice } from './SampleNotice';
 import { CATCHES } from './content';
 import { openApp, siteGo } from './SiteLayout';
 import { useOpenSample } from './Start';
@@ -38,7 +39,7 @@ export function LivePreview() {
         <span className="h-2 w-2 rounded-full bg-[#fbbf24]" />
         <span className="h-2 w-2 rounded-full bg-[#34d399]" />
         <span className="mono ml-2 truncate text-[11px] text-[var(--faint)]">
-          blindspot · analysing {dataset?.rows.toLocaleString() ?? '…'} records
+          blindspot · analyzing {dataset?.rows.toLocaleString() ?? '…'} records
         </span>
       </div>
       <div className="flex items-center justify-between">
@@ -93,7 +94,8 @@ export function LivePreview() {
             {f.impactUsd ? (
               <span
                 className="mono flex-none text-[11.5px] font-semibold"
-                style={{ color: SEV[f.severity].c }}
+                style={{ color: impactColor(f, SEV[f.severity].c) }}
+                title={f.exposure === 'untracked' ? 'Untracked, not lost' : undefined}
               >
                 {usd(f.impactUsd, true)}
               </span>
@@ -373,6 +375,7 @@ export default function Home() {
                 <div className="mt-1 text-[20px] font-extrabold tracking-tight md:text-[24px]">
                   Tested on a real online shop's sales.
                 </div>
+                <SampleNotice className="!mx-0 mt-2" />
               </div>
               <span className="chip" style={{ '--c': 'var(--emerald)' } as CSSProperties}>
                 <BadgeCheck size={11} />
@@ -381,10 +384,10 @@ export default function Home() {
             </div>
             <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
               {[
-                { l: 'Records analysed', v: dataset?.rows ?? 0, c: 'var(--cyan)' },
+                { l: 'Records analyzed', v: dataset?.rows ?? 0, c: 'var(--cyan)' },
                 { l: 'Problems found', v: findings.length, c: 'var(--rose)' },
                 { l: 'Ideas tested by statistics', v: decided.length, c: 'var(--emerald)' },
-                { l: 'Seconds to analyse', v: 2, c: 'var(--violet)' },
+                { l: 'Seconds for 1M rows', v: 5, c: 'var(--violet)' },
               ].map((s) => (
                 <div key={s.l} className="tint rounded-xl p-3" style={{ '--c': s.c } as CSSProperties}>
                   <div className="label">{s.l}</div>

@@ -493,7 +493,7 @@ export function ReadReview() {
                     <span className="mono font-bold text-[var(--text)]">
                       {rep.bridge.analysed.toLocaleString()}
                     </span>{' '}
-                    records analysed
+                    records analyzed
                   </div>
                 )}
 

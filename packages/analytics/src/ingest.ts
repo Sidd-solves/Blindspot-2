@@ -93,7 +93,7 @@ export interface IngestReport {
   rowsRead: number;
   rowsUsed: number;
   ordersFound: number;
-  /** How source rows become analysis records: read → left out → used (+ return records created from refunds) → analysed. */
+  /** How source rows become analysis records: read → left out → used (+ return records created from refunds) → analyzed. */
   bridge?: {
     read: number;
     leftOut: number;
@@ -1328,7 +1328,7 @@ function detectRoles(
     }
   // Score every (role, column) pair: name evidence + whether the values look right.
   const cand: { role: Role; col: string; score: number }[] = [];
-  // A recognised platform's own map is authoritative; only look for extras it doesn't define (e.g. costs).
+  // A recognized platform's own map is authoritative; only look for extras it doesn't define (e.g. costs).
   const open: Role[] = profile ? ['cost', 'profit'] : [...ROLES];
   for (const role of open) {
     if (skip(role)) continue;
@@ -1792,7 +1792,7 @@ export function ingest(
       severity: 'dropped',
       count: fullSize - maxRows,
       lines: [],
-      message: `The file has about ${fullSize.toLocaleString()} rows; the first ${maxRows.toLocaleString()} were analysed. Export a shorter date range (or split it into files) for the rest.`,
+      message: `The file has about ${fullSize.toLocaleString()} rows; the first ${maxRows.toLocaleString()} were analyzed. Export a shorter date range (or split it into files) for the rest.`,
     });
     if (recs.length > maxRows) recs.length = maxRows;
   }

@@ -594,7 +594,7 @@ export function storeFindings(ds: Dataset, fm: FieldMap, rec: (r: CheckRun) => v
       impactUsd: round(atRisk),
       impactBasis: fullYear
         ? 'Their revenue in the year before they went quiet (annual exposure)'
-        : `Their spending over the ${obsMonths} months of data before they went quiet (less than a year of history, so not annualised)`,
+        : `Their spending over the ${obsMonths} months of data before they went quiet (less than a year of history, so not annualized)`,
       nextAction:
         'Contact these accounts personally this week; offer a reorder incentive and ask what changed.',
     });
@@ -764,7 +764,7 @@ export function storeFindings(ds: Dataset, fm: FieldMap, rec: (r: CheckRun) => v
       period: 'whole file',
       exposure: null,
       metric: 'Exact duplicate rows removed during cleaning',
-      explanation: `${pctStr(ds.prep.duplicateRows / ds.prep.inputRows)} of rows were exact copies. Left in, they inflate revenue in any report that doesn't remove them (Blindspot removed them before analysing).`,
+      explanation: `${pctStr(ds.prep.duplicateRows / ds.prep.inputRows)} of rows were exact copies. Left in, they inflate revenue in any report that doesn't remove them (Blindspot removed them before analyzing).`,
       evidence: { ...ds.prep },
       impactUsd: null,
       impactBasis: null,

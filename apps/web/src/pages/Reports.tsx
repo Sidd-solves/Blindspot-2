@@ -107,7 +107,7 @@ export default function Reports() {
               <div className="label">Executive summary · {new Date().toLocaleDateString()}</div>
               <h2 className="mt-1 text-[20px] font-extrabold tracking-tight">{dataset?.name}</h2>
               <div className="mt-0.5 text-[11.5px] text-[var(--muted)]">
-                {dataset?.rows.toLocaleString()} rows analysed · figures computed deterministically ·
+                {dataset?.rows.toLocaleString()} rows analyzed · figures computed deterministically ·
                 scenarios hypothetical
               </div>
             </div>
@@ -200,7 +200,7 @@ export default function Reports() {
                     className="border-t"
                     style={{ borderColor: 'var(--line)' }}
                   >
-                    <td className="py-2 pr-3 font-bold">{r.intervention}</td>
+                    <td className="min-w-[150px] py-2 pr-3 font-bold">{r.intervention}</td>
                     <td>
                       <Chip
                         c={
@@ -215,7 +215,7 @@ export default function Reports() {
                       </Chip>
                     </td>
                     <td
-                      className="mono min-w-[190px] py-1.5 text-right font-semibold"
+                      className="mono min-w-[110px] py-1.5 pl-2 text-right font-semibold md:min-w-[190px]"
                       style={{ color: 'var(--emerald)' }}
                     >
                       {r.expectedBenefitUsd ? (

@@ -484,7 +484,7 @@ function Vision() {
               <ImageUp size={22} className="mx-auto" style={{ color: 'var(--cyan)' }} />
             </motion.div>
             <div className="mt-1 text-[12px] font-bold">Drop a dashboard screenshot</div>
-            <div className="text-[11.5px] text-[var(--faint)]">PNG/JPEG · or Tableau REST capture</div>
+            <div className="text-[11.5px] text-[var(--faint)]">PNG or JPEG</div>
           </div>
         </label>
         <div className="min-w-0 text-[12px]">
@@ -494,8 +494,7 @@ function Vision() {
           {err && <div className="text-[var(--rose)]">{err}</div>}
           {!busy && !res && !err && (
             <div className="text-[var(--muted)]">
-              Vision runs only on a real image you provide or capture from Tableau. It never substitutes
-              another image.
+              Vision runs only on the image you provide. It never substitutes another image.
             </div>
           )}
           {res &&

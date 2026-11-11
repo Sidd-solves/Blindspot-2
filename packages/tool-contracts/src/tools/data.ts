@@ -216,7 +216,7 @@ export function buildStrategy(question: string, v: Dataset) {
   const q = question.toLowerCase();
   const fm = detectFields(v);
   const steps: { tool: string; args: Record<string, unknown>; why: string }[] = [
-    { tool: 'check-connection', args: {}, why: 'Confirm what data source is live before analysing.' },
+    { tool: 'check-connection', args: {}, why: 'Confirm what data source is live before analyzing.' },
     { tool: 'profile-data', args: {}, why: 'Know column types and gaps before drawing conclusions.' },
   ];
   const add = (tool: string, args: Record<string, unknown>, why: string) => steps.push({ tool, args, why });

@@ -14,12 +14,13 @@ import {
   Sparkles,
   X,
 } from 'lucide-react';
-import { CAT, SEV, tool, usd, VERDICT } from '../api';
+import { CAT, SEV, tool, usd, VERDICT, impactColor } from '../api';
 import { useStore } from '../store';
 import { CountUp, Meter, Reveal, Ring } from '../components/ui';
 import { BeamCard } from './Effects';
 import { FinalCta, useHealth } from './Home';
 import { openApp } from './SiteLayout';
+import { SampleNotice } from './SampleNotice';
 
 const Head = ({ icon: I, c, t }: { icon: any; c: string; t: string }) => (
   <div className="flex items-center gap-2">
@@ -35,7 +36,7 @@ const Head = ({ icon: I, c, t }: { icon: any; c: string; t: string }) => (
 
 function TypingChat() {
   const { findings } = useStore();
-  const answer = findings[0] ? `${findings[0].title}. ${findings[0].nextAction}` : 'Analysing your data…';
+  const answer = findings[0] ? `${findings[0].title}. ${findings[0].nextAction}` : 'Analyzing your data…';
   const [n, setN] = useState(0);
   const started = useRef(false);
   useEffect(() => {
@@ -177,8 +178,11 @@ export default function Features() {
           transition={{ delay: 0.2 }}
           className="mt-3 text-[13px] text-[var(--muted)]"
         >
-          Every card below is live, running on a real shop's data right now.
+          {dataset?.source === 'case-study'
+            ? "Every card below is live, running on a real shop's data right now."
+            : 'Every card below is live, running on your file right now.'}
         </motion.p>
+        <SampleNotice className="mt-3" />
       </section>
 
       <section className="mx-auto grid max-w-6xl gap-3 px-4 pb-16 md:grid-cols-6 md:px-6">
@@ -251,7 +255,7 @@ export default function Features() {
                     style={{ background: SEV[f.severity].c }}
                   />
                   <span className="min-w-0 flex-1 truncate font-semibold">{f.title}</span>
-                  <span className="mono flex-none" style={{ color: SEV[f.severity].c }}>
+                  <span className="mono flex-none" style={{ color: impactColor(f, SEV[f.severity].c) }}>
                     {f.impactUsd ? usd(f.impactUsd, true) : '—'}
                   </span>
                 </motion.div>

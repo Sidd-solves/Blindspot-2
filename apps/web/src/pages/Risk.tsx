@@ -25,7 +25,21 @@ import {
   Table2,
 } from 'lucide-react';
 import { useStore, type Finding } from '../store';
-import { CAT, SEV, get, pct, tool, usd, evidenceText, exposureText, BASIS, fmtP, fmtPV, fmtQ } from '../api';
+import {
+  CAT,
+  SEV,
+  get,
+  pct,
+  tool,
+  usd,
+  evidenceText,
+  exposureText,
+  BASIS,
+  fmtP,
+  fmtPV,
+  fmtQ,
+  impactColor,
+} from '../api';
 import {
   Card,
   CardHead,
@@ -97,7 +111,7 @@ const EV: Record<string, [string, Kind]> = {
   profit: ['Profit', 'money'],
   sales: ['Sales', 'money'],
   inputRows: ['Rows read', 'count'],
-  keptRows: ['Rows analysed', 'count'],
+  keptRows: ['Rows analyzed', 'count'],
   duplicateRows: ['Duplicate rows', 'count'],
   returnLines: ['Return lines', 'count'],
   returnValue: ['Value returned', 'money'],
@@ -587,7 +601,10 @@ export default function Risk() {
                     </span>
                   </span>
                   <span className="text-right">
-                    <span className="mono block text-[12px] font-semibold" style={{ color: s.c }}>
+                    <span
+                      className="mono block text-[12px] font-semibold"
+                      style={{ color: impactColor(f, s.c) }}
+                    >
                       {f.impactUsd ? usd(f.impactUsd, true) : '—'}
                     </span>
                     <span className="block text-[11px] font-bold uppercase text-[var(--faint)]">

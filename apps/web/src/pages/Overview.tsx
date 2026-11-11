@@ -32,7 +32,7 @@ import {
   X,
 } from 'lucide-react';
 import { useStore } from '../store';
-import { ago, get, pct, SEV, CAT, tool, usd, evidenceText, VERDICT, exposureText } from '../api';
+import { ago, get, pct, SEV, CAT, tool, usd, evidenceText, VERDICT, exposureText, impactColor } from '../api';
 import { Card, CardHead, Chip, CountUp, Meter, Ring, Sparkline, stagger, Loading } from '../components/ui';
 import { ChartTip, axis, glowDefs } from '../components/charts';
 import { go } from '../App';
@@ -354,7 +354,7 @@ export default function Overview() {
               ))}
             {i === 3 && (
               <div className="mt-1.5 text-[11px] text-[var(--faint)]">
-                {dataset?.rows.toLocaleString()} records analysed (sales + returns)
+                {dataset?.rows.toLocaleString()} records analyzed (sales + returns)
               </div>
             )}
           </Card>
@@ -531,7 +531,10 @@ export default function Overview() {
                     {exposureText(f) ? ` · ${exposureText(f)}` : ''}
                   </span>
                 </span>
-                <span className="mono text-[11.5px] font-semibold" style={{ color: SEV[f.severity].c }}>
+                <span
+                  className="mono text-[11.5px] font-semibold"
+                  style={{ color: impactColor(f, SEV[f.severity].c) }}
+                >
                   {f.impactUsd ? usd(f.impactUsd, true) : '—'}
                 </span>
               </motion.button>

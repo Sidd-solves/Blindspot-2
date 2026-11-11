@@ -12,7 +12,7 @@ import { money } from './money';
  * Yearly baseline for the simulator. Profit stays null when the data has no profit column (unknown is not zero).
  * - a year or more of data: yearly average over the loaded range ("average")
  * - 1 to 12 months: a run rate, total / years, not seasonally adjusted ("run-rate")
- * - under 30 days: too short to annualise; the observed total is returned and labelled as such ("observed")
+ * - under 30 days: too short to annualize; the observed total is returned and labeled as such ("observed")
  */
 export const baselineOf = (ds: Dataset) => {
   const fm = detectFields(ds);
@@ -42,8 +42,8 @@ export const baselineOf = (ds: Dataset) => {
       : basis === 'run-rate'
         ? `per year (run rate from ${months} months of data, not seasonally adjusted)`
         : years === null
-          ? 'over the file (no dates, so not annualised)'
-          : `over the ${Math.round(years * 365.25)} days in your file (too short to annualise)`;
+          ? 'over the file (no dates, so not annualized)'
+          : `over the ${Math.round(years * 365.25)} days in your file (too short to annualize)`;
   return { revenue, profit, years: years ?? 1, basis, months, period };
 };
 

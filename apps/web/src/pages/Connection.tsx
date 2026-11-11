@@ -145,7 +145,7 @@ function WorksheetLoader({ live }: { live: boolean }) {
         {res?.ok && (
           <div className="text-[11.5px] text-[var(--emerald)]">
             Loaded {res.data.rowCount} rows ({res.data.aggregated ? 'summary data' : 'underlying'}). Every
-            page now analyses this worksheet.
+            page now analyzes this worksheet.
           </div>
         )}
       </div>
@@ -288,7 +288,7 @@ export default function Connection() {
               dl: true,
             },
             {
-              t: 'Analyse live',
+              t: 'Analyze live',
               d: 'Worksheets, filters and parameters now flow to every page here.',
               c: 'var(--emerald)',
             },

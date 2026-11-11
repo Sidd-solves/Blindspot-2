@@ -46,7 +46,7 @@ export function simulateScenario(
   const margin = profitKnown ? (base.revenue ? base.profit! / base.revenue : 0) : as.assumedMargin;
   const baseProfit = profitKnown ? base.profit! : base.revenue * margin;
   const cogs = base.revenue - baseProfit;
-  // Churn is an annual rate. When the baseline is a short observed period (not annualised), convert it to that
+  // Churn is an annual rate. When the baseline is a short observed period (not annualized), convert it to that
   // period: churn over h years = 1 − (1 − annual)^h. Other levers scale with revenue or cost of the same period.
   const horizon = base.basis === 'observed' ? Math.min(1, Math.max(0, base.years ?? 1)) : 1;
   const periodChurn = horizon === 1 ? as.annualChurnRate : 1 - Math.pow(1 - as.annualChurnRate, horizon);

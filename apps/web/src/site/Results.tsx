@@ -1,11 +1,12 @@
 import { motion } from 'framer-motion';
 import { useEffect, useState, type CSSProperties } from 'react';
 import { BadgeCheck, Check, Database, Globe2, X } from 'lucide-react';
-import { CAT, SEV, tool, usd, evidenceText, VERDICT } from '../api';
+import { CAT, SEV, tool, usd, evidenceText, VERDICT, impactColor } from '../api';
 import { useStore } from '../store';
 import { CountUp, Reveal } from '../components/ui';
 import { BeamCard } from './Effects';
 import { FinalCta } from './Home';
+import { SampleNotice } from './SampleNotice';
 
 // Verified on the FULL dataset (1,067,371 rows) by an independent Python script: docs/FACT_CHECK.md
 const FACTS = [
@@ -70,7 +71,7 @@ export default function Results() {
                 { l: 'Rows in the file', v: 1067371, c: 'var(--cyan)' },
                 { l: 'Countries', v: 43, c: 'var(--blue)' },
                 { l: 'Problems found', v: findings.length, c: 'var(--rose)' },
-                { l: 'Seconds to analyse', v: 5, c: 'var(--emerald)' },
+                { l: 'Seconds to analyze', v: 5, c: 'var(--emerald)' },
               ].map((s) => (
                 <div key={s.l} className="tint rounded-xl p-3" style={{ '--c': s.c } as CSSProperties}>
                   <div className="label">{s.l}</div>
@@ -85,6 +86,7 @@ export default function Results() {
       <section className="mx-auto max-w-6xl px-4 pb-14 md:px-6">
         <Reveal>
           <h2 className="text-[24px] font-extrabold tracking-tight md:text-[30px]">What it found</h2>
+          <SampleNotice className="!mx-0 mt-2" />
           {real && (
             <p className="mt-1 text-[12px] text-[var(--muted)]">
               Live from the demo, which runs on a 25% sample of the shop's customers (the slice whose overall
@@ -101,7 +103,10 @@ export default function Results() {
                     {CAT[f.category]?.label}
                   </span>
                   {f.impactUsd ? (
-                    <span className="mono text-[12px] font-semibold" style={{ color: SEV[f.severity].c }}>
+                    <span
+                      className="mono text-[12px] font-semibold"
+                      style={{ color: impactColor(f, SEV[f.severity].c) }}
+                    >
                       {usd(f.impactUsd, true)}
                     </span>
                   ) : null}
