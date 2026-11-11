@@ -1,0 +1,22 @@
+{
+  "name": "blindspot",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "workspaces": ["packages/*", "services/*", "apps/*"],
+  "scripts": {
+    "dev": "concurrently -n api,web -c cyan,magenta \"npm run dev -w @blindspot/api\" \"npm run dev -w @blindspot/web\"",
+    "api": "npm run dev -w @blindspot/api",
+    "web": "npm run dev -w @blindspot/web",
+    "mcp": "npm run start -w @blindspot/mcp-server",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "concurrently": "^9.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}

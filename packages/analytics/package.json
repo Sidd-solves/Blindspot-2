@@ -1,0 +1,1 @@
+{ "name": "@blindspot/analytics", "private": true, "version": "0.1.0", "type": "module", "main": "src/index.ts" , "dependencies": { "papaparse": "^5.4.1" } }

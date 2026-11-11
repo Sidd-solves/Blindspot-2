@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest manifest-version="0.1" xmlns="http://www.tableau.com/xml/extension_manifest">
+  <dashboard-extension id="com.blindspot.bridge" extension-version="0.1.0">
+    <default-locale>en_US</default-locale>
+    <name resource-id="name"/>
+    <description>Connects this dashboard to Blindspot for AI-assisted risk analysis.</description>
+    <author name="Blindspot" email="team@blindspot.example" organization="Blindspot" website="https://github.com/"/>
+    <min-api-version>1.4</min-api-version>
+    <source-location>
+      <url>http://localhost:8765/index.html</url>
+    </source-location>
+    <icon>iVBORw0KGgoAAAANSUhEUgAAAEYAAABGCAYAAABxLuKEAAADI0lEQVR42u3bh1IUQRAGYB5HBBERREQQj/OOI0tOkpPkbNYypzKnMocypzKnMqfyZfoZ2p6T5Vbm7uB2OXaY67/qf4Gvtqanunbi4iLMmBdwNI/qAxzJBxwuoBYCDhUBDhZTSwAHSgH7y6jlgH0VgL2V1CrAnmpqDeDGWsDuOmo9YFcDYGcjtQmwoxmwvYXaCtjWBtjaTu0AbOmkdgE2dwM29VB7ARv7ADf0UwcAGwYB64eow4B1I4C1o9RxwJoJ6ibA6s2AcXOdiVzAcTfgmIe6QFGqtlC3AlZuA6zYTt1hA2rCBagrSvlOwLJd1N0RAsUKyvo9gKV7Z4kTayil+wBL9s+AE6soJQcAiw+GwIl1lKJD1MNBcBgFsPDINBhG+YdScJR6zITDKAGU/OMmGEYJoPhOmGEYZQrFd3IShlH+R8k7Beg9TTiMIqN4zwgYRpFQPGcJhlFkFM85gmEUGWXdeQHDKBKK+wLBMIqM4r5IMLqiiFhFyb0kYDT9UkSsorguE4yuKH4YiyiuKwSjK4qIVZS1VwWMpigiVlFyrhGMrih+GIsoOdcJRpeRHCxWUdbcEDCMIqFk3yQYRpFRsm8JGEaRULJuE4xTKCJ2r/nBMhcoWXcIxikUIyqirL4rYBxEMaIaSuY9gnEaxYhKKJn3CUYFFHNUQFn1QMAohGIk1D4lKEwUUDIeEoxqKEacRMl4RDBOnynh4hTKyscCRoGDNtJEGyX9CcGoMn0iSbRR0p8SjEojWRWUFc8EjGL3lFBnynyipD0nGNVQjHWkkyhpLwSMgijG5s0plNSXBKMqinGj9cPMM0rqK4Kxu0+JJooTX4pAWf5awNhcMumIkvKGYOxu3nRESXlLMHbXkTqiLHsnYGzuaHVESX5PMHYX1zqiJH8gGFX/T3ESZelHAcMoEkrSJ4JhFBkl6TPBMIqMsuSLgGEUCSXxK8EwioyS+E3AMIqEkvCdYBhFRkn4MfkChVGCoIgwSgBl8U8TDKMEUOJ/mWEYZQol/ve0l7SMEgTFD8MouOhPiNf6jBImjBImjBImjDJDYmb62M2Cv+bPMn8Bx7nqS5dg4fAAAAAASUVORK5CYII=</icon>
+    <permissions>
+      <permission>full data</permission>
+    </permissions>
+  </dashboard-extension>
+  <resources>
+    <resource id="name">
+      <text locale="en_US">Blindspot Bridge</text>
+    </resource>
+  </resources>
+</manifest>

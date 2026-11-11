@@ -1,0 +1,168 @@
+import express, { type Request, type Response, type NextFunction } from 'express';
+import cors from 'cors';
+import rateLimit from 'express-rate-limit';
+import { createServer } from 'node:http';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { timingSafeEqual } from 'node:crypto';
+import { z } from 'zod';
+import { callTool, listTools, SessionState, screenUserInput, redactSecrets, type ToolContext } from '@blindspot/tool-contracts';
+import { parseCsv, generateSampleDataset, profileData, detectFields, crosstab } from '@blindspot/analytics';
+import { BridgeHub } from './bridge';
+import { makeLlm, claudeChat, MODELS, getModel, setModel, type ModelId } from './llm';
+import { deterministicAnswer } from './deterministic';
+import { zodToJsonSchema } from './zod-json';
+import { fetchShopifyDataset, ShopifyError } from './shopify';
+
+// Load the repo-root .env for local runs (hosted platforms inject real env vars, which take precedence).
+const rootEnv = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../.env');
+if (existsSync(rootEnv)) process.loadEnvFile(rootEnv);
+const env = process.env;
+const PROD = env.NODE_ENV === 'production';
+const PORT = Number(env.PORT ?? 8787);
+const ORIGINS = (env.ALLOWED_ORIGINS ?? 'http://127.0.0.1:5173,http://localhost:5173,http://127.0.0.1:8765,http://localhost:8765').split(',').map((s) => s.trim());
+const SENSITIVE = new Set(['get-worksheet-data', 'set-parameter', 'get-dashboard-screenshot']);
+const log = (m: string) => console.log(`[api] ${new Date().toISOString()} ${redactSecrets(m)}`);
+
+const app = express();
+const server = createServer(app);
+const state = new SessionState();
+const llm = makeLlm();
+const bridge = new BridgeHub(server, { token: env.BRIDGE_TOKEN, allowedOrigins: ORIGINS, log });
+const ctx: ToolContext = { state, bridge, llm, rest: { serverUrl: env.TABLEAU_SERVER_URL, site: env.TABLEAU_SITE, patName: env.TABLEAU_PAT_NAME, patSecret: env.TABLEAU_PAT_SECRET } };
+const activity: { tool: string; ok: boolean; ms: number; at: string }[] = [];
+const sse = new Set<Response>();
+const broadcast = (name: string, payload: unknown) => { for (const r of sse) r.write(`event: ${name}\ndata: ${JSON.stringify(payload)}\n\n`); };
+bridge.onEvent((e) => broadcast(e.name, e.payload));
+
+app.disable('x-powered-by');
+app.use((_req, res, next) => { res.set({ 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer', 'X-Frame-Options': 'SAMEORIGIN' }); next(); });
+app.use('/api', cors({ origin: (o, cb) => cb(null, !o || ORIGINS.includes(o)), credentials: false }));
+app.use('/api', rateLimit({ windowMs: 60_000, limit: 300, standardHeaders: true, legacyHeaders: false }));
+const chatLimit = rateLimit({ windowMs: 60_000, limit: 20 });
+
+function requireAdmin(req: Request, res: Response, next: NextFunction) {
+  const want = env.ADMIN_TOKEN;
+  if (!want) return PROD ? res.status(503).json({ error: { code: 'ADMIN_TOKEN_NOT_SET', message: 'Sensitive endpoints are disabled until ADMIN_TOKEN is configured.' } }) : next();
+  const got = (req.headers.authorization ?? '').replace(/^Bearer\s+/i, '');
+  if (got.length === want.length && timingSafeEqual(Buffer.from(got), Buffer.from(want))) return next();
+  res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Admin token required.' } });
+}
+
+app.get('/api/health', (_req, res) => res.json({ ok: true, tools: listTools().length, extension: bridge.isConnected(), ai: llm.configured ? llm.model : null }));
+
+app.get('/api/tools', (_req, res) => res.json(listTools().map((t) => ({ name: t.name, category: t.category, core: t.core, description: t.description, sensitive: SENSITIVE.has(t.name), inputSchema: zodToJsonSchema(t.input) }))));
+
+app.post('/api/tools/:name', express.json({ limit: '8mb' }), (req, res, next) => (SENSITIVE.has(req.params.name) ? requireAdmin(req, res, next) : next()), async (req, res) => {
+  const r = await callTool(ctx, req.params.name, req.body ?? {});
+  activity.unshift({ tool: r.tool, ok: r.ok, ms: r.ms, at: new Date().toISOString() });
+  activity.length = Math.min(activity.length, 50);
+  if (!r.ok) log(`tool ${r.tool} failed: ${r.error?.code}`);
+  if (r.ok && ['apply-filter', 'get-worksheet-data', 'clear-canvas'].includes(r.tool)) broadcast('state', { filters: Object.fromEntries(state.filters), rows: state.view().rows.length });
+  res.status(r.ok ? 200 : r.error?.code === 'UNKNOWN_TOOL' ? 404 : 400).json(r);
+});
+
+app.get('/api/settings', (_req, res) => res.json({ model: getModel(), models: MODELS, aiConfigured: llm.configured, bridgeTokenRequired: !!env.BRIDGE_TOKEN, adminTokenRequired: !!env.ADMIN_TOKEN, restConfigured: !!(env.TABLEAU_SERVER_URL && env.TABLEAU_PAT_NAME) }));
+app.post('/api/settings/model', express.json({ limit: '1kb' }), (req, res) => {
+  const m = z.enum(MODELS).safeParse(req.body?.model);
+  if (!m.success) return res.status(400).json({ error: { code: 'INVALID_MODEL', message: `Model must be one of ${MODELS.join(', ')}` } });
+  setModel(m.data as ModelId);
+  res.json({ model: getModel() });
+});
+
+app.get('/api/activity', (_req, res) => res.json(activity.slice(0, 20)));
+
+app.get('/api/dataset', (_req, res) => {
+  const v = state.view();
+  res.json({ name: v.name, source: v.source, label: v.label, rows: v.rows.length, totalRows: state.dataset.rows.length, filters: Object.fromEntries(state.filters), fields: detectFields(v), columns: profileData(v).columns.map((c) => ({ name: c.name, type: c.type, distinct: c.distinct, values: c.type === 'category' ? [...new Set(state.dataset.rows.map((r) => String(r[c.name] ?? '')))].sort().slice(0, 50) : undefined })) });
+});
+
+app.get('/api/crosstab', (req, res) => {
+  const q = z.object({ row: z.string().max(100), col: z.string().max(100), measure: z.string().max(100), ratioOf: z.string().max(100).optional() }).safeParse(req.query);
+  if (!q.success) return res.status(400).json({ error: { code: 'INVALID_INPUT', message: 'row, col, measure required' } });
+  const cols = new Set(profileData(state.view()).columns.map((c) => c.name));
+  for (const f of [q.data.row, q.data.col, q.data.measure, q.data.ratioOf].filter(Boolean) as string[]) if (!cols.has(f)) return res.status(400).json({ error: { code: 'UNKNOWN_FIELD', message: `Unknown field ${f}` } });
+  res.json(crosstab(state.view().rows, q.data.row, q.data.col, q.data.measure, q.data.ratioOf));
+});
+
+app.post('/api/dataset/csv', express.text({ type: ['text/csv', 'text/plain'], limit: '15mb' }), (req, res) => {
+  const name = z.string().max(120).regex(/^[\w .()-]*$/).catch('Uploaded CSV').parse(req.query.name);
+  if (typeof req.body !== 'string' || !req.body.trim()) return res.status(400).json({ error: { code: 'EMPTY', message: 'Send CSV text as the request body.' } });
+  const ds = parseCsv(req.body, name || 'Uploaded CSV');
+  if (ds.rows.length < 2) return res.status(400).json({ error: { code: 'TOO_FEW_ROWS', message: 'CSV needs a header and at least 2 rows.' } });
+  if (!detectFields(ds).measure) return res.status(400).json({ error: { code: 'NO_MEASURE', message: 'CSV needs at least one numeric column.' } });
+  state.setDataset(ds);
+  broadcast('state', { dataset: ds.name, rows: ds.rows.length });
+  log(`dataset replaced: ${ds.rows.length} rows`);
+  res.json({ ok: true, name: ds.name, rows: ds.rows.length });
+});
+
+// Credentials are used for this one request only: never stored, logged or returned.
+app.post('/api/connect/shopify', rateLimit({ windowMs: 60_000, limit: 6 }), express.json({ limit: '4kb' }), async (req, res) => {
+  const p = z.object({
+    shop: z.string().min(3).max(120),
+    accessToken: z.string().regex(/^shp[a-z]{2}_[A-Za-z0-9]{16,}$/).optional(),
+    clientId: z.string().min(8).max(128).optional(), clientSecret: z.string().min(8).max(256).optional(),
+    days: z.number().int().min(7).max(730).default(365), maxOrders: z.number().int().min(10).max(5000).default(2500),
+  }).safeParse(req.body);
+  if (!p.success) return res.status(400).json({ error: { code: 'INVALID_INPUT', message: 'Store address plus an access token (shpat_…) or Client ID + secret are required.' } });
+  try {
+    const { dataset, orders } = await fetchShopifyDataset(p.data);
+    if (dataset.rows.length < 2) return res.status(400).json({ error: { code: 'TOO_FEW_ORDERS', message: `Only ${orders} order(s) found in the last ${p.data.days} days.` } });
+    state.setDataset(dataset);
+    broadcast('state', { dataset: dataset.name, rows: dataset.rows.length });
+    log(`shopify connected: ${orders} orders, ${dataset.rows.length} line items`);
+    res.json({ ok: true, name: dataset.name, orders, rows: dataset.rows.length, label: dataset.label });
+  } catch (e: any) {
+    const code = e instanceof ShopifyError ? e.code : e?.name === 'TimeoutError' ? 'SHOPIFY_TIMEOUT' : 'SHOPIFY_UNREACHABLE';
+    log(`shopify connect failed: ${code}`);
+    res.status(400).json({ error: { code, message: e instanceof ShopifyError ? e.message : 'Could not reach Shopify. Check the store address.' } });
+  }
+});
+
+app.post('/api/dataset/sample', (_req, res) => { state.setDataset(generateSampleDataset()); broadcast('state', { dataset: 'sample' }); res.json({ ok: true }); });
+
+app.post('/api/chat', chatLimit, express.json({ limit: '32kb' }), async (req, res) => {
+  const parsed = z.object({ message: z.string().min(1).max(2000) }).safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: { code: 'INVALID_INPUT', message: 'message (1-2000 chars) is required.' } });
+  const screen = screenUserInput(parsed.data.message);
+  if (!screen.allowed) { log(`guardrail blocked: ${screen.ids.join(',')}`); return res.json({ blocked: true, reasons: screen.reasons, answer: `Blocked by guardrails: ${screen.reasons.join('; ')}.`, evidence: [], mode: 'guardrail' }); }
+  try {
+    const out = llm.configured ? await claudeChat(llm, ctx, parsed.data.message) : await deterministicAnswer(ctx, parsed.data.message);
+    res.json(out);
+  } catch (e: any) {
+    log(`chat error: ${e?.status ?? ''} ${e?.message ?? e}`);
+    const fallback = await deterministicAnswer(ctx, parsed.data.message);
+    res.json({ ...fallback, note: 'AI provider failed; answered in deterministic mode.' });
+  }
+});
+
+app.get('/api/events', (req, res) => {
+  res.set({ 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
+  res.flushHeaders();
+  res.write(`event: hello\ndata: ${JSON.stringify({ extension: bridge.isConnected() })}\n\n`);
+  sse.add(res);
+  const t = setInterval(() => res.write(': keepalive\n\n'), 20_000);
+  req.on('close', () => { clearInterval(t); sse.delete(res); });
+});
+
+// Single-service production deploy: serve the built web app from the same persistent Node process.
+const here = path.dirname(fileURLToPath(import.meta.url));
+const dist = path.resolve(here, '../../../apps/web/dist');
+if (existsSync(dist)) {
+  app.use(express.static(dist, { index: false, maxAge: '1h' }));
+  app.get(/^(?!\/api|\/bridge).*/, (_req, res) => res.sendFile(path.join(dist, 'index.html')));
+}
+
+app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  log(`unhandled: ${err?.type ?? ''} ${err?.message ?? err}`);
+  res.status(err?.status ?? 500).json({ error: { code: err?.type === 'entity.too.large' ? 'TOO_LARGE' : 'INTERNAL', message: err?.type === 'entity.too.large' ? 'Payload too large.' : 'Internal error.' } });
+});
+
+const HOST = env.HOST ?? (PROD ? '0.0.0.0' : '127.0.0.1');
+server.listen(PORT, HOST, () => {
+  log(`Blindspot API on http://${HOST}:${PORT} | tools=${listTools().length} | ai=${llm.configured ? llm.model : 'deterministic'} | bridge ws://127.0.0.1:${PORT}/bridge${env.BRIDGE_TOKEN ? ' (token required)' : ' (no token, dev only)'}`);
+  if (PROD && !env.BRIDGE_TOKEN) log('WARNING: BRIDGE_TOKEN not set in production');
+});
+export { app, server, state, bridge };

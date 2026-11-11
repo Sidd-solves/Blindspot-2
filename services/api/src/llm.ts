@@ -1,0 +1,69 @@
+import Anthropic from '@anthropic-ai/sdk';
+import { zodToJsonSchema } from './zod-json';
+import { callTool, getTool, toolNames, checkToolAllowed, wrapUntrusted, UNTRUSTED_RULE, type ToolContext, type LlmLike } from '@blindspot/tool-contracts';
+
+/** Switchable from Settings. Sonnet 5.5 by default to keep API cost down. */
+export const MODELS = ['claude-haiku-4-5', 'claude-sonnet-5-5', 'claude-opus-5-5'] as const;
+export type ModelId = (typeof MODELS)[number];
+let current: ModelId = (MODELS as readonly string[]).includes(process.env.ANTHROPIC_MODEL ?? '') ? (process.env.ANTHROPIC_MODEL as ModelId) : 'claude-sonnet-5-5';
+export const getModel = () => current;
+export const setModel = (m: ModelId) => { current = m; };
+// Server-side refusal fallback is supported on the 5.5 models; Haiku 4.5 runs without it.
+const fallbackParams = (m: ModelId) => (m === 'claude-haiku-4-5' ? {} : { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' });
+
+/** Tools the chat model may call. Read-only analysis by default; no Tableau writes from chat. */
+export const CHAT_TOOLS = ['analyze-dashboard-smart', 'full-data-exploration', 'profile-data', 'get-semantic-metadata', 'interpret-concentration', 'interpret-segments', 'transform-to-story', 'recommend-actions', 'run-scenario', 'suggest-annotations', 'generate-executive-summary'];
+
+const SYSTEM = `You are Blindspot, an AI business analyst giving a second opinion on company data.
+Ground every claim in tool results. Quote the numbers the tools return; never invent figures. Numbers come from deterministic tools, you only interpret.
+State uncertainty plainly: correlation is not causation, scenarios are hypothetical, sample data is synthetic.
+Answer in under 180 words: a direct answer, then 2-4 evidence bullets, then one recommended next step.
+${UNTRUSTED_RULE}`;
+
+export function makeLlm(): LlmLike & { client?: Anthropic } {
+  if (!process.env.ANTHROPIC_API_KEY) return { configured: false, get model() { return current; } };
+  const client = new Anthropic();
+  return {
+    configured: true, get model() { return current; }, client,
+    async describeImage(base64, mediaType, prompt) {
+      const r = await client.messages.create({ model: current, max_tokens: 4000, messages: [{ role: 'user', content: [{ type: 'image', source: { type: 'base64', media_type: mediaType as 'image/png', data: base64 } }, { type: 'text', text: prompt }] }] });
+      return r.content.filter((b) => b.type === 'text').map((b: any) => b.text).join('\n');
+    },
+  };
+}
+
+export interface Evidence { tool: string; ok: boolean; summary: string; data?: unknown }
+
+export async function claudeChat(llm: ReturnType<typeof makeLlm>, ctx: ToolContext, question: string) {
+  const client = llm.client!;
+  const tools: Anthropic.Tool[] = CHAT_TOOLS.map((n) => {
+    const t = getTool(n)!;
+    return { name: n, description: t.description, input_schema: zodToJsonSchema(t.input) as Anthropic.Tool.InputSchema };
+  });
+  const messages: Anthropic.MessageParam[] = [{ role: 'user', content: question }];
+  const evidence: Evidence[] = [];
+  const allow = new Set(CHAT_TOOLS);
+  for (let turn = 0; turn < 6; turn++) {
+    const res: any = await (client.beta.messages.create as any)({
+      model: current, max_tokens: 8000, system: SYSTEM, tools, messages, ...fallbackParams(current),
+    });
+    if (res.stop_reason === 'refusal') return { answer: 'The model declined this request.', evidence, mode: 'claude' as const };
+    messages.push({ role: 'assistant', content: res.content });
+    if (res.stop_reason !== 'tool_use') {
+      return { answer: res.content.filter((b: any) => b.type === 'text').map((b: any) => b.text).join('\n'), evidence, mode: 'claude' as const };
+    }
+    const results: Anthropic.ToolResultBlockParam[] = [];
+    for (const block of res.content.filter((b: any) => b.type === 'tool_use')) {
+      const gate = checkToolAllowed(block.name, toolNames(), { hasBridge: !!ctx.bridge?.isConnected(), hasImage: !!ctx.state.lastImage, hasRestConfig: false });
+      if (!allow.has(block.name) || !gate.ok) {
+        results.push({ type: 'tool_result', tool_use_id: block.id, is_error: true, content: gate.reason ?? 'Tool not allowed in chat.' });
+        continue;
+      }
+      const r = await callTool(ctx, block.name, block.input);
+      evidence.push({ tool: block.name, ok: r.ok, summary: r.ok ? 'ok' : r.error!.message, data: r.data });
+      results.push({ type: 'tool_result', tool_use_id: block.id, is_error: !r.ok, content: wrapUntrusted(block.name, r.ok ? r.data : r.error) });
+    }
+    messages.push({ role: 'user', content: results });
+  }
+  return { answer: 'Stopped after 6 tool rounds without a final answer.', evidence, mode: 'claude' as const };
+}

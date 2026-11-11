@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blindspot Bridge</title>
+  <!-- Official Tableau-hosted Extensions API library -->
+  <script src="https://extensions.tableauusercontent.com/resources/tableau.extensions.1.latest.min.js"></script>
+  <style>
+    :root { --bg:#0b1022; --panel:#121833; --line:rgba(140,150,255,.14); --text:#eef0ff; --muted:#a2a8cf; --violet:#a78bfa; --cyan:#22d3ee; --emerald:#34d399; --amber:#fbbf24; --rose:#fb7185; }
+    * { box-sizing: border-box; } body { margin:0; font: 12px/1.45 system-ui, sans-serif; background: radial-gradient(circle at 0 0, rgba(167,139,250,.25), transparent 60%), var(--bg); color: var(--text); padding: 10px; }
+    .head { display:flex; align-items:center; gap:8px; } .logo { width:22px; height:22px; border-radius:6px; background: linear-gradient(135deg, var(--violet), var(--cyan)); }
+    .pill { margin-left:auto; display:inline-flex; align-items:center; gap:6px; padding:2px 8px; border-radius:99px; font-weight:700; font-size:11px; border:1px solid var(--line); }
+    .dot { width:7px; height:7px; border-radius:99px; background: var(--c); box-shadow: 0 0 8px var(--c); animation: p 1.6s infinite; } @keyframes p { 50% { opacity:.4 } }
+    .log { margin-top:8px; max-height: calc(100vh - 60px); overflow:auto; border:1px solid var(--line); border-radius:8px; background: var(--panel); }
+    .row { display:flex; gap:8px; padding:4px 8px; border-bottom:1px solid var(--line); font-family: ui-monospace, monospace; font-size:11px; animation: in .25s ease-out; } @keyframes in { from { opacity:0; transform: translateY(-4px) } }
+    .t { color: var(--muted); } .ok { color: var(--emerald); } .err { color: var(--rose); }
+  </style>
+</head>
+<body>
+  <div class="head"><div class="logo"></div><b>Blindspot Bridge</b><span class="pill" id="status" style="--c: var(--amber)"><span class="dot"></span><span id="status-text">Starting</span></span></div>
+  <div class="log" id="log"></div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
