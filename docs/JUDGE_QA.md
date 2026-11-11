@@ -56,4 +56,4 @@ More connectors (WooCommerce, Square, Stripe), weekly alerts by email, and compa
 I used Claude Code as a coding partner. I made the product decisions: focusing on small businesses, Shopify, the design, what to test and which problems mattered. The AI helped write and debug the code, and we disclose that openly.
 
 **17. Where did the idea come from?**
-It was inspired by DashAgent, which won the Tableau Hackathon. That project gives Tableau dashboards a "second opinion" for big companies. We wrote everything from scratch and took the idea further: small businesses, real-data testing, proven ideas, a money simulator and a report.
+I run a Shopify store and never knew which numbers to worry about. Big companies pay data teams to find problems in their sales; I wanted that for small shops, and I wanted every number to be provable.

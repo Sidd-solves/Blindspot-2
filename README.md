@@ -42,5 +42,3 @@ Add `ANTHROPIC_API_KEY=` to `.env` for Claude answers (optional; without it the 
 
 ## Docs
 [Feature matrix and limitations](docs/FEATURE_MATRIX.md) · [Fact check](docs/FACT_CHECK.md) · [Deployment](docs/DEPLOYMENT.md) · [Phase plan](docs/PHASE_PLAN.md) · [Devpost draft](docs/DEVPOST.md) · [Presentation](docs/PRESENTATION.md) · [AI disclosure](docs/AI_DISCLOSURE.md)
-
-Inspired by the public write-up of DashAgent (Tableau Hackathon 2025 grand prize). All code written independently.

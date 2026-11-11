@@ -4,7 +4,6 @@
 
 **Positioning:** Blindspot, an AI business analyst for small businesses. Connect Shopify or upload a spreadsheet. It finds what's costing you money, proves it, prices it, and tells you what to do.
 
-**Reference point:** DashAgent won the **$17,000 Grand Prize** (of $45,000 total) at the Tableau Hackathon against 2,233 participants. We build on that idea and go further: risk ranking, money simulator, actions, reports, Shopify.
 
 ## DataNova scoring → where we earn it
 | Criterion | Weight | How Blindspot scores |
@@ -65,11 +64,13 @@
 
 ## Phase 6: Submit DataNova (Nov 8) · YOU, with copy-paste text from ME
 - [ ] Devpost project: overview, problem, solution, tech stack, demo link, results/validation, impact, team, slides link, video link
-- [ ] AI-use disclosure and credit for the DashAgent inspiration (rules require acknowledging pre-existing work)
 - **Done when:** project published and confirmation received
 
 ## Phase 7: Buffer (Nov 9–10)
 - Fix anything broken. Nothing new gets added.
+
+## Extra: Remote Control AI (due Nov 4, 5pm PST)
+- [ ] Join on Devpost; one-line pitch, 150–300 word description (lead with "AI suggests, math checks"), 2–3 min video, repo, tech stack, live demo link
 
 ## Extra: Next Byte Hacks V5 (due Nov 7, 4pm CST)
 - [ ] Join on Devpost (students 18+, solo OK)

@@ -53,7 +53,7 @@ export default function SiteLayout({ page, children }: { page: string; children:
             <div className="space-y-1.5"><div className="label">Product</div>{SITE.slice(1).map((s) => <button key={s.id} onClick={() => siteGo(s.id)} className="block hover:text-[var(--text)]">{s.label}</button>)}<button onClick={() => openApp()} className="block hover:text-[var(--text)]">Open the app</button></div>
             <div className="space-y-1.5"><div className="label">Project</div><a href="https://github.com/Sidd-solves/BlindSpot" target="_blank" rel="noreferrer" className="flex items-center gap-1 hover:text-[var(--text)]"><Github size={12} />GitHub</a><button onClick={() => siteGo('results')} className="block hover:text-[var(--text)]">Fact check</button></div>
           </div>
-          <div className="max-w-sm">Case-study data: UCI Online Retail II (CC BY 4.0). Inspired by the public write-up of DashAgent (Tableau Hackathon 2025). All code written independently.</div>
+          <div className="max-w-sm">Case-study data: UCI Online Retail II (CC BY 4.0).</div>
         </div>
       </footer>
     </div>
