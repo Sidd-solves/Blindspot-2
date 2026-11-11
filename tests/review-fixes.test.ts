@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { analyzeSmart, baselineOf, testGeneric, toMs, reportTopics, simulateScenario, corrTest, recommend, type Dataset, type Finding, type Row } from '@blindspot/analytics';
+import { analyzeSmart, baselineOf, testGeneric, toMs, reportTopics, simulateScenario, corrTest, recommend, checkRuns, ingest, type Dataset, type Finding, type Row } from '@blindspot/analytics';
 import { SessionState } from '@blindspot/tool-contracts';
 import { loadCaseStudy } from '../services/api/src/case-study';
 
@@ -188,5 +188,57 @@ describe('review fixes, round 4', () => {
     const c = (rep as any).check;
     expect(c.checks.find((x: any) => x.id === 'repeat-rate').ran).toBe(false);
     expect(c.coverage).not.toBe('full');
+  });
+});
+
+describe('review fixes, round 5', () => {
+  const mk = (rows: Row[]): Dataset => ({ name: 't', label: 't', source: 'upload', rows } as unknown as Dataset);
+  // Six customers, one product, January to June; three good customers stop after March.
+  const sixMonths = () => {
+    const rows: Row[] = []; let o = 0;
+    for (let m = 1; m <= 6; m++) for (let c = 0; c < 6; c++) {
+      if (c < 3 && m > 3) continue;
+      for (let k = 0; k < 2; k++) rows.push({ Order: `o${o++}`, Customer: `c${c}`, Product: 'Mug', OrderDate: `2025-0${m}-${String(5 + k * 10).padStart(2, '0')}`, Sales: c < 3 ? 120 : 20, Quantity: 1, IsReturn: 0 });
+    }
+    return mk(rows);
+  };
+
+  it('execution records come from the checks: a lapsed finding always has a matching "ran" record', () => {
+    const ds = sixMonths(), f = analyzeSmart(ds), runs = checkRuns(ds);
+    const lapsedRun = runs.find((r) => r.id === 'lapsed')!;
+    expect(lapsedRun).toBeTruthy();
+    if (f.some((x) => x.id === 'store-lapsed')) expect(lapsedRun.ran).toBe(true);
+    const topic = reportTopics(ds, f).find((t) => t.key === 'retention')!;
+    expect((topic as any).check.checks.find((c: any) => c.id === 'lapsed').ran).toBe(lapsedRun.ran);
+  });
+
+  it('short history: lapsed spending is labelled as observed months, not a year', () => {
+    const lapsed = analyzeSmart(sixMonths()).find((x) => x.id === 'store-lapsed');
+    if (lapsed) {
+      expect(lapsed.title).not.toMatch(/a year/);
+      expect(lapsed.period).toMatch(/months observed/);
+      expect(lapsed.impactBasis).toMatch(/not annualised/);
+    }
+  });
+
+  it('every check that ran over a period records its date range', () => {
+    const runs = checkRuns(loadCaseStudy());
+    for (const id of ['lapsed', 'stopped-products', 'decline']) {
+      const r = runs.find((x) => x.id === id)!;
+      expect(r.ran, id).toBe(true);
+      expect(r.from, id).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    }
+  });
+
+  it('the upload report bridges rows read to records analysed', () => {
+    const csv = ['Order,Date,Customer,Product,Qty,Total,Status',
+      ...Array.from({ length: 20 }, (_, i) => `A${i},2025-01-${String(1 + i).padStart(2, '0')},c${i % 4},Mug,1,10,${i === 3 ? 'Refunded' : i === 5 ? 'Cancelled' : 'Paid'}`)].join('\n');
+    const { report, dataset } = ingest([{ name: 'x.csv', text: csv }]);
+    const b = report.bridge!;
+    expect(b.read).toBe(20);
+    expect(b.analysed).toBe(dataset.rows.length);
+    expect(b.saleRecords + b.returnRecords).toBe(b.analysed);
+    expect(b.used + b.refundRecordsAdded).toBe(b.analysed);
+    expect(b.leftOut).toBe(b.read - b.used);
   });
 });

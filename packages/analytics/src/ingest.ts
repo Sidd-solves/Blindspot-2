@@ -32,6 +32,8 @@ export interface IngestReport {
   dateOrder: DateOrder | null; dateOrderAssumed: boolean;
   currency: string | null; currencySource: string;
   rowsRead: number; rowsUsed: number; ordersFound: number;
+  /** How source rows become analysis records: read → left out → used (+ return records created from refunds) → analysed. */
+  bridge?: { read: number; leftOut: number; used: number; refundRecordsAdded: number; saleRecords: number; returnRecords: number; analysed: number };
   issues: Issue[]; unlocks: Unlock[];
   dateRange: [string, string] | null;
   prep: PrepReport | null;
@@ -829,6 +831,7 @@ export function ingest(files: IngestInput[], opts: IngestOptions = {}): { datase
     files: fileInfo, format, platform: profile?.id ?? null, columns: table.headers, roles, confidence: primary.confidence, samples,
     dateOrder: roles.date ? dateOrder : null, dateOrderAssumed: !!roles.date && dateOrderAssumed,
     currency, currencySource, rowsRead, rowsUsed: Math.max(0, rows.length - refundLines), ordersFound: orders,
+    bridge: (() => { const ret = rows.reduce((n, r) => n + (r.IsReturn === 1 ? 1 : 0), 0), used = Math.max(0, rows.length - refundLines); return { read: rowsRead, leftOut: Math.max(0, rowsRead - used), used, refundRecordsAdded: refundLines, saleRecords: rows.length - ret, returnRecords: ret, analysed: rows.length }; })(),
     issues: issues.sort((a, b) => ({ dropped: 0, kept: 1, info: 2 }[a.severity] - { dropped: 0, kept: 1, info: 2 }[b.severity])), unlocks,
     dateRange: dates.length ? [dates[0], dates[dates.length - 1]] : null, prep,
   };

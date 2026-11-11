@@ -57,12 +57,12 @@ function IdeasCard() {
         {!res && <div className="space-y-2">{[0, 1, 2].map((i) => <div key={i} className="skeleton h-9" />)}</div>}
         {res && shown.length === 0 && <div className="text-[12px] text-[var(--muted)]">None of the built-in ideas apply to this data.</div>}
         {shown.map((h, i) => (
-          <motion.div key={h.id} layout onClick={() => setOpenIdea(openIdea === h.id ? null : h.id)} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }} className="cursor-pointer rounded-lg px-2 py-1.5" style={{ background: 'var(--line)', borderLeft: `3px solid ${VERDICT[h.verdict]?.c}` }}>
+          <motion.button type="button" key={h.id} layout aria-expanded={openIdea === h.id} aria-label={`${h.claim}: ${openIdea === h.id ? 'hide' : 'show'} full result`} onClick={() => setOpenIdea(openIdea === h.id ? null : h.id)} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }} className="block w-full cursor-pointer rounded-lg px-2 py-1.5 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1" style={{ background: 'var(--line)', borderLeft: `3px solid ${VERDICT[h.verdict]?.c}` }}>
             <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider" style={{ color: VERDICT[h.verdict]?.c }}>{h.verdict === 'supported' ? <Check size={11} /> : <X size={11} />}{VERDICT[h.verdict]?.label}</div>
             <div className="text-[11.5px] font-bold leading-snug">{h.claim}</div>
             <div className={`${openIdea === h.id ? '' : 'line-clamp-2'} text-[12px] leading-snug text-[var(--muted)]`}>{h.summary}</div>
-            {openIdea !== h.id && h.summary.length > 110 && <div className="mt-0.5 text-[11px] font-bold" style={{ color: VERDICT[h.verdict]?.c }}>Show all</div>}
-          </motion.div>
+            {openIdea !== h.id && h.summary.length > 110 && <div className="mt-0.5 text-[11px] font-bold" style={{ color: VERDICT[h.verdict]?.c }} aria-hidden>Show all</div>}
+          </motion.button>
         ))}
       </div>
     </Card>
@@ -115,7 +115,7 @@ export default function Overview() {
             {i === 0 && <div className="mt-1.5 flex items-center gap-1.5 text-[11px]"><Chip c={momentum >= 0 ? 'var(--emerald)' : 'var(--rose)'}>{momentum >= 0 ? '▲' : '▼'} {pct(Math.abs(momentum))}</Chip><span className="text-[var(--faint)]">{yoy ? 'last 6 full months vs same months last year' : 'last 6 full months vs prior 6'}</span></div>}
             {i === 1 && <div className="mt-1.5 text-[11px] text-[var(--faint)]">{k.label === 'Avg order' ? 'revenue per order' : 'after cost of goods'}</div>}
             {i === 2 && (k.format === 'pct' ? <div className="mt-1.5"><Meter value={Math.max(0, k.value) * 4} c={st.c} h={4} /></div> : <div className="mt-1.5 text-[11px] text-[var(--faint)]">known buyers</div>)}
-            {i === 3 && <div className="mt-1.5 text-[11px] text-[var(--faint)]">{dataset?.rows.toLocaleString()} sales lines analysed</div>}
+            {i === 3 && <div className="mt-1.5 text-[11px] text-[var(--faint)]">{dataset?.rows.toLocaleString()} records analysed (sales + returns)</div>}
           </Card>
         );
       })}

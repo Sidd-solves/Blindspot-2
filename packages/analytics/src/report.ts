@@ -1,6 +1,7 @@
-import type { Dataset, Finding } from './types';
+import type { CheckRun, Dataset, Finding } from './types';
 import { detectFields, profileData } from './profile';
 import { recommend } from './recommend';
+import { checkRuns } from './findings';
 import { simulateScenario } from './scenario';
 import { numeric } from './profile';
 import { sum } from './stats';
@@ -103,33 +104,23 @@ export function reportTopics(ds: Dataset, findings: Finding[]) {
     seasonality: fm.date && months >= 12 ? null : 'Needs at least 12 months of dated sales.',
     orders: tx ? null : 'Needs order IDs.', data: null,
   };
-  // Execution record, one entry per individual check (conditions mirror the checks in findings.ts/insights.ts).
-  type Check = { id: string; label: string; eligible: boolean; ran: boolean; reason: string | null };
-  const ck = (id: string, label: string, eligible: boolean, ran: boolean, reason: string | null): Check => ({ id, label, eligible, ran: eligible && ran, reason: eligible && ran ? null : reason });
-  const geoCol = cols.find((k) => /country|region|state|province|market/i.test(k));
-  const CHECKS: Record<string, Check[]> = {
-    customers: depCols.length ? depCols.map((c) => ck(`dependence-${c}`, `${c} dependence`, true, ranDims.has(c), dependence.notRun.find((x) => x.col === c)?.why ?? null)) : [ck('dependence', 'Customer or product dependence', false, false, missing.customers)],
-    markets: [ck('market-reach', 'Market reach', !!geoCol, !!geoCol && fm.highCardDims.includes(geoCol) && !thin.markets, missing.markets ?? thin.markets)],
-    profit: [ck('loss-segments', 'Loss-making segments', !!fm.profit, !!fm.profit, missing.profit)],
-    trend: [ck('decline', 'Decline vs earlier period', !!fm.date, months >= 6, missing.trend), ck('anomaly-scan', 'Segments falling behind', !!fm.date, months >= 6, missing.trend)],
-    retention: [ck('repeat-rate', 'New-customer repeat rate (tested)', tx && !!fm.date, knownCustomers >= 100, thin.retention ?? missing.retention), ck('lapsed', 'Best customers who went quiet', tx && !!fm.date, months >= 6, months < 6 ? 'Needs 6+ months of history.' : missing.retention)],
-    returns: [ck('return-rate', 'Return rate', hasReturns, hasReturns, missing.returns)],
-    products: [ck('stopped-products', 'Products that stopped selling', tx, tx && months >= 15, missing.products)],
-    seasonality: [ck('seasonality', 'Seasonal concentration', !!fm.date, months >= 12, missing.seasonality)],
-    orders: [ck('large-orders', 'Dependence on large orders', tx, orderCount >= 200, thin.orders ?? missing.orders)],
-    data: [ck('data-quality', 'Duplicates and missing IDs', true, true, null)],
-  };
+  // Execution records come from the checks themselves (see checkRuns): what ran, what didn't, and why.
+  type Check = CheckRun;
+  const runs = checkRuns(ds);
+  const CHECKS: Record<string, Check[]> = {};
+  for (const r of runs) (CHECKS[r.topic] ??= []).push(r);
   return REPORT_TOPICS.map((t) => {
     const hits = findings.filter((f) => (t.cats as readonly string[]).includes(f.category) && (t.key === 'markets' ? GEO_ID.test(f.id) : t.key === 'customers' ? !GEO_ID.test(f.id) : true));
     // Unconfirmed signals ("Possible: …") count as something to watch, not a confirmed problem.
     const confirmed = hits.filter((f) => !f.id.startsWith('watch-'));
     const checks = CHECKS[t.key] ?? [], ran = checks.filter((c) => c.ran), skipped = checks.filter((c) => !c.ran);
-    const eligible = checks.some((c) => c.eligible);
+    // A topic with no recorded checks was not applicable to this file at all.
+    const eligible = checks.length ? checks.some((c) => c.eligible) : !missing[t.key];
     const coverage: 'full' | 'partial' | 'none' = !checks.length || skipped.length === 0 ? 'full' : ran.length ? 'partial' : 'none';
     const status = confirmed.length ? 'issue' : hits.length ? 'watch' : !eligible ? 'not-in-data' : coverage === 'none' ? 'not-enough' : coverage === 'partial' ? 'partial' : 'clear';
     const note = hits.length ? hits[0].title
       : !eligible ? missing[t.key] ?? skipped[0]?.reason ?? 'Not in your data.'
-      : coverage === 'none' ? (thin[t.key] ?? skipped.map((c) => c.reason).filter(Boolean).join(' ')) || 'Not enough data to check.'
+      : coverage === 'none' ? (skipped.map((c) => (c.reason ?? '').replace(/^only/, 'Not judged: only')).filter(Boolean).join(' ') || thin[t.key]) || 'Not enough data to check.'
       : coverage === 'partial' ? `Checked ${ran.map((c) => c.label.toLowerCase()).join(' and ')}: no problem found. Not run: ${skipped.map((c) => `${c.label.toLowerCase()} (${(c.reason ?? '').replace(/\.$/, '').replace(/^Not judged: /, '')})`).join('; ')}.`
       : checkedNote[t.key] ?? 'Checked: no problem found.';
     return { key: t.key, label: t.label, status, note, check: { eligible, ran: coverage !== 'none' && eligible, coverage, checks }, count: hits.length, severity: hits[0]?.severity ?? null };

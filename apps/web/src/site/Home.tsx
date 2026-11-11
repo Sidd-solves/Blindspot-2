@@ -22,7 +22,7 @@ export function LivePreview() {
   return (
     <BeamCard on c="var(--cyan)" className="relative overflow-hidden p-4">
       <div className="scanline" />
-      <div className="flex items-center gap-1.5 pb-3"><span className="h-2 w-2 rounded-full bg-[#fb7185]" /><span className="h-2 w-2 rounded-full bg-[#fbbf24]" /><span className="h-2 w-2 rounded-full bg-[#34d399]" /><span className="mono ml-2 truncate text-[11px] text-[var(--faint)]">blindspot · analysing {dataset?.rows.toLocaleString() ?? '…'} sales</span></div>
+      <div className="flex items-center gap-1.5 pb-3"><span className="h-2 w-2 rounded-full bg-[#fb7185]" /><span className="h-2 w-2 rounded-full bg-[#fbbf24]" /><span className="h-2 w-2 rounded-full bg-[#34d399]" /><span className="mono ml-2 truncate text-[11px] text-[var(--faint)]">blindspot · analysing {dataset?.rows.toLocaleString() ?? '…'} records</span></div>
       <div className="flex items-center justify-between">
         <div className="min-w-0"><div className="label flex items-center gap-1"><span className="pulse-dot" style={{ '--c': 'var(--emerald)', width: 6, height: 6 } as CSSProperties} />{dataset?.source === 'case-study' ? 'Live · real UK online shop' : 'Live analysis'}</div><div className="truncate text-[13px] font-extrabold">{dataset?.name ?? 'Loading…'}</div></div>
         <Ring value={health / 100} size={60} stroke={6} c={health >= 60 ? 'var(--cyan)' : health >= 40 ? 'var(--amber)' : 'var(--rose)'}><div className="text-center"><div className="mono text-[14px] font-semibold leading-none">{health}</div><div className="text-[7.5px] font-bold uppercase text-[var(--faint)]">health</div></div></Ring>
@@ -118,7 +118,7 @@ export default function Home() {
         <Reveal><BeamCard on c="var(--emerald)" className="p-5 md:p-6">
           <div className="flex flex-wrap items-center justify-between gap-3"><div><div className="label" style={{ color: 'var(--emerald)' }}>Real results</div><div className="mt-1 text-[20px] font-extrabold tracking-tight md:text-[24px]">Tested on a real online shop's sales.</div></div><span className="chip" style={{ '--c': 'var(--emerald)' } as CSSProperties}><BadgeCheck size={11} />Every number independently re-checked</span></div>
           <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
-            {[{ l: 'Sales lines analysed', v: dataset?.rows ?? 0, c: 'var(--cyan)' }, { l: 'Problems found', v: findings.length, c: 'var(--rose)' }, { l: 'Ideas tested by statistics', v: decided.length, c: 'var(--emerald)' }, { l: 'Seconds to analyse', v: 2, c: 'var(--violet)' }].map((s) => (
+            {[{ l: 'Records analysed', v: dataset?.rows ?? 0, c: 'var(--cyan)' }, { l: 'Problems found', v: findings.length, c: 'var(--rose)' }, { l: 'Ideas tested by statistics', v: decided.length, c: 'var(--emerald)' }, { l: 'Seconds to analyse', v: 2, c: 'var(--violet)' }].map((s) => (
               <div key={s.l} className="tint rounded-xl p-3" style={{ '--c': s.c } as CSSProperties}><div className="label">{s.l}</div><CountUp value={s.v} className="text-[24px] font-semibold" duration={1.6} /></div>
             ))}
           </div>

@@ -1,4 +1,4 @@
-import type { Dataset, Finding, Severity } from './types';
+import type { CheckRun, Dataset, Finding, Severity } from './types';
 import { detectFields, numeric, profileData } from './profile';
 import { interpretConcentration } from './concentration';
 import { interpretSegments } from './segments';
@@ -23,6 +23,10 @@ function mk(f: Omit<Finding, 'score'>): Finding {
 
 // Results are cached per rows array (+ currency), so every page and tool call after the first is instant.
 const cache = new WeakMap<object, Map<string, Finding[]>>();
+/** Execution records written by each check during the analysis that produced a findings array. */
+const runsByResult = new WeakMap<Finding[], CheckRun[]>();
+/** What every check actually did for this dataset (runs the cached analysis if needed). */
+export function checkRuns(ds: Dataset): CheckRun[] { return runsByResult.get(analyzeSmart(ds)) ?? []; }
 
 export function analyzeSmart(ds: Dataset): Finding[] {
   const key = ds.currency ?? 'USD';
@@ -37,8 +41,10 @@ export function analyzeSmart(ds: Dataset): Finding[] {
 function analyzeUncached(ds: Dataset): Finding[] {
   const fm = detectFields(ds);
   const rows = ds.rows;
-  const out: Finding[] = [];
-  if (!rows.length || !fm.measure) return out;
+  const out: Finding[] = [], runs: CheckRun[] = [];
+  const rec = (r: CheckRun) => { runs.push(r); };
+  const done = (res: Finding[]) => { runsByResult.set(res, runs); return res; };
+  if (!rows.length || !fm.measure) return done(out);
   const $ = (n: number) => money(n, ds.currency);
   const pct = (n: number) => pctStr(n);
   const transactional = 'Order' in rows[0] && 'IsReturn' in rows[0];
@@ -46,6 +52,16 @@ function analyzeUncached(ds: Dataset): Finding[] {
   const total = sum(numeric(sales, fm.measure));
 
   // 1. Concentration. Customers and products are dependency risks; geography is framed as market reach.
+  {
+    const cols = Object.keys(rows[0]), ran = new Set(fm.highCardDims.filter((d) => !ID_LIKE.test(d)));
+    const distinct = (c: string) => new Set(sales.map((r) => String(r[c] ?? '')).filter((v) => v && !UNKNOWN_BUYER.has(v))).size;
+    for (const c of [cols.find((k) => /customer|client|buyer/i.test(k)), cols.find((k) => /product|item|sku|title|description/i.test(k))].filter((x): x is string => !!x)) {
+      const n = distinct(c);
+      rec({ id: `dependence-${c}`, topic: 'customers', label: `${c} dependence`, eligible: true, ran: ran.has(c), reason: ran.has(c) ? null : `only ${n} distinct ${c.toLowerCase()} value${n === 1 ? '' : 's'}, too few to measure dependence` });
+    }
+    const geo = cols.find((k) => GEO.test(k));
+    if (geo) { const n = distinct(geo); rec({ id: 'market-reach', topic: 'markets', label: 'Market reach', eligible: true, ran: ran.has(geo) && n > 1, reason: ran.has(geo) && n > 1 ? null : n === 0 ? `The ${geo} column is empty or only placeholders.` : n === 1 ? `Every sale is in one ${geo.toLowerCase()}.` : `Too few ${plural(geo)} to compare.` }); }
+  }
   for (const dim of fm.highCardDims.filter((d) => !ID_LIKE.test(d))) {
     // Concentration is measured over KNOWN buyers/products only, the same base the dashboard counts.
     const c = interpretConcentration(sales.filter((r) => !UNKNOWN_BUYER.has(String(r[dim] ?? ''))), dim, fm.measure);
@@ -69,6 +85,7 @@ function analyzeUncached(ds: Dataset): Finding[] {
   }
 
   // 2. Loss-making segments
+  rec({ id: 'loss-segments', topic: 'profit', label: 'Loss-making segments', eligible: !!fm.profit, ran: !!fm.profit, reason: fm.profit ? null : 'Needs a profit or product-cost column.' });
   for (const dim of fm.dims) {
     const s = interpretSegments(rows, dim, fm.measure, { profit: fm.profit });
     for (const seg of s.segments) {
@@ -94,6 +111,7 @@ function analyzeUncached(ds: Dataset): Finding[] {
     const days = pickWindowDays(sales, fm.date);
     const w = comparisonWindows(sales, fm.date, days);
     const drv = w ? explainChange(rows, fm, { windows: w }) : null;
+    rec({ id: 'decline', topic: 'trend', label: 'Decline vs an earlier period', eligible: true, ran: !!w, reason: w ? null : `Needs at least ${Math.round((days * 2) / 30)} months of dated sales.`, ...(w ? { from: new Date(w.baseline[0]).toISOString().slice(0, 10), to: new Date(w.current[1] - DAY).toISOString().slice(0, 10) } : {}) });
     if (drv && w && drv.changePct <= -0.05) {
       const wk = (win: [number, number]) => { const n = Math.round(days / 7), b = new Array(n).fill(0); for (const r of sales) { const t = toMs(r[fm.date!]); if (inWin(t, win)) b[Math.min(n - 1, Math.floor((t - win[0]) / (7 * DAY)))] += (r[fm.measure] as number) || 0; } return b; };
       const test = welchTest(wk(w.current), wk(w.baseline)), t = roundStat(test.stat, 2);
@@ -114,6 +132,7 @@ function analyzeUncached(ds: Dataset): Finding[] {
     }
     // 4. Layer 2: scan every segment for ones falling behind the rest of the business
     const scan = scanAnomalies(rows, fm, { days });
+    rec({ id: 'anomaly-scan', topic: 'trend', label: 'Segments falling behind', eligible: true, ran: !!scan, reason: scan ? null : 'Needs two comparable periods of dated sales.' });
     for (const a of scan?.anomalies.slice(0, 5) ?? []) {
       out.push(mk({
         id: `anomaly-${a.dimension}-${a.segment}`, category: 'anomaly',
@@ -161,10 +180,12 @@ function analyzeUncached(ds: Dataset): Finding[] {
   }
 
   // 6. Dependence on very large orders (order level when order IDs exist; robust 3xIQR otherwise)
+  if (!transactional) rec({ id: 'large-orders', topic: 'orders', label: 'Dependence on large orders', eligible: false, ran: false, reason: 'Needs order IDs.' });
   if (transactional) {
     const totals = new Map<string, number>();
     for (const r of sales) totals.set(String(r.Order), (totals.get(String(r.Order)) ?? 0) + ((r[fm.measure] as number) || 0));
     const ranked = [...totals].sort((a, b) => b[1] - a[1]), vals = ranked.map(([, v]) => v), n = Math.max(1, Math.ceil(vals.length * 0.01)), topShare = sum(vals.slice(0, n)) / sum(vals);
+    rec({ id: 'large-orders', topic: 'orders', label: 'Dependence on large orders', eligible: true, ran: vals.length >= 200, reason: vals.length >= 200 ? null : `Only ${vals.length.toLocaleString()} orders; the large-order check needs 200+.` });
     if (vals.length >= 200 && topShare >= 0.2) out.push(mk({
       id: 'outlier-orders', category: 'outlier', title: `The top 1% of orders (${n.toLocaleString()}) bring in ${pct(topShare)} of revenue`,
       severity: topShare >= 0.35 ? 'high' : 'medium', confidence: 1, basis: 'measured', pValue: null, period: 'whole file', exposure: 'at-risk', metric: 'Revenue share of the largest 1% of orders',
@@ -189,7 +210,7 @@ function analyzeUncached(ds: Dataset): Finding[] {
   }
 
   // 7. Layer 1: online-store checks (returns, retention, lapsed customers, stopped products, basket size, seasonality)
-  for (const f of storeFindings(ds, fm)) out.push(mk(f));
+  for (const f of storeFindings(ds, fm, rec)) out.push(mk(f));
 
   // 8. Data quality: empty columns
   for (const c of profileData(ds).columns) {
@@ -201,7 +222,7 @@ function analyzeUncached(ds: Dataset): Finding[] {
       nextAction: `Fix the source feed for ${c.name} or exclude it explicitly.`,
     }));
   }
-  return out.sort((a, b) => b.score - a.score);
+  return done(out.sort((a, b) => b.score - a.score));
 }
 
 export const _q = quantile;

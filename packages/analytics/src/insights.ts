@@ -1,4 +1,4 @@
-import type { Dataset, Finding, FieldMap, Row } from './types';
+import type { CheckRun, Dataset, Finding, FieldMap, Row } from './types';
 import { comparisonWindows, inWin, toMs, DAY, dateSpan, type Windows } from './time';
 import { mean, std, round, roundStat, sum, quantile, welchTest, propTest, bhAdjust, fmtP } from './stats';
 import { money, pctStr, plural } from './money';
@@ -138,15 +138,26 @@ function ordersOf(rows: Row[], fm: FieldMap): Order[] {
   return [...map.values()].filter((o) => Number.isFinite(o.t));
 }
 
-export function storeFindings(ds: Dataset, fm: FieldMap): Draft[] {
+export function storeFindings(ds: Dataset, fm: FieldMap, rec: (r: CheckRun) => void = () => {}): Draft[] {
   const rows = ds.rows, cur = ds.currency ?? 'USD', $ = (n: number) => money(n, cur);
-  if (!rows.length || !('Order' in rows[0]) || !('Customer' in rows[0]) || !fm.date) return [];
+  const iso = (t: number) => new Date(t).toISOString().slice(0, 10);
+  const run = (id: string, topic: string, label: string, ran: boolean, reason: string | null, eligible = true, win?: [number, number]) =>
+    rec({ id, topic, label, eligible, ran: eligible && ran, reason: eligible && ran ? null : reason, ...(win && eligible && ran ? { from: iso(win[0]), to: iso(win[1] - DAY) } : {}) });
+  if (!rows.length || !('Order' in rows[0]) || !('Customer' in rows[0]) || !fm.date) {
+    const why = 'Needs order IDs, customer IDs and dates.';
+    run('repeat-rate', 'retention', 'New-customer repeat rate (tested)', false, why, false);
+    run('lapsed', 'retention', 'Best customers who went quiet', false, why, false);
+    run('stopped-products', 'products', 'Products that stopped selling', false, why, false);
+    if (rows.length && 'IsReturn' in rows[0]) run('returns', 'returns', 'Return rate', false, why, false);
+    return [];
+  }
   const out: Draft[] = [];
   const span = dateSpan(rows, fm.date), end = span.max + DAY;
   const orders = ordersOf(rows, fm);
   const gross = sum(orders.map((o) => o.total));
 
   // Returns and cancellations
+  run('returns', 'returns', 'Return rate', 'IsReturn' in rows[0], 'Needs returns or cancellations in the data.', 'IsReturn' in rows[0]);
   if ('IsReturn' in rows[0]) {
     const byProd = new Map<string, [number, number]>();
     let returned = 0;
@@ -198,6 +209,7 @@ export function storeFindings(ds: Dataset, fm: FieldMap): Draft[] {
   const byCust = new Map<string, number[]>();
   for (const o of known) byCust.set(o.customer, [...(byCust.get(o.customer) ?? []), o.t]);
   const firsts = [...byCust.values()].map((ts) => ts.sort((a, b) => a - b)).filter((ts) => ts[0] <= end - 90 * DAY);
+  run('repeat-rate', 'retention', 'New-customer repeat rate (tested)', firsts.length >= 100, `Only ${firsts.length} first-time customers; the repeat-rate test needs 100+.`);
   if (firsts.length >= 100) {
     const mid = span.min + (end - 90 * DAY - span.min) / 2;
     const early = firsts.filter((ts) => ts[0] < mid), late = firsts.filter((ts) => ts[0] >= mid);
@@ -217,6 +229,10 @@ export function storeFindings(ds: Dataset, fm: FieldMap): Draft[] {
 
   // Lapsed best customers
   const cutoff = end - 90 * DAY, yearStart = cutoff - 365 * DAY;
+  // With less than a full year before the cutoff, the money is the spending actually observed, not a yearly figure.
+  const winStart = Math.max(yearStart, span.min), fullYear = winStart - yearStart < 7 * DAY;
+  const obsMonths = Math.max(0, Math.round((cutoff - winStart) / (30.44 * DAY)));
+  run('lapsed', 'retention', 'Best customers who went quiet', cutoff - span.min >= 60 * DAY, 'Needs at least 5 months of history (2 before the last 90 days).', true, [winStart, cutoff]);
   const prior = new Map<string, { rev: number; n: number; last: number }>();
   for (const o of known) {
     const e = prior.get(o.customer) ?? { rev: 0, n: 0, last: 0 };
@@ -227,21 +243,22 @@ export function storeFindings(ds: Dataset, fm: FieldMap): Draft[] {
   const best = ranked.slice(0, Math.max(10, Math.ceil(ranked.length * 0.1)));
   const lapsed = best.filter(([, e]) => e.n >= 3 && e.last < cutoff);
   const priorTotal = sum(ranked.map(([, e]) => e.rev));
-  if (lapsed.length >= 3 && priorTotal) {
+  if (lapsed.length >= 3 && priorTotal && cutoff - span.min >= 60 * DAY) {
     const atRisk = sum(lapsed.map(([, e]) => e.rev));
     out.push({
-      id: 'store-lapsed', category: 'retention', title: `${lapsed.length} of your best customers stopped ordering (${$(atRisk)} a year)`,
-      severity: atRisk / priorTotal >= 0.05 ? 'high' : 'medium', confidence: 0.75, basis: 'rule', pValue: null, period: 'per year', exposure: 'at-risk', metric: 'Top-10% customers with no order in 90 days',
-      explanation: `These customers ordered 3+ times in the prior year (${pctStr(atRisk / priorTotal)} of revenue) but haven't ordered in the last 90 days.`,
-      drill: { field: 'Customer', values: lapsed.map(([c]) => c), totalValues: lapsed.length, label: `the ${lapsed.length} customers who went quiet`, rowType: 'sale', dateField: fm.date, windows: [{ label: 'Year before they went quiet', from: yearStart, to: cutoff, expect: round(atRisk) }], expect: { value: round(atRisk), what: 'their sales in the year before they went quiet' } },
-      evidence: { lapsedCustomers: lapsed.length, bestCustomers: best.length, annualRevenueAtRisk: round(atRisk), shareOfRevenue: round(atRisk / priorTotal, 4), examples: lapsed.slice(0, 5).map(([c, e]) => ({ customer: c, priorYearRevenue: round(e.rev), orders: e.n })) },
-      impactUsd: round(atRisk), impactBasis: 'Their revenue in the year before they went quiet (annual exposure)',
+      id: 'store-lapsed', category: 'retention', title: `${lapsed.length} of your best customers stopped ordering (${$(atRisk)} ${fullYear ? 'a year' : `over ${obsMonths} months`})`,
+      severity: atRisk / priorTotal >= 0.05 ? 'high' : 'medium', confidence: 0.75, basis: 'rule', pValue: null, period: fullYear ? 'per year' : `${obsMonths} months observed`, exposure: 'at-risk', metric: 'Top-10% customers with no order in 90 days',
+      explanation: `These customers ordered 3+ times in the ${fullYear ? 'prior year' : `${obsMonths} months of data before the last 90 days (less than a full year)`} (${pctStr(atRisk / priorTotal)} of revenue) but haven't ordered in the last 90 days.`,
+      drill: { field: 'Customer', values: lapsed.map(([c]) => c), totalValues: lapsed.length, label: `the ${lapsed.length} customers who went quiet`, rowType: 'sale', dateField: fm.date, windows: [{ label: fullYear ? 'Year before they went quiet' : `${obsMonths} months before they went quiet`, from: winStart, to: cutoff, expect: round(atRisk) }], expect: { value: round(atRisk), what: fullYear ? 'their sales in the year before they went quiet' : `their sales in the ${obsMonths} months before they went quiet` } },
+      evidence: { lapsedCustomers: lapsed.length, bestCustomers: best.length, ...(fullYear ? { annualRevenueAtRisk: round(atRisk) } : { observedRevenueAtRisk: round(atRisk), monthsObserved: obsMonths }), shareOfRevenue: round(atRisk / priorTotal, 4), examples: lapsed.slice(0, 5).map(([c, e]) => ({ customer: c, priorYearRevenue: round(e.rev), orders: e.n })) },
+      impactUsd: round(atRisk), impactBasis: fullYear ? 'Their revenue in the year before they went quiet (annual exposure)' : `Their spending over the ${obsMonths} months of data before they went quiet (less than a year of history, so not annualised)`,
       nextAction: 'Contact these accounts personally this week; offer a reorder incentive and ask what changed.',
     });
   }
 
   // Products that stopped selling (year-over-year, so seasonal items aren't flagged)
   const w = comparisonWindows(rows, fm.date, 90);
+  run('stopped-products', 'products', 'Products that stopped selling', w?.mode === 'year-over-year', 'Needs 15+ months to compare the same 90 days a year apart.', true, w?.mode === 'year-over-year' ? [w.baseline[0], w.current[1]] : undefined);
   if (w?.mode === 'year-over-year') {
     const pb = new Map<string, number>(), pc = new Map<string, number>();
     for (const r of rows) {
@@ -266,6 +283,7 @@ export function storeFindings(ds: Dataset, fm: FieldMap): Draft[] {
   }
 
   // Order value trend
+  run('aov', 'trend', 'Average order value', !!w, 'Needs 6+ months of dated orders.');
   if (w) {
     const ob = orders.filter((o) => inWin(o.t, w.baseline)).map((o) => o.total), oc = orders.filter((o) => inWin(o.t, w.current)).map((o) => o.total);
     const test = welchTest(oc, ob), t = roundStat(test.stat, 2), ab = mean(ob), ac = mean(oc);
@@ -284,6 +302,7 @@ export function storeFindings(ds: Dataset, fm: FieldMap): Draft[] {
   // Seasonality: dependence on a few months
   const months = new Map<string, number>();
   for (const o of orders) if (o.t >= end - 365 * DAY) { const k = new Date(o.t).toISOString().slice(0, 7); months.set(k, (months.get(k) ?? 0) + o.total); }
+  run('seasonality', 'seasonality', 'Seasonal concentration', months.size >= 12, `Only ${months.size} months of sales; needs 12+.`);
   if (months.size >= 12) {
     const vals = [...months].sort((a, b) => b[1] - a[1]), yr = sum(vals.map(([, v]) => v)), top3 = vals.slice(0, 3);
     const share = sum(top3.map(([, v]) => v)) / yr;
@@ -297,6 +316,7 @@ export function storeFindings(ds: Dataset, fm: FieldMap): Draft[] {
   }
 
   // Duplicates found while cleaning
+  run('data-quality', 'data', 'Duplicates and missing IDs', true, null);
   if (ds.prep && ds.prep.duplicateRows / ds.prep.inputRows >= 0.01) out.push({
     id: 'store-duplicates', category: 'data-quality', title: `${ds.prep.duplicateRows.toLocaleString()} duplicate lines in your sales records`,
     severity: 'medium', confidence: 1, basis: 'measured', pValue: null, period: 'whole file', exposure: null, metric: 'Exact duplicate rows removed during cleaning',

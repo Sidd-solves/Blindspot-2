@@ -123,6 +123,14 @@ export function ReadReview() {
                   </motion.div>
                 ))}
               </div>}
+              {rep?.bridge && !failed && (rep.bridge.leftOut > 0 || rep.bridge.refundRecordsAdded > 0) && <div className="flex flex-wrap items-center gap-1.5 rounded-lg px-2.5 py-2 text-[12px] text-[var(--muted)]" style={{ background: 'var(--line)' }}>
+                <span className="font-bold text-[var(--text)]">From file to analysis:</span>
+                <span className="mono">{rep.bridge.read.toLocaleString()}</span> rows read
+                {rep.bridge.leftOut > 0 && <><ArrowRight size={11} /><span className="mono">{rep.bridge.leftOut.toLocaleString()}</span> left out (see "What Blindspot cleaned up")</>}
+                <ArrowRight size={11} /><span className="mono">{rep.bridge.saleRecords.toLocaleString()}</span> sale + <span className="mono">{rep.bridge.returnRecords.toLocaleString()}</span> return records
+                {rep.bridge.refundRecordsAdded > 0 && <span className="text-[var(--faint)]">({rep.bridge.refundRecordsAdded.toLocaleString()} returns created from refunded orders)</span>}
+                <ArrowRight size={11} /><span className="mono font-bold text-[var(--text)]">{rep.bridge.analysed.toLocaleString()}</span> records analysed
+              </div>}
 
               {rep?.columns && <div>
                 <div className="mb-2 flex items-center justify-between"><div className="label flex items-center gap-1"><Wand2 size={11} style={{ color: 'var(--violet)' }} />What each column means</div><span className="text-[11.5px] text-[var(--faint)]">Wrong? Pick the right column.</span></div>

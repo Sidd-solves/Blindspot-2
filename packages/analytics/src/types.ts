@@ -90,3 +90,17 @@ export interface DrillSpec {
   /** The figure these rows should add up to, and what it is (e.g. "sales in the prior year"). */
   expect?: { value: number; what: string } | null;
 }
+
+/** Execution record emitted by each check while it runs (not reconstructed afterwards). */
+export interface CheckRun {
+  id: string;
+  /** Report topic the check belongs to (customers, markets, profit, trend, retention, returns, products, seasonality, orders, data). */
+  topic: string;
+  label: string;
+  /** false when the data lacks what the check needs at all (e.g. no profit column). */
+  eligible: boolean;
+  ran: boolean;
+  reason: string | null;
+  /** The date range the check actually looked at, when it used one (ISO dates). */
+  from?: string; to?: string;
+}

@@ -114,7 +114,9 @@ app.get('/api/crosstab', (req, res) => {
   const state = sessions.get(sid(req));
   const cols = new Set(profileData(state.view()).columns.map((c) => c.name));
   for (const f of [q.data.row, q.data.col, q.data.measure, q.data.ratioOf].filter(Boolean) as string[]) if (!cols.has(f)) return res.status(400).json({ error: { code: 'UNKNOWN_FIELD', message: `Unknown field ${f}` } });
-  res.json(crosstab(state.view().rows, q.data.row, q.data.col, q.data.measure, q.data.ratioOf));
+  // Same definition as everywhere else: sales = sale lines before returns (returns are counted separately).
+  const vrows = state.view().rows, saleRows = vrows[0] && 'IsReturn' in vrows[0] ? vrows.filter((r) => r.IsReturn !== 1) : vrows;
+  res.json({ ...crosstab(saleRows, q.data.row, q.data.col, q.data.measure, q.data.ratioOf), basis: 'sale lines, before returns' });
 });
 
 app.get('/api/fx', async (req, res) => {

@@ -52,7 +52,7 @@ function SamplePreview() {
     <div className="relative overflow-hidden rounded-xl border p-3" style={{ borderColor: 'var(--line)', background: 'linear-gradient(160deg, color-mix(in srgb, var(--violet) 10%, transparent), transparent 60%)' }}>
       <div className="mb-2 flex items-center gap-1.5">{['var(--rose)', 'var(--amber)', 'var(--emerald)'].map((c) => <span key={c} className="h-2 w-2 rounded-full" style={{ background: c, opacity: 0.7 }} />)}<span className="ml-1 text-[11px] font-bold text-[var(--faint)]">UK gift shop · Overview</span></div>
       <div className="grid grid-cols-3 gap-1.5">
-        {[{ l: 'Sales lines', v: 261658, c: 'var(--violet)' }, { l: 'Orders', v: 9964, c: 'var(--cyan)' }, { l: 'Customers', v: 1458, c: 'var(--emerald)' }].map((s) => (
+        {[{ l: 'Records', v: 261658, c: 'var(--violet)' }, { l: 'Orders', v: 9964, c: 'var(--cyan)' }, { l: 'Customers', v: 1458, c: 'var(--emerald)' }].map((s) => (
           <div key={s.l} className="rounded-lg px-2 py-1.5" style={{ background: 'var(--line)' }}>
             <div className="text-[11px] font-bold uppercase tracking-wider text-[var(--faint)]">{s.l}</div>
             <CountUp value={s.v} className="mono block text-[13px] font-semibold" />
