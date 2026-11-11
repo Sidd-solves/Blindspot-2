@@ -59,8 +59,8 @@ export function CardHead({
   right?: ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between gap-2 px-3.5 pt-3 pb-2">
-      <div className="flex items-center gap-2 min-w-0">
+    <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 px-3.5 pt-3 pb-2">
+      <div className="flex min-w-0 flex-[1_1_9rem] items-center gap-2">
         {icon && (
           <span
             className="grid h-6 w-6 flex-none place-items-center rounded-md"
@@ -69,7 +69,9 @@ export function CardHead({
             {icon}
           </span>
         )}
-        <h3 className="truncate text-[12.5px] font-extrabold tracking-tight">{title}</h3>
+        <h3 className="min-w-0 text-[12.5px] font-extrabold leading-snug tracking-tight [overflow-wrap:anywhere]">
+          {title}
+        </h3>
       </div>
       {right}
     </div>

@@ -508,3 +508,10 @@ input[type='range']::-moz-range-thumb {
     animation-duration: 9s;
   }
 }
+
+/* Keyboard users can always see where they are. Mouse clicks don't show the ring. */
+:where(button, a, [role='button'], [tabindex], input, select, textarea, summary):focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+  border-radius: 8px;
+}

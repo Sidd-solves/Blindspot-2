@@ -3,7 +3,7 @@
 > **Work in progress, not part of any hackathon submission.** This branch holds features built *after* the
 > submissions were made. Judges: please evaluate the submitted version on the `main` branch and the live site.
 
-[![CI](https://github.com/Sidd-solves/BlindSpot/actions/workflows/ci.yml/badge.svg)](https://github.com/Sidd-solves/BlindSpot/actions/workflows/ci.yml) ![Tests](https://img.shields.io/badge/tests-244%20passing-34d399) ![Coverage](https://img.shields.io/badge/coverage-82%25%20engine%20%2B%20API-22d3ee) ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6) ![Lint](https://img.shields.io/badge/ESLint-0%20problems-8b5cf6) [![License: MIT](https://img.shields.io/badge/license-MIT-a78bfa)](LICENSE)
+[![CI](https://github.com/Sidd-solves/BlindSpot/actions/workflows/ci.yml/badge.svg)](https://github.com/Sidd-solves/BlindSpot/actions/workflows/ci.yml) ![Tests](https://img.shields.io/badge/tests-247%20passing-34d399) ![Coverage](https://img.shields.io/badge/coverage-82%25%20engine%20%2B%20API-22d3ee) ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6) ![Lint](https://img.shields.io/badge/ESLint-0%20problems-8b5cf6) [![License: MIT](https://img.shields.io/badge/license-MIT-a78bfa)](LICENSE)
 
 **The AI analyst for small businesses. See what your sales data is hiding.**
 
@@ -81,7 +81,7 @@ Needs **Node.js 22+** and npm.
 git clone https://github.com/Sidd-solves/BlindSpot.git && cd BlindSpot
 npm install
 npm run dev     # API on :8787, web on :5173 (open http://localhost:5173)
-npm test        # 244 tests: statistics, file reading (incl. real PDFs), analytics, forecasting, customers, stock-outs, all 40 tools, sessions, API + MCP
+npm test        # 247 tests: statistics, file reading (incl. real PDFs), analytics, forecasting, customers, stock-outs, all 40 tools, sessions, API + MCP
 npm run typecheck  # strict TypeScript, 0 errors
 npm run format:check
 npm run lint       # ESLint, 0 problems

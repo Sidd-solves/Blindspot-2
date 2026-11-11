@@ -282,7 +282,8 @@ export default function Overview() {
               c: 'var(--rose)',
               advice: 'Serious problems are costing you money; fix the one below this week.',
             };
-  const top = findings[0];
+  // Same rule as the AI Analyst's "biggest risk": the top problem that puts money at stake, not a data-cleaning note.
+  const top = findings.find((f) => f.exposure === 'lost' || f.exposure === 'at-risk') ?? findings[0];
   const fmt = (k: { format: string; value: number }) =>
     k.format === 'usd'
       ? (n: number) => usd(n, k.value >= 10000)
@@ -297,6 +298,48 @@ export default function Overview() {
       animate="show"
       className="grid grid-cols-1 gap-3 md:grid-cols-6 xl:grid-cols-12"
     >
+      {top && (
+        <motion.button
+          variants={{ hidden: { opacity: 0, y: -8 }, show: { opacity: 1, y: 0 } }}
+          whileHover={{ y: -1 }}
+          whileTap={{ scale: 0.995 }}
+          onClick={() => go('risk', `?f=${encodeURIComponent(top.id)}`)}
+          aria-label={`Fix this first: ${top.title}. Open the evidence.`}
+          className="tint group relative flex w-full flex-wrap items-center gap-x-3 gap-y-1.5 overflow-hidden rounded-xl px-3 py-2.5 text-left md:col-span-6 xl:col-span-12"
+          style={{ '--c': SEV[top.severity].c } as CSSProperties}
+        >
+          <motion.span
+            aria-hidden
+            className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3"
+            style={{
+              background: `linear-gradient(90deg, transparent, color-mix(in srgb, ${SEV[top.severity].c} 22%, transparent), transparent)`,
+            }}
+            animate={{ x: ['0%', '420%'] }}
+            transition={{ duration: 3.2, repeat: Infinity, repeatDelay: 2.5, ease: 'easeInOut' }}
+          />
+          <span
+            className="flex flex-none items-center gap-1.5 text-[10.5px] font-extrabold uppercase tracking-wider"
+            style={{ color: SEV[top.severity].c }}
+          >
+            <Crosshair size={13} />
+            Fix this first
+          </span>
+          <span className="min-w-0 flex-1 basis-64 text-[13px] font-extrabold leading-snug">{top.title}</span>
+          {top.impactUsd ? (
+            <span className="mono flex-none text-[13px] font-semibold" style={{ color: SEV[top.severity].c }}>
+              {usd(top.impactUsd)}
+              {top.period ? (
+                <span className="ml-1 font-sans text-[11px] text-[var(--muted)]">{top.period}</span>
+              ) : null}
+            </span>
+          ) : null}
+          <Confidence sure={sureOf(top)} />
+          <span className="flex flex-none items-center gap-1 text-[11.5px] font-bold text-[var(--muted)] transition-colors group-hover:text-[var(--text)]">
+            See the evidence
+            <ArrowRight size={12} className="transition-transform group-hover:translate-x-0.5" />
+          </span>
+        </motion.button>
+      )}
       {dash.kpis.slice(0, 4).map((k, i) => {
         const st = KPI_STYLE[i];
         const spark = k.format === 'pct' ? [] : k.label === 'Orders' ? [] : series;
@@ -463,27 +506,6 @@ export default function Overview() {
           100 means Blindspot found nothing wrong. Every problem takes points off, more for serious,
           well-proven ones. {band.advice}
         </p>
-        {top && (
-          <motion.button
-            whileHover={{ y: -1 }}
-            onClick={() => go('risk', `?f=${encodeURIComponent(top.id)}`)}
-            className="tint mt-2.5 w-full rounded-lg p-2.5 text-left"
-            style={{ '--c': SEV[top.severity].c } as CSSProperties}
-          >
-            <div className="label" style={{ color: SEV[top.severity].c }}>
-              Fix this first
-            </div>
-            <div className="mt-0.5 text-[12.5px] font-extrabold leading-snug">{top.title}</div>
-            {top.impactUsd ? (
-              <div className="mt-1 text-[11px] text-[var(--muted)]">
-                <span className="mono font-semibold" style={{ color: SEV[top.severity].c }}>
-                  {usd(top.impactUsd)}
-                </span>{' '}
-                at stake: {top.impactBasis?.toLowerCase()}
-              </div>
-            ) : null}
-          </motion.button>
-        )}
         <div className="mt-3 label">Biggest problem in each area</div>
         <div className="mt-1.5 space-y-1">
           {Object.entries(CAT)

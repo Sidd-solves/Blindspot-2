@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import {
   Bar,
   CartesianGrid,
@@ -184,11 +184,21 @@ function Evidence({ ev }: { ev: Record<string, any> }) {
   );
 }
 
-function Detail({ f }: { f: Finding }) {
+function Detail({ f, focusOnOpen = false }: { f: Finding; focusOnOpen?: boolean }) {
   const s = SEV[f.severity],
     c = CAT[f.category];
+  // Arriving from a link (Overview, chat, report), keyboard focus moves to the finding itself, so the next Tab reaches
+  // its evidence and "See the affected rows" instead of starting again at the sidebar.
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (focusOnOpen) ref.current?.focus({ preventScroll: false });
+  }, [focusOnOpen, f.id]);
   return (
     <motion.div
+      ref={ref}
+      tabIndex={-1}
+      role="region"
+      aria-label={`Finding: ${f.title}`}
       key={f.id}
       initial={{ opacity: 0, x: 14 }}
       animate={{ opacity: 1, x: 0 }}
@@ -626,7 +636,7 @@ export default function Risk() {
       >
         <AnimatePresence mode="wait">
           {selected ? (
-            <Detail f={selected} />
+            <Detail f={selected} focusOnOpen={selected.id === initial} />
           ) : (
             <Empty icon={<Crosshair size={18} />} title="Select a finding" />
           )}
