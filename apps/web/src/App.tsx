@@ -14,6 +14,8 @@ import {
   ScanEye,
   FileText,
   Settings as Cog,
+  UserRound,
+  LogIn,
   Moon,
   Sun,
   RefreshCw,
@@ -36,6 +38,10 @@ const Audit = lazy(() => import('./pages/Audit'));
 const Reports = lazy(() => import('./pages/Reports'));
 const Settings = lazy(() => import('./pages/Settings'));
 const SourceData = lazy(() => import('./pages/SourceData'));
+const Account = lazy(() => import('./pages/Account'));
+const AuthPage = lazy(() => import('./site/AuthPage').then((m) => ({ default: m.AuthPage })));
+import { useAuth } from './auth';
+import { Avatar } from './pages/Account';
 import { CurrencyPicker } from './components/Currency';
 import { ReadReview } from './components/ReadReview';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -63,6 +69,9 @@ const SITE_PAGES: Record<SiteId | 'start', React.ComponentType> = {
   results: SiteResults,
   start: SiteStart,
 };
+/** Log in, sign up, forgot and reset password are full-screen pages of their own. */
+const AUTH = ['login', 'signup', 'forgot', 'reset'] as const;
+const authRoute = () => AUTH.find((a) => location.hash.replace(/^#\//, '').split('?')[0] === a) ?? null;
 /** Marketing site lives at #/, #/how, #/features, #/results, the start page at #/start and guides at #/guide/<id>; everything else is the app. */
 const siteRoute = (): string | null => {
   const h = location.hash.replace(/^#/, '').split('?')[0];
@@ -90,6 +99,7 @@ export const NAV = [
   { id: 'forecast', label: 'Sales Forecast', icon: LineChart, c: 'var(--cyan)', el: Forecast },
   { id: 'audit', label: 'Dashboard Audit', icon: ScanEye, c: 'var(--amber)', el: Audit },
   { id: 'reports', label: 'Executive Reports', icon: FileText, c: 'var(--sky)', el: Reports },
+  { id: 'account', label: 'Account', icon: UserRound, c: 'var(--violet)', el: Account },
   { id: 'settings', label: 'Settings', icon: Cog, c: 'var(--muted)', el: Settings },
 ] as const;
 export type PageId = (typeof NAV)[number]['id'];
@@ -222,18 +232,56 @@ function DatasetNotice() {
   );
 }
 
+/** Who is signed in, one tap to the account page; guests get a log-in prompt. */
+function UserChip() {
+  const { user, profile, ready } = useAuth();
+  if (!ready) return <div className="skeleton h-11" />;
+  return (
+    <motion.button
+      whileHover={{ y: -1 }}
+      whileTap={{ scale: 0.98 }}
+      onClick={() => (location.hash = user ? '/account' : '/login')}
+      className="panel flex w-full items-center gap-2 p-2 text-left"
+    >
+      {user ? (
+        <Avatar name={profile?.display_name || user.email || '?'} accent={profile?.accent} size={28} />
+      ) : (
+        <span className="grid h-7 w-7 place-items-center rounded-full bg-[var(--line)]">
+          <LogIn size={13} />
+        </span>
+      )}
+      <span className="min-w-0">
+        <span className="block truncate text-[12px] font-bold">
+          {user ? profile?.display_name || user.email : 'Guest'}
+        </span>
+        <span className="block truncate text-[10.5px] text-[var(--faint)]">
+          {user ? profile?.shop_name || 'Account & saved analyses' : 'Log in to save analyses'}
+        </span>
+      </span>
+    </motion.button>
+  );
+}
+
 export default function App() {
   const [page, setPage] = useState<PageId>(current());
   const [site, setSite] = useState<string | null>(siteRoute());
+  const [auth, setAuth] = useState(authRoute());
   const { dataset, extension, loading, refresh } = useStore();
   useEffect(() => {
     const h = () => {
       setPage(current());
       setSite(siteRoute());
+      setAuth(authRoute());
     };
     window.addEventListener('hashchange', h);
     return () => window.removeEventListener('hashchange', h);
   }, []);
+  if (auth)
+    return (
+      <Suspense fallback={<PageLoading />}>
+        <AuthPage mode={auth} />
+      </Suspense>
+    );
   if (site?.startsWith('guide/'))
     return (
       <SiteLayout page={site}>
@@ -365,7 +413,8 @@ export default function App() {
             })}
           </nav>
           <div className="hidden px-3 pt-3 md:block">
-            <div className="panel space-y-1.5 p-2.5 text-[11px]">
+            <UserChip />
+            <div className="panel mt-2 space-y-1.5 p-2.5 text-[11px]">
               <div className="flex items-center justify-between">
                 <span className="text-[var(--muted)]">Data</span>
                 <Chip

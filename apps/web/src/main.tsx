@@ -4,6 +4,7 @@ import { MotionConfig } from 'framer-motion';
 import './index.css';
 import App from './App';
 import { StoreProvider } from './store';
+import { AuthProvider } from './auth';
 
 try {
   document.documentElement.dataset.theme = localStorage.getItem('ciq-theme') ?? 'dark';
@@ -14,9 +15,11 @@ try {
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <MotionConfig reducedMotion="user">
-      <StoreProvider>
-        <App />
-      </StoreProvider>
+      <AuthProvider>
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      </AuthProvider>
     </MotionConfig>
   </StrictMode>,
 );

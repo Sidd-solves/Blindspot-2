@@ -4,7 +4,8 @@ import { ArrowRight, FileSpreadsheet, FileText, Plus, UploadCloud, X } from 'luc
 import { useStore } from '../store';
 import { Loading } from './ui';
 
-export const ACCEPT = '.csv,.tsv,.txt,.tab,.xlsx,.xlsm,.xls,.ods,.numbers,.pdf,text/csv,application/pdf';
+export const ACCEPT =
+  '.csv,.tsv,.txt,.tab,.xlsx,.xlsm,.xls,.ods,.numbers,.pdf,.png,.jpg,.jpeg,.webp,text/csv,application/pdf,image/png,image/jpeg,image/webp';
 const size = (b: number) =>
   b > 1e6 ? `${(b / 1e6).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1e3))} KB`;
 

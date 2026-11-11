@@ -22,9 +22,15 @@ export async function fileToText(f: File): Promise<FileText> {
   if (SPREADSHEET.test(f.name)) return { name: f.name, kind: 'excel', ...(await sheetToText(f)) };
   if (TEXT.test(f.name) || f.type.startsWith('text/'))
     return { name: f.name, kind: 'csv', text: decode(new Uint8Array(await f.arrayBuffer())) };
-  if (/\.(png|jpe?g|gif|webp|heic|bmp|tiff?)$/i.test(f.name))
+  if (/\.(png|jpe?g|gif|webp)$/i.test(f.name) || /^image\/(png|jpeg|gif|webp)$/.test(f.type))
+    return {
+      name: f.name.replace(/\.[^.]+$/, '') + ' (from photo).csv',
+      kind: 'csv',
+      ...(await photoToText(f)),
+    };
+  if (/\.(heic|bmp|tiff?)$/i.test(f.name))
     throw new FileReadError(
-      "That's a picture. Blindspot needs the sales data itself: download a CSV, Excel or PDF report from your store instead.",
+      'That photo format can’t be read here. Save it as a JPEG or PNG and drop it in again.',
     );
   if (/\.(docx?|pages|pptx?|key|zip|rar)$/i.test(f.name))
     throw new FileReadError(
@@ -131,5 +137,34 @@ async function pdfToText(f: File): Promise<{ text: string; note?: string }> {
     note: headerFound
       ? `Read from a ${doc.numPages}-page PDF: ${rows.toLocaleString()} table rows rebuilt from the page layout.`
       : `Read from a ${doc.numPages}-page PDF without a clear table header; check the columns below.`,
+  };
+}
+
+/**
+ * A photo or screenshot of a printed report or spreadsheet: shrunk in the browser, then transcribed by Claude into a
+ * table exactly as printed. The result goes through the same upload review as any file, so every column is checked.
+ */
+async function photoToText(f: File): Promise<{ text: string; note: string }> {
+  const { SID } = await import('../api');
+  const bmp = await createImageBitmap(f);
+  const scale = Math.min(1, 2000 / Math.max(bmp.width, bmp.height));
+  const c = document.createElement('canvas');
+  c.width = Math.round(bmp.width * scale);
+  c.height = Math.round(bmp.height * scale);
+  c.getContext('2d')!.drawImage(bmp, 0, 0, c.width, c.height);
+  const data = c.toDataURL('image/jpeg', 0.9).split(',')[1];
+  const r = await fetch('/api/ai/photo', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Session-Id': SID },
+    body: JSON.stringify({ data, mediaType: 'image/jpeg' }),
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new FileReadError(j.error?.message ?? 'Reading the photo failed. Try a clearer photo.');
+  const missing = j.unreadable?.length
+    ? ` ${j.unreadable.length} cell(s) couldn’t be read and were left blank.`
+    : '';
+  return {
+    text: j.csv,
+    note: `Read from a photo by AI (${j.rows} rows, ${j.columns.length} columns). Check the columns below before relying on it.${missing}`,
   };
 }

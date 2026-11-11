@@ -9,6 +9,7 @@
  },
  "dependencies": {
   "@blindspot/analytics": "*",
+  "@supabase/supabase-js": "^2.49.4",
   "framer-motion": "^11.11.0",
   "lucide-react": "^0.460.0",
   "pdfjs-dist": "^4.10.38",

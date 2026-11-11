@@ -38,6 +38,7 @@ import { ChartTip, axis, glowDefs } from '../components/charts';
 import { go } from '../App';
 import { Confidence, sureOf } from '../components/Confidence';
 import { describeAccuracy } from '@blindspot/analytics';
+import { AiBriefing } from '../components/AiBriefing';
 
 const KPI_STYLE = [
   { c: 'var(--violet)', icon: DollarSign },
@@ -340,6 +341,7 @@ export default function Overview() {
           </span>
         </motion.button>
       )}
+      <AiBriefing />
       {dash.kpis.slice(0, 4).map((k, i) => {
         const st = KPI_STYLE[i];
         const spark = k.format === 'pct' ? [] : k.label === 'Orders' ? [] : series;

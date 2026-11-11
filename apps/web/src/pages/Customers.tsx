@@ -4,7 +4,6 @@ import {
   BellRing,
   Check,
   ChevronDown,
-  Copy,
   Download,
   FlaskConical,
   HeartHandshake,
@@ -15,6 +14,7 @@ import {
 import { usd } from '../api';
 import { useStore } from '../store';
 import { ToolError, useTool } from '../components/useTool';
+import { AiWinback } from '../components/AiWinback';
 import { Card, CardHead, Chip, CountUp, Empty, Loading, stagger } from '../components/ui';
 import { Confidence } from '../components/Confidence';
 
@@ -621,17 +621,7 @@ export default function Customers() {
                         <div className="mb-1 text-[11px] text-[var(--muted)]">
                           Usually bought: {c.topProducts.join(' · ') || 'not recorded'}
                         </div>
-                        <pre className="whitespace-pre-wrap font-sans text-[12px] leading-snug">
-                          {c.message}
-                        </pre>
-                        <motion.button
-                          whileTap={{ scale: 0.95 }}
-                          className="btn mt-2 !h-7 text-[11.5px]"
-                          onClick={() => copy(c.customer, c.message)}
-                        >
-                          {copied === c.customer ? <Check size={12} /> : <Copy size={12} />}
-                          {copied === c.customer ? 'Copied' : 'Copy message'}
-                        </motion.button>
+                        <AiWinback customer={c.customer} shopName={shopName} template={c.message} />
                       </div>
                     </motion.div>
                   )}
