@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { useEffect, useState, type CSSProperties } from 'react';
 import { BadgeCheck, Check, Database, Globe2, X } from 'lucide-react';
-import { CAT, SEV, tool, usd } from '../api';
+import { CAT, SEV, tool, usd, evidenceText, VERDICT } from '../api';
 import { useStore } from '../store';
 import { CountUp, Reveal } from '../components/ui';
 import { BeamCard } from './Effects';
@@ -52,7 +52,7 @@ export default function Results() {
               <div className="mt-2 text-[13.5px] font-extrabold leading-snug">{f.title}</div>
               <div className="mt-1 text-[12px] text-[var(--muted)]"><span className="font-bold" style={{ color: 'var(--emerald)' }}>Fix: </span>{f.nextAction}</div>
               <motion.div className="mt-3 h-[2px] origin-left rounded-full" style={{ background: SEV[f.severity].c, boxShadow: `0 0 10px ${SEV[f.severity].c}` }} initial={{ scaleX: 0 }} whileInView={{ scaleX: f.confidence }} viewport={{ once: true }} transition={{ duration: 0.9, delay: i * 0.05 }} />
-              <div className="mt-1 text-[10px] text-[var(--faint)]">{Math.round(f.confidence * 100)}% confidence</div>
+              <div className="mt-1 text-[10px] text-[var(--faint)]">{evidenceText(f)}</div>
             </BeamCard></Reveal>
           ))}
         </div>
@@ -74,8 +74,8 @@ export default function Results() {
         <Reveal><BeamCard c="var(--fuchsia)" className="h-full p-5">
           <div className="flex items-center gap-2"><Database size={16} style={{ color: 'var(--fuchsia)' }} /><span className="text-[14px] font-extrabold">Ideas it proved true or false</span></div>
           <div className="mt-3 space-y-1.5">{ideas.map((h, i) => (
-            <motion.div key={h.id} initial={{ opacity: 0, y: 6 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.06 }} className="rounded-lg px-3 py-2" style={{ background: 'var(--line)', borderLeft: `3px solid ${h.verdict === 'supported' ? 'var(--emerald)' : h.verdict === 'rejected' ? 'var(--rose)' : 'var(--faint)'}` }}>
-              <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider" style={{ color: h.verdict === 'supported' ? 'var(--emerald)' : h.verdict === 'rejected' ? 'var(--rose)' : 'var(--faint)' }}>{h.verdict === 'supported' ? <><Check size={11} />True</> : h.verdict === 'rejected' ? <><X size={11} />False</> : 'Not enough evidence'}</div>
+            <motion.div key={h.id} initial={{ opacity: 0, y: 6 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.06 }} className="rounded-lg px-3 py-2" style={{ background: 'var(--line)', borderLeft: `3px solid ${VERDICT[h.verdict]?.c}` }}>
+              <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider" style={{ color: VERDICT[h.verdict]?.c }}>{h.verdict === 'supported' ? <Check size={11} /> : <X size={11} />}{VERDICT[h.verdict]?.label}</div>
               <div className="text-[12px] font-bold">{h.claim}</div><div className="text-[11px] text-[var(--muted)]">{h.summary}</div>
             </motion.div>
           ))}</div>

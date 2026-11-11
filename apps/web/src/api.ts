@@ -39,7 +39,7 @@ let currency = 'USD';
 export const setCurrency = (c: string) => { currency = c || 'USD'; };
 export const baseCurrency = () => currency;
 export const shownCurrency = () => (display.to && display.to !== currency ? display.to : currency);
-export const usd = (n: number | null | undefined, compact = false) => n == null ? '—' : new Intl.NumberFormat('en-US', { style: 'currency', currency: shownCurrency(), maximumFractionDigits: compact ? 1 : 0, ...(compact ? { notation: 'compact' as const } : {}) }).format(shownCurrency() === currency ? n : n * display.rate);
+export const usd = (n: number | null | undefined, compact = false) => n == null ? '—' : currency === 'XXX' ? new Intl.NumberFormat('en-US', { maximumFractionDigits: compact ? 1 : 0, ...(compact ? { notation: 'compact' as const } : {}) }).format(n) : new Intl.NumberFormat('en-US', { style: 'currency', currency: shownCurrency(), maximumFractionDigits: compact ? 1 : 0, ...(compact ? { notation: 'compact' as const } : {}) }).format(shownCurrency() === currency ? n : n * display.rate);
 export const pct = (n: number, d = 1) => `${(n * 100).toFixed(d)}%`;
 export const ago = (iso: string, now = Date.now()) => { const s = Math.max(0, Math.round((now - Date.parse(iso)) / 1000)); return s < 60 ? `${s}s ago` : s < 3600 ? `${Math.floor(s / 60)}m ago` : `${Math.floor(s / 3600)}h ago`; };
 
@@ -55,3 +55,23 @@ export const CAT: Record<string, { c: string; label: string }> = {
 export const TOOL_CAT: Record<string, string> = {
   'Data Analysis': 'var(--violet)', Visualization: 'var(--cyan)', 'Design Analysis': 'var(--fuchsia)', Interaction: 'var(--emerald)', Interpretation: 'var(--amber)', Orchestration: 'var(--blue)', Documentation: 'var(--lime)', Utilities: 'var(--sky)', 'Business Intelligence': 'var(--rose)',
 };
+
+// ---- one vocabulary for evidence, used on every screen
+/** Hypothesis verdicts describe THIS data only. */
+export const VERDICT: Record<string, { c: string; label: string }> = {
+  supported: { c: 'var(--emerald)', label: 'Supported by your data' },
+  rejected: { c: 'var(--sky)', label: 'Not supported' },
+  'small-effect': { c: 'var(--amber)', label: 'Real but small' },
+  inconclusive: { c: 'var(--faint)', label: 'Not enough evidence' },
+};
+export const BASIS: Record<string, { c: string; label: string; hint: string }> = {
+  measured: { c: 'var(--emerald)', label: 'Measured', hint: 'Counted directly from your data' },
+  tested: { c: 'var(--violet)', label: 'Statistically tested', hint: 'Passed a significance test (p below 0.05)' },
+  rule: { c: 'var(--amber)', label: 'Rule of thumb', hint: 'A threshold check, not a statistical test' },
+};
+export const fmtP = (p: number) => (p < 0.001 ? 'p < 0.001' : `p = ${p < 0.01 ? p.toFixed(3) : p.toFixed(2)}`);
+/** "Measured", "Tested · p = 0.003", "Rule of thumb". */
+export const evidenceText = (f: { basis?: string; pValue?: number | null }) => (f.basis === 'tested' && f.pValue != null ? `Tested · ${fmtP(f.pValue)}` : BASIS[f.basis ?? '']?.label ?? '');
+const EXPOSURE: Record<string, string> = { lost: 'Lost', 'at-risk': 'At risk', reversed: 'Reversed (never earned)', untracked: 'Untracked (not lost)' };
+/** "At risk · per year", "Lost · last 180 days". */
+export const exposureText = (f: { exposure?: string | null; period?: string | null }) => [f.exposure ? EXPOSURE[f.exposure] : null, f.period].filter(Boolean).join(' · ');

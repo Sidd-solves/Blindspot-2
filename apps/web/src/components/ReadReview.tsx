@@ -15,6 +15,7 @@ const MAIN: Role[] = ['date', 'amount', 'price', 'quantity', 'product', 'custome
 const MORE: Role[] = ['sku', 'region', 'category', 'currency', 'discount', 'refund', 'profit'];
 const ROLE_C: Partial<Record<Role, string>> = { date: 'var(--cyan)', amount: 'var(--emerald)', price: 'var(--emerald)', quantity: 'var(--lime)', product: 'var(--violet)', customer: 'var(--fuchsia)', order: 'var(--blue)', country: 'var(--sky)', status: 'var(--amber)', cost: 'var(--rose)' };
 const NONE = 'Not in my file';
+const CURRENCY_CHOICES = ['USD · US dollar', 'EUR · Euro', 'GBP · British pound', 'INR · Indian rupee', 'CAD · Canadian dollar', 'AUD · Australian dollar', 'JPY · Japanese yen', 'CNY · Chinese yuan', 'CHF · Swiss franc', 'SEK · Swedish krona', 'NOK · Norwegian krone', 'DKK · Danish krone', 'NZD · New Zealand dollar', 'SGD · Singapore dollar', 'HKD · Hong Kong dollar', 'KRW · South Korean won', 'MXN · Mexican peso', 'BRL · Brazilian real', 'ZAR · South African rand', 'TRY · Turkish lira', 'PLN · Polish zloty', 'AED · UAE dirham', 'SAR · Saudi riyal', 'PHP · Philippine peso', 'IDR · Indonesian rupiah', 'MYR · Malaysian ringgit', 'THB · Thai baht', 'ILS · Israeli shekel', 'CZK · Czech koruna', 'HUF · Hungarian forint'];
 const SEV = { dropped: { c: 'var(--rose)', icon: CircleSlash, label: 'Left out' }, kept: { c: 'var(--amber)', icon: AlertTriangle, label: 'Kept' }, info: { c: 'var(--sky)', icon: Info, label: 'Cleaned' } };
 
 function RoleCard({ role, i }: { role: Role; i: number }) {
@@ -114,7 +115,7 @@ export function ReadReview() {
 
               {rep && !failed && <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {[{ icon: Rows3, l: 'Rows used', v: rep.rowsUsed, sub: `of ${rep.rowsRead.toLocaleString()} read`, c: 'var(--emerald)' }, rep.roles.order || rep.roles.customer ? { icon: Hash, l: 'Orders', v: rep.ordersFound, sub: rep.roles.order ? 'by order number' : 'same customer + day', c: 'var(--blue)' } : { icon: Hash, l: 'Orders', v: null, sub: 'No order numbers', c: 'var(--blue)' },
-                  { icon: Calendar, l: 'Dates', v: null, sub: rep.dateRange ? `${rep.dateRange[0]} → ${rep.dateRange[1]}` : 'No dates', c: 'var(--cyan)' }, { icon: Coins, l: 'Currency', v: null, sub: rep.currency ?? 'Not stated', c: 'var(--amber)' }].map((x, i) => (
+                  { icon: Calendar, l: 'Dates', v: null, sub: rep.dateRange ? `${rep.dateRange[0]} → ${rep.dateRange[1]}` : 'No dates', c: 'var(--cyan)' }, { icon: Coins, l: 'Currency', v: null, sub: rep.currency ?? 'Not stated: pick it below', c: 'var(--amber)' }].map((x, i) => (
                   <motion.div key={x.l} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="rounded-xl border p-2.5" style={{ borderColor: 'var(--line)' }}>
                     <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider" style={{ color: x.c }}><x.icon size={11} />{x.l}</div>
                     {x.v !== null ? <CountUp value={x.v} className="mt-0.5 block text-[18px] font-semibold" /> : <div className="mono mt-0.5 truncate text-[12.5px] font-semibold" title={x.sub}>{x.sub}</div>}
@@ -130,6 +131,11 @@ export function ReadReview() {
                 <AnimatePresence initial={false}>{more && <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden"><div className="grid grid-cols-2 gap-2 pt-2 sm:grid-cols-3 xl:grid-cols-5">{MORE.map((r, i) => <RoleCard key={r} role={r} i={i} />)}</div></motion.div>}</AnimatePresence>
               </div>}
 
+              {rep && !failed && !rep.currency && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-wrap items-center gap-2 rounded-xl border p-2.5 text-[12.5px]" style={{ borderColor: 'color-mix(in srgb, var(--amber) 40%, var(--line))', background: 'color-mix(in srgb, var(--amber) 7%, transparent)' }}>
+                <Coins size={15} style={{ color: 'var(--amber)' }} />
+                <span className="flex-1"><b>Your file doesn't say its currency.</b> Amounts show as plain numbers until you pick it.</span>
+                <Dropdown width={190} c="var(--amber)" value={[]} placeholder="Select currency…" options={CURRENCY_CHOICES} onChange={(v) => v[0] && fixUpload(upload.overrides, upload.dateOrder, v[0].slice(0, 3))} />
+              </motion.div>}
               {rep?.dateOrderAssumed && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-wrap items-center gap-2 rounded-xl border p-2.5 text-[12px]" style={{ borderColor: 'color-mix(in srgb, var(--cyan) 30%, var(--line))' }}>
                 <Calendar size={14} style={{ color: 'var(--cyan)' }} />
                 <span className="flex-1">Dates like <b className="mono">{rep.samples.date?.[0]}</b> could be read two ways. Which is right?</span>

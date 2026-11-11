@@ -1,7 +1,7 @@
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { ArrowRight, BadgeCheck, Check, Eye, PlugZap, Search, ShoppingBag, Sparkles, Wrench, X } from 'lucide-react';
-import { CAT, SEV, tool, usd } from '../api';
+import { CAT, SEV, tool, usd, VERDICT } from '../api';
 import { useStore } from '../store';
 import { CountUp, Reveal, Ring } from '../components/ui';
 import { Aurora, BeamCard, Marquee } from './Effects';
@@ -125,8 +125,8 @@ export default function Home() {
           <div className="mt-4 grid gap-2 md:grid-cols-2">
             {decided.slice(0, 4).map((h, i) => (
               <motion.div key={h.id} initial={{ opacity: 0, y: 8 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }} className="flex items-start gap-2 rounded-lg px-3 py-2" style={{ background: 'var(--line)' }}>
-                {h.verdict === 'supported' ? <Check size={14} className="mt-0.5 flex-none" style={{ color: 'var(--emerald)' }} /> : <X size={14} className="mt-0.5 flex-none" style={{ color: 'var(--rose)' }} />}
-                <div><div className="text-[12.5px] font-bold">{h.claim}</div><div className="text-[11px] text-[var(--muted)]">{h.summary}</div></div>
+                {h.verdict === 'supported' ? <Check size={14} className="mt-0.5 flex-none" style={{ color: VERDICT[h.verdict].c }} /> : <X size={14} className="mt-0.5 flex-none" style={{ color: VERDICT[h.verdict]?.c }} />}
+                <div><div className="text-[11px] font-bold uppercase tracking-wider" style={{ color: VERDICT[h.verdict]?.c }}>{VERDICT[h.verdict]?.label}</div><div className="text-[12.5px] font-bold">{h.claim}</div><div className="text-[11px] text-[var(--muted)]">{h.summary}</div></div>
               </motion.div>
             ))}
           </div>

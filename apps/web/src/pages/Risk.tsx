@@ -3,20 +3,42 @@ import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { Bar, CartesianGrid, Cell, ComposedChart, Line, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis, ZAxis } from 'recharts';
 import { BarChart3, Crosshair, Grid3x3, MessageSquareText, ScatterChart as ScatterIcon, ShieldAlert, Target } from 'lucide-react';
 import { useStore, type Finding } from '../store';
-import { CAT, SEV, get, pct, tool, usd } from '../api';
+import { CAT, SEV, get, pct, tool, usd, evidenceText, exposureText, BASIS, fmtP } from '../api';
 import { Card, CardHead, Chip, CountUp, Dropdown, Empty, Meter, Reveal, Ring, Tabs, stagger } from '../components/ui';
 import { ChartTip, axis } from '../components/charts';
 import { go } from '../App';
 
+/** Plain names and the right format for every evidence value: money, percent, count, p-value or plain number. */
+type Kind = 'money' | 'pct' | 'count' | 'num' | 'p' | 'text';
+const EV: Record<string, [string, Kind]> = {
+  top5Share: ['Share from the top 5', 'pct'], top1Share: ['Share from the largest', 'pct'], hhi: ['Concentration index (HHI)', 'num'], groupsFor80Pct: ['How many make 80% of sales', 'count'],
+  returnRate: ['Return rate', 'pct'], returnedValue: ['Value returned', 'money'], grossSales: ['Sales before returns', 'money'],
+  cancelledPairs: ['Order lines reversed', 'count'], value: ['Value', 'money'], share: ['Share of sales', 'pct'], unknownSales: ['Sales with no customer ID', 'money'],
+  earlyRate: ['Earlier repeat rate', 'pct'], lateRate: ['Recent repeat rate', 'pct'], earlyCustomers: ['Earlier new customers', 'count'], lateCustomers: ['Recent new customers', 'count'], z: ['z statistic', 'num'],
+  lapsedCustomers: ['Customers gone quiet', 'count'], bestCustomers: ['Best customers checked', 'count'], annualRevenueAtRisk: ['Their yearly sales', 'money'], shareOfRevenue: ['Share of yearly sales', 'pct'],
+  stoppedProducts: ['Products at zero now', 'count'], lostRevenue: ['Their sales last year', 'money'], shareOfBaseline: ['Share of last year', 'pct'],
+  before: ['Average order before', 'money'], after: ['Average order now', 'money'], ordersBefore: ['Orders before', 'count'], ordersAfter: ['Orders now', 'count'], t: ['t statistic', 'num'],
+  window: ['Period compared', 'text'], top3Share: ['Share in the top 3 months', 'pct'], baseline: ['Before', 'money'], current: ['Now', 'money'], changePct: ['Change', 'pct'], overallChangePct: ['Whole-business change', 'pct'],
+  gapPts: ['Gap vs the business (points)', 'num'], p: ['p-value', 'p'], q: ['Adjusted p-value (q)', 'p'], impact: ['Beyond the overall trend', 'money'], segmentsScanned: ['Segments compared', 'count'],
+  dimension: ['Category', 'text'], segment: ['Segment', 'text'], topOrders: ['Largest orders', 'count'], orders: ['Orders', 'count'], threshold: ['Order size cutoff', 'money'], count: ['How many', 'count'],
+  nulls: ['Empty cells', 'count'], nullPct: ['Empty (%)', 'num'], pearson: ['Correlation (r)', 'num'], margin: ['Margin', 'pct'], profit: ['Profit', 'money'], sales: ['Sales', 'money'],
+  inputRows: ['Rows read', 'count'], keptRows: ['Rows analysed', 'count'], duplicateRows: ['Duplicate rows', 'count'], returnLines: ['Return lines', 'count'], returnValue: ['Value returned', 'money'],
+  feeLines: ['Fee and shipping lines', 'count'], feeValue: ['Fees and shipping', 'money'], zeroPriceRows: ['Zero-value rows', 'count'], missingCustomerRows: ['Rows with no customer', 'count'], missingCustomerSales: ['Sales with no customer', 'money'], cancelledPairValue: ['Value reversed', 'money'],
+};
+const fmtEv = (kind: Kind, v: any) => typeof v !== 'number' ? String(v) : kind === 'money' ? usd(v) : kind === 'pct' ? pct(v) : kind === 'count' ? Math.round(v).toLocaleString() : kind === 'p' ? fmtP(v) : (Math.round(v * 100) / 100).toLocaleString();
+const guess = (k: string): [string, Kind] => {
+  const label = k.replace(/([a-z])([A-Z0-9])/g, '$1 $2').replace(/^./, (c) => c.toUpperCase());
+  return [label, /share|rate|margin|pct$|change/i.test(k) ? 'pct' : /sales|revenue|value|profit|amount/i.test(k) ? 'money' : /customers|orders|products|rows|lines|count|pairs/i.test(k) ? 'count' : 'num'];
+};
+
 function Evidence({ ev }: { ev: Record<string, any> }) {
-  const flat = Object.entries(ev).filter(([, v]) => v !== null && typeof v !== 'object');
-  const fmt = (k: string, v: any) => typeof v !== 'number' ? String(v) : /share|margin|pct|trend/i.test(k) ? pct(v) : /profit|sales|prior|recent|threshold|value/i.test(k) ? usd(v) : v.toLocaleString();
+  const flat = Object.entries(ev).filter(([k, v]) => v !== null && typeof v !== 'object' && k !== 'feeCodes');
   return (
     <div className="grid grid-cols-2 gap-1.5">
       {flat.map(([k, v], i) => (
         <motion.div key={k} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.03 }} className="rounded-md px-2 py-1.5" style={{ background: 'var(--line)' }}>
-          <div className="text-[9.5px] font-bold uppercase tracking-wider text-[var(--faint)]">{k.replace(/([A-Z])/g, ' $1')}</div>
-          <div className="mono truncate text-[12px] font-semibold">{fmt(k, v)}</div>
+          <div className="text-[10.5px] font-bold text-[var(--faint)]">{(EV[k] ?? guess(k))[0]}</div>
+          <div className="mono truncate text-[13px] font-semibold">{fmtEv((EV[k] ?? guess(k))[1], v)}</div>
         </motion.div>
       ))}
       {Array.isArray(ev.topGroups) && <div className="col-span-2 space-y-1 pt-1">{ev.topGroups.map((g: any) => <div key={g.key} className="flex items-center gap-2 text-[11px]"><span className="w-20 truncate font-semibold">{g.key}</span><div className="flex-1"><Meter value={g.share * 2.5} c="var(--violet)" h={4} /></div><span className="mono">{pct(g.share)}</span></div>)}</div>}
@@ -31,11 +53,14 @@ function Detail({ f }: { f: Finding }) {
       <div className="flex flex-wrap items-center gap-1.5"><Chip c={s.c} pulse={f.severity === 'critical'}>{s.label}</Chip><Chip c={c.c}>{c.label}</Chip><span className="mono text-[10.5px] text-[var(--faint)]">score {f.score}</span></div>
       <h2 className="text-[15px] font-extrabold leading-snug tracking-tight">{f.title}</h2>
       <div className="flex items-center gap-3">
-        <Ring value={f.confidence} size={64} stroke={6} c={s.c}><span className="mono text-[12px] font-semibold">{Math.round(f.confidence * 100)}%</span></Ring>
+        <div className="w-[132px] flex-none rounded-xl px-2.5 py-2" style={{ background: `color-mix(in srgb, ${BASIS[f.basis]?.c} 12%, transparent)`, border: `1px solid color-mix(in srgb, ${BASIS[f.basis]?.c} 35%, transparent)` }} title={BASIS[f.basis]?.hint}>
+          <div className="text-[10.5px] font-bold uppercase tracking-wider" style={{ color: BASIS[f.basis]?.c }}>{BASIS[f.basis]?.label}</div>
+          <div className="mono mt-0.5 text-[12px] font-semibold">{f.basis === 'tested' && f.pValue != null ? fmtP(f.pValue) : f.basis === 'measured' ? 'Exact count' : 'Threshold'}</div>
+        </div>
         <div className="flex-1">
-          <div className="label">Dollar exposure</div>
-          {f.impactUsd !== null ? <CountUp value={f.impactUsd} format={(n) => usd(n)} className="text-[20px] font-semibold" /> : <div className="text-[13px] font-bold text-[var(--faint)]">Not quantifiable</div>}
-          <div className="text-[10.5px] text-[var(--muted)]">{f.impactBasis ?? 'No dollar basis in the data'}</div>
+          <div className="label">Money involved{exposureText(f) ? ` · ${exposureText(f)}` : ''}</div>
+          {f.impactUsd !== null ? <CountUp value={f.impactUsd} format={(n) => usd(n)} className="text-[20px] font-semibold" /> : <div className="text-[13px] font-bold text-[var(--faint)]">Can't be put in money from this data</div>}
+          <div className="text-[11.5px] text-[var(--muted)]">{f.impactBasis ?? 'This problem has no direct money figure in your data'}</div>
         </div>
       </div>
       <div><div className="label mb-1">Why it matters</div><p className="text-[12.5px] leading-relaxed text-[var(--muted)]">{f.explanation}</p></div>
@@ -98,7 +123,7 @@ function Pareto() {
   return (
     <Card c="var(--violet)" hover={false}>
       <CardHead icon={<BarChart3 size={13} />} title="Pareto concentration" c="var(--violet)" right={<Dropdown width={130} value={dim} options={[...new Set(dims)]} onChange={setDim} placeholder={d ?? 'Dimension'} />} />
-      {data && <div className="flex flex-wrap gap-1.5 px-3.5"><Chip c="var(--violet)">Top 1 {pct(data.top1Share)}</Chip><Chip c="var(--fuchsia)">Top 5 {pct(data.top5Share)}</Chip><Chip c="var(--cyan)">80% from {data.groupsFor80Pct}/{data.groupCount}</Chip><Chip c={data.hhi > 2500 ? 'var(--rose)' : data.hhi > 1500 ? 'var(--amber)' : 'var(--emerald)'}>HHI {data.hhi}</Chip></div>}
+      {data && <div className="flex flex-wrap gap-1.5 px-3.5"><Chip c="var(--violet)">Top 1 {pct(data.top1Share)}</Chip><Chip c="var(--fuchsia)">Top 5 {pct(data.top5Share)}</Chip><Chip c="var(--cyan)">80% from {data.groupsFor80Pct}/{data.groupCount}</Chip><span title="Herfindahl index: 10,000 means everything comes from one; shown for reference, not a risk verdict"><Chip c="var(--sky)">Concentration index {data.hhi.toLocaleString()}</Chip></span></div>}
       <div className="h-[210px] px-1 pb-2 pt-1">
         <ResponsiveContainer>
           <ComposedChart data={(data?.groups ?? []).map((g: any) => ({ ...g, sh: g.share * 100, cum: g.cumShare * 100 }))} margin={{ top: 6, right: 10, left: -18, bottom: 0 }}>
@@ -144,7 +169,7 @@ export default function Risk() {
                   <span className="h-8 rounded-full" style={{ background: s.c, boxShadow: on ? `0 0 10px ${s.c}` : 'none' }} />
                   <span className="min-w-0">
                     <span className="block truncate text-[12.5px] font-bold">{f.title}</span>
-                    <span className="mt-0.5 flex items-center gap-1.5"><Chip c={CAT[f.category].c}>{CAT[f.category].label}</Chip><span className="w-20"><Meter value={f.confidence} c={s.c} h={3} /></span><span className="mono text-[10px] text-[var(--faint)]">{Math.round(f.confidence * 100)}%</span></span>
+                    <span className="mt-0.5 flex items-center gap-1.5"><Chip c={CAT[f.category].c}>{CAT[f.category].label}</Chip><span className="text-[11px] font-semibold" style={{ color: BASIS[f.basis]?.c }}>{evidenceText(f)}</span></span>
                   </span>
                   <span className="text-right"><span className="mono block text-[12px] font-semibold" style={{ color: s.c }}>{f.impactUsd ? usd(f.impactUsd, true) : '—'}</span><span className="block text-[10px] font-bold uppercase text-[var(--faint)]">{s.label}</span></span>
                 </motion.button>
@@ -160,15 +185,15 @@ export default function Risk() {
 
       <div className="xl:col-span-4"><Reveal>
         <Card c="var(--orange)" hover={false}>
-          <CardHead icon={<ScatterIcon size={13} />} title="Impact × confidence" c="var(--orange)" />
+          <CardHead icon={<ScatterIcon size={13} />} title="Money × strength of evidence" c="var(--orange)" />
           <div className="h-[250px] px-1 pb-2">
             <ResponsiveContainer>
               <ScatterChart margin={{ top: 8, right: 14, left: 0, bottom: 4 }}>
                 <CartesianGrid stroke="var(--line)" />
-                <XAxis type="number" dataKey="x" name="Confidence" unit="%" domain={[40, 100]} {...axis} />
+                <XAxis type="number" dataKey="x" name="Evidence strength" unit="%" domain={[40, 100]} {...axis} />
                 <YAxis type="number" dataKey="y" name="Exposure" {...axis} width={46} tickFormatter={(v) => usd(v, true)} />
                 <ZAxis type="number" dataKey="z" range={[60, 420]} />
-                <Tooltip cursor={{ strokeDasharray: 3 }} content={({ active, payload }: any) => active && payload?.[0] ? <div className="panel max-w-[220px] px-2.5 py-1.5 text-[11.5px]" style={{ background: 'var(--panel-solid)' }}><div className="font-bold">{payload[0].payload.f.title}</div><div className="mono text-[var(--muted)]">{usd(payload[0].payload.y)} · {payload[0].payload.x}%</div></div> : null} />
+                <Tooltip cursor={{ strokeDasharray: 3 }} content={({ active, payload }: any) => active && payload?.[0] ? <div className="panel max-w-[220px] px-2.5 py-1.5 text-[11.5px]" style={{ background: 'var(--panel-solid)' }}><div className="font-bold">{payload[0].payload.f.title}</div><div className="mono text-[var(--muted)]">{usd(payload[0].payload.y)} · {evidenceText(payload[0].payload.f)}</div></div> : null} />
                 <Scatter data={bubbles} onClick={(p: any) => setSel(p.f.id)} animationDuration={900}>
                   {bubbles.map((b, i) => <Cell key={i} fill={SEV[b.f.severity].c} fillOpacity={0.75} stroke={SEV[b.f.severity].c} style={{ filter: `drop-shadow(0 0 6px ${SEV[b.f.severity].c})`, cursor: 'pointer' }} />)}
                 </Scatter>

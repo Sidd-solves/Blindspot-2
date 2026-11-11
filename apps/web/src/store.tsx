@@ -3,7 +3,7 @@ import type { IngestReport, Role, DateOrder } from '@blindspot/analytics';
 import { fileToText, type FileText } from './lib/fileText';
 import { baseCurrency, display, get, setCurrency, setDisplay, tool, SID } from './api';
 
-export interface Finding { id: string; category: string; title: string; severity: string; confidence: number; metric: string; explanation: string; evidence: any; impactUsd: number | null; impactBasis: string | null; nextAction: string; score: number }
+export interface Finding { id: string; category: string; title: string; severity: string; confidence: number; basis: 'measured' | 'tested' | 'rule'; pValue: number | null; period: string | null; exposure: 'lost' | 'at-risk' | 'reversed' | 'untracked' | null; metric: string; explanation: string; evidence: any; impactUsd: number | null; impactBasis: string | null; nextAction: string; score: number }
 export interface Action { findingId: string; problem: string; intervention: string; expectedBenefitUsd: number | null; benefitKind: 'profit' | 'revenue'; benefitBasis: string; effort: 'low' | 'medium' | 'high'; risks: string; severity: string; benefitToEffort: number | null; evidence: any }
 export interface DatasetMeta { name: string; source: string; label: string; currency: string; prep: Record<string, any> | null; citation: string | null; caseStudyAvailable: boolean; rows: number; totalRows: number; filters: Record<string, string[]>; fields: { measure: string; profit: string | null; date: string | null; dims: string[]; highCardDims: string[] }; columns: { name: string; type: string; distinct: number; values?: string[] }[] }
 export interface Dash { kpis: { label: string; value: number; format: string }[]; charts: { id: string; type: string; title: string; data: any[] }[] }
@@ -12,14 +12,14 @@ export interface FxInfo { base: string; to: string; live: boolean; date: string;
 const fxCache = new Map<string, Promise<Omit<FxInfo, 'to'>>>();
 const ratesFor = (base: string) => { let p = fxCache.get(base); if (!p) { p = get('/api/fx?base=' + base); fxCache.set(base, p); p.catch(() => fxCache.delete(base)); } return p; };
 
-export interface UploadState { staged: File[]; raw: File[]; files: FileText[]; report: IngestReport | null; error: string | null; busy: string | null; open: boolean; overrides: Partial<Record<Role, string | null>>; dateOrder?: DateOrder }
+export interface UploadState { staged: File[]; raw: File[]; files: FileText[]; report: IngestReport | null; error: string | null; busy: string | null; open: boolean; overrides: Partial<Record<Role, string | null>>; dateOrder?: DateOrder; currency?: string }
 
 interface Store {
   dataset: DatasetMeta | null; findings: Finding[]; bySeverity: Record<string, number>; actions: Action[]; dash: Dash | null; health: any; conn: any;
   loading: boolean; version: number; extension: boolean; events: { name: string; payload: any; at: string }[]; fx: FxInfo | null;
   upload: UploadState;
   uploadFiles: (files: File[], mode?: 'replace' | 'add') => Promise<'ok' | 'fixable' | 'failed'>;
-  fixUpload: (overrides: Partial<Record<Role, string | null>>, dateOrder?: DateOrder) => Promise<void>;
+  fixUpload: (overrides: Partial<Record<Role, string | null>>, dateOrder?: DateOrder, currency?: string) => Promise<void>;
   setReviewOpen: (open: boolean) => void;
   stageFiles: (files: File[]) => void; unstage: (i: number) => void; readStaged: (mode?: 'replace' | 'add') => Promise<'ok' | 'fixable' | 'failed'>; goBackToFiles: () => void;
   refresh: () => Promise<void>; setDisplayCurrency: (code: string) => Promise<void>; setFilter: (field: string, values: string[]) => Promise<void>; clearFilters: () => Promise<void>;
@@ -41,7 +41,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       await tool('clear-canvas');
       setCurrency(dataset.currency);
       let fx: FxInfo | null = null;
-      try { const t = await ratesFor(dataset.currency); fx = { ...t, to: display.to || dataset.currency }; setDisplay(display.to, t.rates[display.to] ?? 1); } catch { setDisplay('', 1); }
+      // Unknown currency ('XXX'): amounts are plain numbers and can't be converted until the person says what they are.
+      if (dataset.currency === 'XXX') setDisplay('', 1);
+      else try { const t = await ratesFor(dataset.currency); fx = { ...t, to: display.to || dataset.currency }; setDisplay(display.to, t.rates[display.to] ?? 1); } catch { setDisplay('', 1); }
       setS((p) => ({ ...p, fx, dataset, findings: a.data?.findings ?? [], bySeverity: a.data?.bySeverity ?? {}, actions: r.data?.actions ?? [], dash: d.ok ? d.data : null, health, conn: conn.data, extension: !!health.extension, loading: false, version: p.version + 1 }));
       retries.current = 0;
     } catch {
@@ -60,13 +62,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   // ---- uploads: files are kept in the browser so a column fix or an extra file re-reads everything instantly
   const uploadRef = useRef<UploadState>(s.upload);
   const setUpload = (u: Partial<UploadState>) => setS((p) => { const next = { ...p.upload, ...u }; uploadRef.current = next; return { ...p, upload: next }; });
-  const send = useCallback(async (files: FileText[], overrides: Partial<Record<Role, string | null>>, dateOrder?: DateOrder) => {
+  const send = useCallback(async (files: FileText[], overrides: Partial<Record<Role, string | null>>, dateOrder?: DateOrder, currency?: string) => {
     setUpload({ busy: 'Reading every row…', error: null, open: true });
     try {
-      const r = await fetch('/api/dataset/files', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Session-Id': SID }, body: JSON.stringify({ files: files.map(({ name, text }) => ({ name, text })), overrides, dateOrder }) });
+      const r = await fetch('/api/dataset/files', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Session-Id': SID }, body: JSON.stringify({ files: files.map(({ name, text }) => ({ name, text })), overrides, dateOrder, currency }) });
       const j = await r.json().catch(() => ({}));
-      if (!r.ok) { setUpload({ files, overrides, dateOrder, busy: null, report: j.report ?? null, error: j.error?.message ?? 'This file couldn\'t be read.' }); return j.report?.columns ? 'fixable' as const : 'failed' as const; }
-      setUpload({ files, overrides, dateOrder, busy: null, report: j.report, error: null });
+      if (!r.ok) { setUpload({ files, overrides, dateOrder, currency, busy: null, report: j.report ?? null, error: j.error?.message ?? 'This file couldn\'t be read.' }); return j.report?.columns ? 'fixable' as const : 'failed' as const; }
+      setUpload({ files, overrides, dateOrder, currency, busy: null, report: j.report, error: null });
       await refresh();
       return 'ok' as const;
     } catch { setUpload({ busy: null, error: 'Couldn\'t reach the server. Try again in a moment.' }); return 'failed' as const; }
@@ -79,11 +81,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const prev = uploadRef.current;
     const files = mode === 'add' ? [...prev.files, ...read].slice(0, 5) : read;
     setUpload({ raw: mode === 'add' ? [...prev.raw, ...list].slice(0, 5) : list });
-    return send(files, mode === 'add' ? prev.overrides : {}, mode === 'add' ? prev.dateOrder : undefined);
+    return send(files, mode === 'add' ? prev.overrides : {}, mode === 'add' ? prev.dateOrder : undefined, mode === 'add' ? prev.currency : undefined);
   }, [send]);
-  const fixUpload = useCallback(async (overrides: Partial<Record<Role, string | null>>, dateOrder?: DateOrder) => {
+  const fixUpload = useCallback(async (overrides: Partial<Record<Role, string | null>>, dateOrder?: DateOrder, currency?: string) => {
     const u = uploadRef.current;
-    if (u.files.length) await send(u.files, overrides, dateOrder ?? u.dateOrder);
+    if (u.files.length) await send(u.files, overrides, dateOrder ?? u.dateOrder, currency ?? u.currency);
   }, [send]);
   const setReviewOpen = useCallback((open: boolean) => setUpload({ open }), []);
   // Files wait in a list (removable) until Next is pressed; only then is anything read.

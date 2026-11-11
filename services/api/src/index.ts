@@ -153,10 +153,11 @@ app.post('/api/dataset/files', express.json({ limit: '40mb' }), (req, res) => {
     files: z.array(z.object({ name: z.string().max(160).transform((x) => x.replace(/[^\w .()\-]/g, '').trim() || 'Uploaded file'), text: z.string().min(1).max(30_000_000) })).min(1).max(5),
     overrides: z.partialRecord(z.enum(ROLES), z.string().max(200).nullable()).optional(),
     dateOrder: z.enum(['ymd', 'mdy', 'dmy']).optional(),
+    currency: z.string().regex(/^[A-Za-z]{3}$/).optional(),
   }).safeParse(req.body);
   if (!p.success) return res.status(400).json({ error: { code: 'INVALID_INPUT', message: 'Send up to 5 files as { name, text }.' } });
   try {
-    const { dataset, report } = ingest(p.data.files, { overrides: p.data.overrides, dateOrder: p.data.dateOrder, maxRows: UPLOAD_MAX_ROWS });
+    const { dataset, report } = ingest(p.data.files, { overrides: p.data.overrides, dateOrder: p.data.dateOrder, currency: p.data.currency, maxRows: UPLOAD_MAX_ROWS });
     if (dataset.rows.length < 1) return res.status(400).json({ error: { code: 'NO_ROWS', message: 'No usable rows were found.' }, report });
     sessions.setDataset(sid(req), dataset, true);
     broadcastTo(sid(req), 'state', { dataset: dataset.name, rows: dataset.rows.length });

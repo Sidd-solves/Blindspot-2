@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { Bot, Brush, Check, FileText, FlaskConical, MessageSquareText, Radar, ShieldAlert, ShoppingBag, SlidersHorizontal, Sparkles, X } from 'lucide-react';
-import { CAT, SEV, tool, usd } from '../api';
+import { CAT, SEV, tool, usd, VERDICT } from '../api';
 import { useStore } from '../store';
 import { CountUp, Meter, Reveal, Ring } from '../components/ui';
 import { BeamCard } from './Effects';
@@ -81,8 +81,8 @@ export default function Features() {
 
         {/* Ideas checked */}
         <Reveal className="md:col-span-3"><BeamCard c="var(--emerald)" className="h-full p-5"><Head icon={FlaskConical} c="var(--emerald)" t="Ideas, proven true or false" />
-          <div className="mt-3 space-y-1.5">{ideas.slice(0, 4).map((h, i) => <motion.div key={h.id} initial={{ opacity: 0, y: 6 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.07 }} className="flex items-start gap-2 rounded-lg px-2.5 py-1.5" style={{ background: 'var(--line)' }}>{h.verdict === 'supported' ? <Check size={13} className="mt-0.5 flex-none" style={{ color: 'var(--emerald)' }} /> : <X size={13} className="mt-0.5 flex-none" style={{ color: 'var(--rose)' }} />}<span className="text-[11.5px] font-semibold">{h.claim}</span></motion.div>)}</div>
-          <div className="mt-2 flex items-center gap-1 text-[10.5px] text-[var(--faint)]"><Sparkles size={11} style={{ color: 'var(--fuchsia)' }} />AI can suggest new ideas; math decides if they're true.</div>
+          <div className="mt-3 space-y-1.5">{ideas.slice(0, 4).map((h, i) => <motion.div key={h.id} initial={{ opacity: 0, y: 6 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.07 }} className="flex items-start gap-2 rounded-lg px-2.5 py-1.5" style={{ background: 'var(--line)' }}>{h.verdict === 'supported' ? <Check size={13} className="mt-0.5 flex-none" style={{ color: VERDICT[h.verdict].c }} /> : <X size={13} className="mt-0.5 flex-none" style={{ color: VERDICT[h.verdict]?.c }} />}<span className="text-[11.5px] font-semibold">{h.claim} <span className="font-bold" style={{ color: VERDICT[h.verdict]?.c }}>· {VERDICT[h.verdict]?.label}</span></span></motion.div>)}</div>
+          <div className="mt-2 flex items-center gap-1 text-[10.5px] text-[var(--faint)]"><Sparkles size={11} style={{ color: 'var(--fuchsia)' }} />AI can suggest new ideas; statistics check them against your data.</div>
         </BeamCard></Reveal>
 
         {/* Cleaning */}

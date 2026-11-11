@@ -18,8 +18,11 @@ export const interpretConcentrationTool = defineTool({
   output: z.object({ dimension: z.string(), measure: z.string(), total: z.number(), groupCount: z.number(), top1Share: z.number(), top3Share: z.number(), top5Share: z.number(), top10PctShare: z.number(), groupsFor80Pct: z.number(), hhi: z.number(), risk: z.enum(['high', 'medium', 'low']), groups: z.array(z.object({ key: z.string(), value: z.number(), share: z.number(), cumShare: z.number() })), interpretation: z.string() }),
   async handler(ctx, i) {
     const d = field(ctx, i.dimension, 'dim'), m = field(ctx, i.measure, 'measure');
-    const c = interpretConcentration(d.v.rows, d.name, m.name, i.limit);
-    const interpretation = `${c.groupsFor80Pct} of ${c.groupCount} ${c.dimension} values (${Math.round((c.groupsFor80Pct / Math.max(1, c.groupCount)) * 100)}%) produce 80% of ${c.measure}. HHI ${c.hhi} (${c.hhi > 2500 ? 'highly concentrated' : c.hhi > 1500 ? 'moderately concentrated' : 'unconcentrated'} on the DOJ scale). Risk: ${c.risk}.`;
+    // Same base as the dashboard: sales only (no returns) and known values only (no "Unknown customer" or blanks).
+    const UNKNOWN = new Set(['Unknown customer', 'Guest checkout', 'Unknown', '', '(blank)', 'null', 'undefined']);
+    const rows = d.v.rows.filter((r) => r.IsReturn !== 1 && !UNKNOWN.has(String(r[d.name] ?? '')));
+    const c = interpretConcentration(rows, d.name, m.name, i.limit);
+    const interpretation = `${c.groupsFor80Pct} of ${c.groupCount} known ${c.dimension} values (${Math.round((c.groupsFor80Pct / Math.max(1, c.groupCount)) * 100)}%) produce 80% of ${c.measure}; the largest is ${Math.round(c.top1Share * 100)}% and the top 5 are ${Math.round(c.top5Share * 100)}%. Dependency: ${c.risk} (from those shares; the HHI index ${c.hhi} is shown for reference, 10,000 = everything from one).`;
     return { ...c, interpretation };
   },
 });

@@ -519,7 +519,7 @@ function explodeMulti(product: string): { name: string; qty: number }[] | null {
 /* ------------------------------------------------------------------ main */
 
 export interface IngestInput { name: string; text: string }
-export interface IngestOptions { overrides?: Partial<Record<Role, string | null>>; dateOrder?: DateOrder; maxRows?: number }
+export interface IngestOptions { overrides?: Partial<Record<Role, string | null>>; dateOrder?: DateOrder; maxRows?: number; /** The person's answer when the file doesn't state its currency. */ currency?: string }
 
 interface Parsed { name: string; table: Table; profile: Profile | null; roles: RoleMap; confidence: Partial<Record<Role, number>> }
 
@@ -677,6 +677,7 @@ export function ingest(files: IngestInput[], opts: IngestOptions = {}): { datase
     }
   }
 
+  if (opts.currency && CURRENCY_CODES.has(opts.currency.toUpperCase())) { currency = opts.currency.toUpperCase(); currencySource = 'You chose it'; }
   // ---- lines
   type Line = { order: string; date: string | null; product: string; sku: string; customer: string | null; country: string | null; region: string | null; qty: number; unit: number; sales: number; ret: boolean; cost: number | null; profit: number | null; category: string | null; extra: Record<string, string>; line: number };
   const lines: Line[] = [];
@@ -787,7 +788,7 @@ export function ingest(files: IngestInput[], opts: IngestOptions = {}): { datase
       canon[k] = o;
     }
     lines.length = 0;
-    const ds = prepareTransactions(canon, primary.name, { currency: currency ?? undefined, exactSales: true, feeRule: profile?.id === 'uci' ? 'uci' : 'strict', pairReversals: profile?.id === 'uci', dedupe: profile?.id === 'uci', keep });
+    const ds = prepareTransactions(canon, primary.name, { currency: currency ?? 'XXX', exactSales: true, feeRule: profile?.id === 'uci' ? 'uci' : 'strict', pairReversals: profile?.id === 'uci', dedupe: profile?.id === 'uci', keep });
     canon.length = 0;
     rows = ds!.rows; prep = ds!.prep ?? null;
     if (prep && !hasCustomer) { prep.missingCustomerRows = 0; prep.missingCustomerSales = 0; }
@@ -832,7 +833,8 @@ export function ingest(files: IngestInput[], opts: IngestOptions = {}): { datase
     dateRange: dates.length ? [dates[0], dates[dates.length - 1]] : null, prep,
   };
   const label = `${format}${table.how ? ` (${table.how})` : ''}`;
-  return { dataset: { name: primary.name, source: 'csv', label, rows, currency: currency ?? undefined, prep: prep ?? undefined }, report };
+  // Unknown currency stays unknown ('XXX': amounts shown without a symbol) until the person says what it is.
+  return { dataset: { name: primary.name, source: 'csv', label, rows, currency: currency ?? 'XXX', prep: prep ?? undefined }, report };
 }
 
 function partialReport(p: Parsed, issues: Issue[], files: IngestReport['files']): Partial<IngestReport> {

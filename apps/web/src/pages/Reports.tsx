@@ -1,13 +1,13 @@
 import { motion } from 'framer-motion';
 import { useEffect, useState, type CSSProperties } from 'react';
 import { BookOpen, Download, FileText, Flag, Printer, RefreshCw, Rocket, Target, TrendingUp } from 'lucide-react';
-import { tool, usd, pct, SEV } from '../api';
+import { tool, usd, pct, SEV, evidenceText } from '../api';
 import { useStore } from '../store';
 import { Card, CardHead, Chip, CountUp, Loading, Markdown, stagger } from '../components/ui';
 
 const download = (name: string, text: string) => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: 'text/markdown' })); a.download = name; a.click(); URL.revokeObjectURL(a.href); };
 const PHASE_STYLE = [{ c: 'var(--rose)', icon: Flag }, { c: 'var(--amber)', icon: Target }, { c: 'var(--emerald)', icon: Rocket }];
-const TOPIC_STYLE: Record<string, { c: string; label: string }> = { issue: { c: 'var(--rose)', label: 'Problem found' }, clear: { c: 'var(--emerald)', label: 'No problem' }, 'not-in-data': { c: 'var(--faint)', label: 'Not in your data' } };
+const TOPIC_STYLE: Record<string, { c: string; label: string }> = { issue: { c: 'var(--rose)', label: 'Problem found' }, clear: { c: 'var(--emerald)', label: 'No problem' }, 'not-enough': { c: 'var(--amber)', label: 'Not enough data' }, 'not-in-data': { c: 'var(--faint)', label: 'Not in your data' } };
 
 export default function Reports() {
   const { version, dataset, dash } = useStore();
@@ -33,14 +33,14 @@ export default function Reports() {
         <Card c="var(--sky)" hover={false} className="print-full p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div><div className="label">Executive summary · {new Date().toLocaleDateString()}</div><h2 className="mt-1 text-[20px] font-extrabold tracking-tight">{dataset?.name}</h2><div className="mt-0.5 text-[11.5px] text-[var(--muted)]">{dataset?.rows.toLocaleString()} rows analysed · figures computed deterministically · scenarios hypothetical</div></div>
-            <div className="flex gap-2">{kpis.slice(0, 3).map((k, i) => <div key={k.label} className="tint rounded-lg px-3 py-2" style={{ '--c': ['var(--violet)', 'var(--emerald)', 'var(--cyan)'][i] } as CSSProperties}><div className="label">{k.label}</div><CountUp value={k.value} format={(n) => (k.format === 'pct' ? pct(n) : usd(n, true))} className="text-[16px] font-semibold" /></div>)}</div>
+            <div className="flex gap-2">{kpis.slice(0, 3).map((k, i) => <div key={k.label} className="tint rounded-lg px-3 py-2" style={{ '--c': ['var(--violet)', 'var(--emerald)', 'var(--cyan)'][i] } as CSSProperties}><div className="label">{k.label}</div><CountUp value={k.value} format={(n) => (k.format === 'pct' ? pct(n) : k.format === 'int' ? Math.round(n).toLocaleString() : usd(n, true))} className="text-[16px] font-semibold" /></div>)}</div>
           </div>
 
           <h3 className="mb-2 mt-5 text-[11px] font-extrabold uppercase tracking-[.1em]" style={{ color: 'var(--rose)' }}>Top 3 findings</h3>
           <div className="grid gap-2 md:grid-cols-3">
             {rep.topFindings.map((f: any, i: number) => (
               <motion.div key={f.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 * i }} className="tint rounded-xl p-3" style={{ '--c': SEV[f.severity].c } as CSSProperties}>
-                <div className="flex items-center gap-2"><span className="mono grid h-6 w-6 place-items-center rounded-lg text-[12px] font-bold text-white" style={{ background: SEV[f.severity].c }}>{i + 1}</span><Chip c={SEV[f.severity].c}>{SEV[f.severity].label}</Chip><span className="mono ml-auto text-[11px]">{Math.round(f.confidence * 100)}%</span></div>
+                <div className="flex items-center gap-2"><span className="mono grid h-6 w-6 place-items-center rounded-lg text-[12px] font-bold text-white" style={{ background: SEV[f.severity].c }}>{i + 1}</span><Chip c={SEV[f.severity].c}>{SEV[f.severity].label}</Chip><span className="ml-auto text-[11px] font-semibold text-[var(--muted)]">{evidenceText(f)}</span></div>
                 <div className="mt-2 text-[12.5px] font-extrabold leading-snug">{f.title}</div>
                 <div className="mt-1 text-[11px] leading-relaxed text-[var(--muted)]">{f.explanation}</div>
                 {f.impactUsd && <div className="mono mt-2 text-[13px] font-semibold" style={{ color: SEV[f.severity].c }}>{usd(f.impactUsd)}</div>}

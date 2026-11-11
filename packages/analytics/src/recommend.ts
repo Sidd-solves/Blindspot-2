@@ -19,14 +19,17 @@ const COST = { low: 1, medium: 2, high: 3 } as const;
 export function recommend(findings: Finding[]) {
   return findings.map((f) => {
     const p = PLAYBOOK[f.category];
-    const benefit = f.impactUsd ? round(f.impactUsd * p.recovery) : null;
+    // Reversed or untracked sales were never lost, so there's nothing to "recover".
+    const recoverable = f.exposure !== 'reversed' && f.exposure !== 'untracked';
+    const benefit = f.impactUsd && recoverable && p.recovery > 0 ? round(f.impactUsd * p.recovery) : null;
     return {
       findingId: f.id, problem: f.title, intervention: p.intervention,
       expectedBenefitUsd: benefit,
       /** Profitability fixes recover profit; concentration/trend/outlier benefits are revenue protected or recovered. */
       benefitKind: f.category === 'profitability' || f.category === 'pricing' ? ('profit' as const) : ('revenue' as const),
-      benefitBasis: benefit === null ? 'Not quantifiable from loaded data' : `Hypothetical: ${Math.round(p.recovery * 100)}% recovery of the ${f.impactBasis?.toLowerCase()}`,
+      benefitBasis: benefit === null ? (recoverable ? 'No money figure to recover from this data' : 'Nothing to recover: this money was never earned or lost') : `${Math.round(p.recovery * 100)}% of the ${f.impactBasis?.toLowerCase()} is won back (a planning assumption, not a measured result)`,
       effort: p.effort, risks: p.risks, evidence: f.evidence, severity: f.severity,
+      /** A ranking score (scenario benefit ÷ effort weight), not a return on investment: real costs aren't in the data. */
       benefitToEffort: benefit === null ? null : round(benefit / COST[p.effort] ** 2, 0),
     };
   }).sort((a, b) => (b.benefitToEffort ?? -1) - (a.benefitToEffort ?? -1));

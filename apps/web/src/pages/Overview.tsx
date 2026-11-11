@@ -3,7 +3,7 @@ import { useEffect, useState, type CSSProperties } from 'react';
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, ComposedChart, Line, ReferenceArea, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Activity, ArrowRight, Check, Crosshair, DollarSign, FlaskConical, Gauge, Layers, Lightbulb, PieChart, Radar, ShoppingCart, TrendingUp, X } from 'lucide-react';
 import { useStore } from '../store';
-import { ago, get, pct, SEV, CAT, tool, usd } from '../api';
+import { ago, get, pct, SEV, CAT, tool, usd, evidenceText, VERDICT } from '../api';
 import { Card, CardHead, Chip, CountUp, Meter, Ring, Sparkline, stagger, Loading } from '../components/ui';
 import { ChartTip, axis, glowDefs } from '../components/charts';
 import { go } from '../App';
@@ -57,8 +57,8 @@ function IdeasCard() {
         {!res && <div className="space-y-2">{[0, 1, 2].map((i) => <div key={i} className="skeleton h-9" />)}</div>}
         {res && shown.length === 0 && <div className="text-[12px] text-[var(--muted)]">None of the built-in ideas apply to this data.</div>}
         {shown.map((h, i) => (
-          <motion.div key={h.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }} className="rounded-lg px-2 py-1.5" style={{ background: 'var(--line)', borderLeft: `3px solid ${h.verdict === 'supported' ? 'var(--emerald)' : 'var(--rose)'}` }}>
-            <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider" style={{ color: h.verdict === 'supported' ? 'var(--emerald)' : 'var(--rose)' }}>{h.verdict === 'supported' ? <Check size={11} /> : <X size={11} />}{h.verdict === 'supported' ? 'True' : 'False'}</div>
+          <motion.div key={h.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }} className="rounded-lg px-2 py-1.5" style={{ background: 'var(--line)', borderLeft: `3px solid ${VERDICT[h.verdict]?.c}` }}>
+            <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider" style={{ color: VERDICT[h.verdict]?.c }}>{h.verdict === 'supported' ? <Check size={11} /> : <X size={11} />}{VERDICT[h.verdict]?.label}</div>
             <div className="text-[11.5px] font-bold leading-snug">{h.claim}</div>
             <div className="truncate text-[10.5px] text-[var(--muted)]" title={h.summary}>{h.summary}</div>
           </motion.div>
@@ -179,7 +179,7 @@ export default function Overview() {
           {loading && !findings.length ? <div className="space-y-2 p-2">{[0, 1, 2, 3].map((i) => <div key={i} className="skeleton h-7" />)}</div> : findings.length === 0 ? <div className="px-2 pb-2 text-[12px] text-[var(--muted)]">No problems found in this data.</div> : findings.slice(0, 6).map((f, i) => (
             <motion.button key={f.id} onClick={() => go('risk', `?f=${encodeURIComponent(f.id)}`)} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.05 * i }} className="row-hover flex w-full items-center gap-2.5 rounded-lg px-2 py-[7px] text-left">
               <span className="h-6 w-1 flex-none rounded-full" style={{ background: SEV[f.severity].c, boxShadow: `0 0 8px ${SEV[f.severity].c}` }} />
-              <span className="min-w-0 flex-1"><span className="block truncate text-[12.5px] font-bold">{f.title}</span><span className="block truncate text-[10.5px] text-[var(--faint)]">{CAT[f.category]?.label} · {Math.round(f.confidence * 100)}% confidence</span></span>
+              <span className="min-w-0 flex-1"><span className="block truncate text-[12.5px] font-bold">{f.title}</span><span className="block truncate text-[10.5px] text-[var(--faint)]">{CAT[f.category]?.label} · {evidenceText(f)}</span></span>
               <span className="mono text-[11.5px] font-semibold" style={{ color: SEV[f.severity].c }}>{f.impactUsd ? usd(f.impactUsd, true) : '—'}</span>
             </motion.button>
           ))}
@@ -187,7 +187,7 @@ export default function Overview() {
       </Card>
 
       <Card c="var(--violet)" className="md:col-span-3 xl:col-span-3">
-        <CardHead icon={<PieChart size={13} />} title={conc ? `Who your sales depend on` : 'Who your sales depend on'} c="var(--violet)" right={conc && <Chip c={conc.risk === 'high' ? 'var(--rose)' : conc.risk === 'medium' ? 'var(--amber)' : 'var(--emerald)'}>{conc.risk} risk</Chip>} />
+        <CardHead icon={<PieChart size={13} />} title={conc ? `Who your sales depend on` : 'Who your sales depend on'} c="var(--violet)" right={conc && <span title="Based on how much comes from the largest and the top 5"><Chip c={conc.risk === 'high' ? 'var(--rose)' : conc.risk === 'medium' ? 'var(--amber)' : 'var(--emerald)'}>{conc.risk} dependency</Chip></span>} />
         {conc ? (
           <>
             <div className="flex items-baseline gap-1.5 px-3.5"><CountUp value={conc.top5Share * 100} format={(n) => `${n.toFixed(1)}%`} className="text-[20px] font-semibold" /><span className="text-[11px] text-[var(--muted)]">of sales from your top 5 {conc.dimension.toLowerCase()}s</span></div>

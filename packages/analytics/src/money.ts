@@ -1,6 +1,9 @@
 /** Currency-aware formatting shared by findings, reports and the analyst. */
+/** ISO 4217 code for "no currency": used when a file doesn't say what currency it's in. */
+export const NO_CURRENCY = 'XXX';
 export function money(n: number | null | undefined, currency = 'USD', compact = false) {
   if (n == null || !Number.isFinite(n)) return 'n/a';
+  if (currency === NO_CURRENCY) return new Intl.NumberFormat('en-US', { maximumFractionDigits: compact ? 1 : 0, ...(compact ? { notation: 'compact' } : {}) }).format(n);
   return new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: compact ? 1 : 0, ...(compact ? { notation: 'compact' } : {}) }).format(n);
 }
 export const pctStr = (n: number, d = 1) => `${(n * 100).toFixed(d)}%`;
@@ -14,6 +17,7 @@ export function plural(dim: string) {
  * in `to` at `rate`. Analysis runs once in the data's own currency; only the text shown is converted.
  */
 export function convertMoneyText(text: string, from: string, to: string, rate: number) {
+  if (from === NO_CURRENCY) return text;
   const sym = new Intl.NumberFormat('en-US', { style: 'currency', currency: from }).formatToParts(1).find((p) => p.type === 'currency')?.value;
   if (!sym) return text;
   const esc = sym.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

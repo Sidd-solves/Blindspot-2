@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { ArrowUp, Bot, Check, ChevronRight, Cpu, Database, FlaskConical, Lightbulb, ShieldCheck, ShieldX, Sparkles, User, Workflow, X } from 'lucide-react';
-import { post, tool } from '../api';
+import { post, tool, VERDICT } from '../api';
 import { Card, CardHead, Chip, CountUp, Loading, Markdown, Meter, stagger } from '../components/ui';
 import { useStore } from '../store';
 
@@ -13,7 +13,7 @@ const SUGGESTED = [
   { q: 'What is our biggest risk?', c: 'var(--violet)' },
   { q: 'Top 5 customers by sales', c: 'var(--cyan)' },
   { q: 'Show sales by month', c: 'var(--blue)' },
-  { q: 'Which recommendation has the highest estimated ROI?', c: 'var(--emerald)' },
+  { q: 'Which fix gives the most benefit for the effort?', c: 'var(--emerald)' },
   { q: 'Average sales by weekday', c: 'var(--fuchsia)' },
 ];
 
@@ -90,7 +90,6 @@ function Workflow_() {
   );
 }
 
-const VERDICT: Record<string, { c: string; label: string }> = { supported: { c: 'var(--emerald)', label: 'Supported' }, rejected: { c: 'var(--rose)', label: 'Rejected' }, inconclusive: { c: 'var(--faint)', label: 'Not enough evidence' } };
 
 /** Layer 3: ideas (built-in or AI-proposed) are only reported with a verdict from real calculations. */
 function Hypotheses() {
