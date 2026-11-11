@@ -41,7 +41,7 @@ export function ProvesItself() {
   const rate = (x: number, n: number) => (n ? Math.round((x / n) * 100) : 0);
 
   return (
-    <section className="mx-auto max-w-6xl px-4 pb-16 md:px-6">
+    <section data-scene-exit className="mx-auto max-w-6xl px-4 pb-16 md:px-6">
       <Reveal>
         <div className="label" style={{ color: 'var(--cyan)' }}>
           Predictions with a track record

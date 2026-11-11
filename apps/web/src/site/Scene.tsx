@@ -250,9 +250,13 @@ export function Scene({
       // Just past the hero the scan turns the landscape into the data world; near the end it turns back.
       const ss = (a: number, b: number, x: number) => Math.min(1, Math.max(0, (x - a) / (b - a)));
       const dgT = wld.current === 'data' ? ss(0.05, 0.13, prog01) * (1 - ss(0.6, 0.68, prog01)) : 0;
-      const wpT = wld.current === 'warp' ? ss(0.06, 0.16, prog01) * (1 - ss(0.8, 0.9, prog01)) : 0;
+      // The tunnel retreats as the section marked data-scene-exit scrolls in (on Features: the predictions).
+      const exitEl = document.querySelector<HTMLElement>('[data-scene-exit]');
+      const exitTop = exitEl ? exitEl.getBoundingClientRect().top + scrollY : Infinity;
+      const leave = ss(exitTop - innerHeight * 0.85, exitTop - innerHeight * 0.1, scrollY);
+      const wpT = wld.current === 'warp' ? ss(0.06, 0.16, prog01) * (1 - leave) : 0;
       dgv += (dgT - dgv) * 0.05;
-      wpv += (wpT - wpv) * 0.05;
+      wpv += (wpT - wpv) * 0.07;
       gl.uniform1f(udg, dgv);
       gl.uniform1f(uwp, wpv);
       gl.uniform3f(uck, ckx, cky, still ? 99 : (performance.now() - ckAt) / 1000);
