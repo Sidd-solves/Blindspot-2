@@ -5,7 +5,7 @@ Each choice below has a cost. This page says what we chose, why, and what we gav
 ## 1. The math is separate from the AI
 **Choice.** All numbers come from deterministic TypeScript: cleaning, statistics, findings, scenarios and reports. Claude only picks tools, explains their results and proposes ideas.
 
-**Why.** A store owner acts on these numbers. Code gives the same answer every time, runs in seconds, costs nothing per run and can be tested (247 tests, 84% line coverage on the engine and API). A language model gives none of those guarantees for arithmetic.
+**Why.** A store owner acts on these numbers. Code gives the same answer every time, runs in seconds, costs nothing per run and can be tested (250 tests, 84% line coverage on the engine and API). A language model gives none of those guarantees for arithmetic.
 
 **Trade-off.** Every new kind of analysis has to be written as code, and the AI can't answer questions that no tool covers. It says so instead of guessing.
 
