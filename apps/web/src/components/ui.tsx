@@ -33,15 +33,26 @@ export function Card({
       transition={delay ? { delay } : undefined}
       whileHover={hover ? { y: -2, transition: { duration: 0.15 } } : undefined}
       onClick={onClick}
-      className={`panel relative overflow-hidden ${onClick ? 'cursor-pointer' : ''} ${className}`}
+      onPointerMove={(e) => {
+        const r = e.currentTarget.getBoundingClientRect();
+        e.currentTarget.style.setProperty('--mx', `${e.clientX - r.left}px`);
+        e.currentTarget.style.setProperty('--my', `${e.clientY - r.top}px`);
+      }}
+      className={`panel card-live relative overflow-hidden ${onClick ? 'cursor-pointer' : ''} ${className}`}
       style={{ ...(c ? ({ '--c': c } as CSSProperties) : {}), ...style }}
     >
       {c && (
-        <div
-          className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full opacity-25 blur-2xl"
-          style={{ background: c }}
-        />
+        <>
+          <div
+            className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full opacity-25 blur-2xl"
+            style={{ background: c }}
+          />
+          {/* accent line along the top edge, with a slow light running across it */}
+          <div className="card-edge pointer-events-none absolute inset-x-0 top-0 h-px" />
+        </>
       )}
+      {/* spotlight that follows the cursor */}
+      <div className="card-spot pointer-events-none absolute inset-0" />
       {children}
     </motion.div>
   );
@@ -63,8 +74,12 @@ export function CardHead({
       <div className="flex min-w-0 flex-[1_1_9rem] items-center gap-2">
         {icon && (
           <span
-            className="grid h-6 w-6 flex-none place-items-center rounded-md"
-            style={{ color: c, background: `color-mix(in srgb, ${c} 15%, transparent)` }}
+            className="relative grid h-6 w-6 flex-none place-items-center rounded-md"
+            style={{
+              color: c,
+              background: `linear-gradient(135deg, color-mix(in srgb, ${c} 28%, transparent), color-mix(in srgb, ${c} 8%, transparent))`,
+              boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${c} 35%, transparent), 0 0 14px -4px ${c}`,
+            }}
           >
             {icon}
           </span>
@@ -115,7 +130,7 @@ export function CountUp({
   }, [value]);
   // Re-renders (e.g. a currency switch changes `format`) must show the current number, not reset to 0.
   return (
-    <span ref={ref} className={`mono ${className}`}>
+    <span ref={ref} className={`mono num-glow ${className}`}>
       {format(shown.current)}
     </span>
   );

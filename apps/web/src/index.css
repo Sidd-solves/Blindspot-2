@@ -525,3 +525,65 @@ input[type='range']::-moz-range-thumb {
 .text-glow .grad-text {
   text-shadow: none;
 }
+
+/* ---- In-app polish: cards that respond, numbers that read at a glance ---- */
+.card-live {
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+  background-image: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--c, transparent) 7%, transparent),
+    transparent 45%
+  );
+}
+.card-live:hover {
+  border-color: color-mix(in srgb, var(--c, var(--violet)) 38%, var(--line));
+  box-shadow:
+    var(--shadow),
+    0 0 0 1px color-mix(in srgb, var(--c, var(--violet)) 12%, transparent),
+    0 18px 50px -24px color-mix(in srgb, var(--c, var(--violet)) 55%, transparent);
+}
+.card-spot {
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  background: radial-gradient(
+    260px circle at var(--mx, 50%) var(--my, 50%),
+    color-mix(in srgb, var(--c, var(--violet)) 13%, transparent),
+    transparent 70%
+  );
+}
+.card-live:hover .card-spot {
+  opacity: 1;
+}
+.card-edge {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--c) 75%, transparent) 30%,
+    transparent 85%
+  );
+  background-size: 200% 100%;
+  animation: edge-run 6s linear infinite;
+  opacity: 0.85;
+}
+@keyframes edge-run {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+.num-glow {
+  text-shadow: 0 0 18px color-mix(in srgb, currentColor 35%, transparent);
+  font-variant-numeric: tabular-nums;
+}
+.chip {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 28%, transparent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .card-edge {
+    animation: none;
+  }
+}

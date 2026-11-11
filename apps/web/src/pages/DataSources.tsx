@@ -18,6 +18,8 @@ import {
   ShoppingBag,
   Sparkles,
   Store,
+  Cpu,
+  Target,
 } from 'lucide-react';
 import { post } from '../api';
 import { useStore } from '../store';
@@ -265,7 +267,82 @@ function ShopifyConnect() {
           </motion.div>
         )}
       </AnimatePresence>
+      <DataFlow />
     </Card>
+  );
+}
+
+/** What connecting does, drawn: your store → the engine → ranked findings, with rows flowing along the line. */
+function DataFlow() {
+  const nodes = [
+    { x: 40, label: 'Your store', sub: 'read-only', c: SHOPIFY, ic: Store },
+    { x: 200, label: 'Blindspot engine', sub: '40 checks', c: 'var(--violet)', ic: Cpu },
+    { x: 360, label: 'Findings', sub: 'ranked by money', c: 'var(--amber)', ic: Target },
+  ];
+  return (
+    <div className="border-t px-3.5 pb-3.5 pt-3" style={{ borderColor: 'var(--line)' }}>
+      <div className="label mb-2">What connecting does</div>
+      <div className="relative mx-auto max-w-[520px]">
+        <svg viewBox="0 0 400 86" className="block h-auto w-full" aria-hidden>
+          <defs>
+            <linearGradient id="flow-line" x1="0" x2="1">
+              <stop offset="0" stopColor={SHOPIFY} />
+              <stop offset=".5" stopColor="var(--violet)" />
+              <stop offset="1" stopColor="var(--amber)" />
+            </linearGradient>
+          </defs>
+          <path
+            d="M40 30 L360 30"
+            stroke="url(#flow-line)"
+            strokeWidth="2"
+            strokeDasharray="4 5"
+            opacity=".55"
+          />
+          {Array.from({ length: 7 }, (_, i) => (
+            <motion.circle
+              key={i}
+              r="2.6"
+              cy="30"
+              fill={i % 3 === 0 ? 'var(--amber)' : i % 3 === 1 ? 'var(--violet)' : SHOPIFY}
+              initial={{ cx: 40, opacity: 0 }}
+              animate={{ cx: [40, 360], opacity: [0, 1, 1, 0] }}
+              transition={{ duration: 2.6, repeat: Infinity, delay: i * 0.37, ease: 'linear' }}
+            />
+          ))}
+          {nodes.map((n) => (
+            <g key={n.label}>
+              <motion.circle
+                cx={n.x}
+                cy="30"
+                r="17"
+                fill="none"
+                stroke={n.c}
+                strokeWidth="1.5"
+                animate={{ r: [17, 21, 17], opacity: [0.8, 0.2, 0.8] }}
+                transition={{ duration: 2.2, repeat: Infinity }}
+              />
+              <circle cx={n.x} cy="30" r="15" fill="var(--panel-solid)" stroke={n.c} strokeWidth="1.5" />
+              <text x={n.x} y="66" textAnchor="middle" fontSize="10.5" fontWeight="800" fill="var(--text)">
+                {n.label}
+              </text>
+              <text x={n.x} y="80" textAnchor="middle" fontSize="9.5" fill="var(--muted)">
+                {n.sub}
+              </text>
+            </g>
+          ))}
+        </svg>
+        {/* icons sit over the SVG circles so they stay crisp */}
+        {nodes.map((n) => (
+          <span
+            key={n.label}
+            className="pointer-events-none absolute grid -translate-x-1/2 -translate-y-1/2 place-items-center"
+            style={{ left: `${(n.x / 400) * 100}%`, top: `${(30 / 86) * 100}%`, color: n.c }}
+          >
+            <n.ic size={14} />
+          </span>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -383,6 +460,35 @@ export default function DataSources() {
                 Switch to this shop
               </button>
             )}
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {[
+              {
+                v: dataset?.source === 'case-study' ? dataset.rows.toLocaleString() : '261,658',
+                l: 'clean rows',
+                c: 'var(--violet)',
+              },
+              { v: '2 years', l: 'Dec 2009 to Dec 2011', c: 'var(--cyan)' },
+              { v: '25%', l: 'of customers, every order', c: 'var(--emerald)' },
+              { v: '£93,531', l: 'top finding, to the penny', c: 'var(--amber)' },
+            ].map((x, i) => (
+              <motion.div
+                key={x.l}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 + i * 0.06 }}
+                className="rounded-lg border px-2.5 py-2"
+                style={{
+                  borderColor: `color-mix(in srgb, ${x.c} 28%, var(--line))`,
+                  background: `color-mix(in srgb, ${x.c} 7%, transparent)`,
+                }}
+              >
+                <div className="mono num-glow text-[15px] font-semibold" style={{ color: x.c }}>
+                  {x.v}
+                </div>
+                <div className="text-[10.5px] text-[var(--muted)]">{x.l}</div>
+              </motion.div>
+            ))}
           </div>
         </Card>
       )}

@@ -452,9 +452,43 @@ export default function App() {
               background: 'color-mix(in srgb, var(--bg) 72%, transparent)',
             }}
           >
+            {/* the page's colour runs along the bottom edge of the bar */}
+            <motion.div
+              key={nav.id}
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px]"
+              initial={{ scaleX: 0, opacity: 0 }}
+              animate={{ scaleX: 1, opacity: 1 }}
+              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+              style={{
+                originX: 0,
+                background: `linear-gradient(90deg, ${nav.c}, color-mix(in srgb, ${nav.c} 30%, transparent) 60%, transparent)`,
+                boxShadow: `0 0 12px ${nav.c}`,
+              }}
+            />
             <div className="flex min-w-0 items-center gap-2">
-              <nav.icon size={15} style={{ color: nav.c }} />
-              <h1 className="truncate text-[15px] font-extrabold tracking-tight">{nav.label}</h1>
+              <motion.span
+                key={`ic-${nav.id}`}
+                initial={{ scale: 0.6, rotate: -20, opacity: 0 }}
+                animate={{ scale: 1, rotate: 0, opacity: 1 }}
+                transition={{ type: 'spring', stiffness: 320, damping: 18 }}
+                className="grid h-7 w-7 flex-none place-items-center rounded-lg"
+                style={{
+                  color: nav.c,
+                  background: `linear-gradient(135deg, color-mix(in srgb, ${nav.c} 30%, transparent), color-mix(in srgb, ${nav.c} 8%, transparent))`,
+                  boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${nav.c} 40%, transparent), 0 0 16px -4px ${nav.c}`,
+                }}
+              >
+                <nav.icon size={14} />
+              </motion.span>
+              <motion.h1
+                key={`h-${nav.id}`}
+                initial={{ opacity: 0, x: -6 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="truncate text-[15px] font-extrabold tracking-tight"
+              >
+                {nav.label}
+              </motion.h1>
               {dataset && (
                 <Chip
                   c={
@@ -480,6 +514,11 @@ export default function App() {
                           ? 'Live Tableau'
                           : 'Uploaded file'}
                 </Chip>
+              )}
+              {dataset && dataset.rows === dataset.totalRows && (
+                <span className="chip hidden sm:inline-flex" style={{ '--c': 'var(--sky)' } as CSSProperties}>
+                  <span className="mono">{dataset.rows.toLocaleString()}</span> rows
+                </span>
               )}
               {dataset && dataset.rows !== dataset.totalRows && (
                 <Chip c="var(--cyan)">

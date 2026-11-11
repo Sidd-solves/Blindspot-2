@@ -198,7 +198,7 @@ function SavedTab() {
   const load = () => listSaved().then(setList);
   useEffect(() => {
     load();
-  }, [version]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [version]);
   const health = Math.max(
     0,
     Math.round(100 - findings.reduce((s, f) => s + (PENALTY[f.severity] ?? 1) * f.confidence, 0)),
@@ -384,69 +384,268 @@ export default function Account() {
       'profile',
   );
   if (!ready) return <div className="skeleton h-40" />;
-  if (!user)
-    return (
-      <Card hover={false} className="p-6">
-        <Empty icon={<UserRound size={22} />} title="You’re using Blindspot as a guest">
-          Everything works without an account. Log in to keep a profile and save analyses.
-          <div className="mt-3 flex justify-center gap-2">
-            <button
-              onClick={() => (location.hash = '/login')}
-              className="btn !h-8"
-              style={{ '--c': 'var(--violet)' } as CSSProperties}
-            >
-              <LogIn size={13} /> Log in
-            </button>
-            <button onClick={() => (location.hash = '/signup')} className="btn !h-8">
-              Create an account
-            </button>
-          </div>
-        </Empty>
-      </Card>
-    );
+  if (!user) return <GuestAccount />;
   const t = TABS.find((x) => x.id === tab)!;
   return (
-    <Card c={t.c} hover={false}>
-      <CardHead
-        icon={<t.icon size={13} />}
-        title="Account"
-        c={t.c}
-        right={
-          <div className="relative flex rounded-lg border p-0.5" style={{ borderColor: 'var(--line)' }}>
-            {TABS.map((x) => (
-              <button
-                key={x.id}
-                onClick={() => setTab(x.id)}
-                className="relative z-10 flex h-7 items-center gap-1 px-2.5 text-[11.5px] font-bold"
-                style={{ color: tab === x.id ? 'var(--text)' : 'var(--muted)' }}
-              >
-                {tab === x.id && (
-                  <motion.span
-                    layoutId="acct-tab"
-                    className="absolute inset-0 -z-10 rounded-md"
-                    style={{ background: `color-mix(in srgb, ${x.c} 22%, var(--panel))` }}
-                    transition={{ type: 'spring', stiffness: 380, damping: 32 }}
-                  />
-                )}
-                <x.icon size={11} style={{ color: x.c }} />
-                {x.label}
-              </button>
-            ))}
-          </div>
-        }
+    <div className="space-y-3">
+      <AccountHero onTab={setTab} />
+      <Card c={t.c} hover={false}>
+        <CardHead
+          icon={<t.icon size={13} />}
+          title="Account"
+          c={t.c}
+          right={
+            <div className="relative flex rounded-lg border p-0.5" style={{ borderColor: 'var(--line)' }}>
+              {TABS.map((x) => (
+                <button
+                  key={x.id}
+                  onClick={() => setTab(x.id)}
+                  className="relative z-10 flex h-7 items-center gap-1 px-2.5 text-[11.5px] font-bold"
+                  style={{ color: tab === x.id ? 'var(--text)' : 'var(--muted)' }}
+                >
+                  {tab === x.id && (
+                    <motion.span
+                      layoutId="acct-tab"
+                      className="absolute inset-0 -z-10 rounded-md"
+                      style={{ background: `color-mix(in srgb, ${x.c} 22%, var(--panel))` }}
+                      transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+                    />
+                  )}
+                  <x.icon size={11} style={{ color: x.c }} />
+                  {x.label}
+                </button>
+              ))}
+            </div>
+          }
+        />
+        <div className="px-3.5 pb-3.5">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={tab}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+            >
+              {tab === 'profile' ? <ProfileTab /> : tab === 'saved' ? <SavedTab /> : <SecurityTab />}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+/** Cover banner: animated colour from the user's accent, avatar with a live ring, and the account at a glance. */
+function AccountHero({ onTab }: { onTab: (t: Tab) => void }) {
+  const { user, profile, listSaved } = useAuth();
+  const [saved, setSaved] = useState<number | null>(null);
+  useEffect(() => {
+    listSaved().then((l) => setSaved(l.length));
+  }, [user?.id]);
+  if (!user) return null;
+  const a = profile?.accent ?? 'violet';
+  const name = profile?.display_name || user.email || '';
+  const days = Math.max(1, Math.round((Date.now() - new Date(user.created_at).getTime()) / 86400000));
+  const tiles = [
+    { l: 'Saved analyses', v: saved === null ? '…' : String(saved), c: 'var(--cyan)', go: 'saved' as Tab },
+    { l: 'Member for', v: `${days} day${days === 1 ? '' : 's'}`, c: 'var(--emerald)', go: 'security' as Tab },
+    { l: 'Shop', v: profile?.shop_name || 'Not set', c: 'var(--amber)', go: 'profile' as Tab },
+    { l: 'Money shown in', v: profile?.currency || 'Auto', c: 'var(--fuchsia)', go: 'profile' as Tab },
+  ];
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="panel relative overflow-hidden"
+    >
+      <motion.div
+        aria-hidden
+        className="absolute inset-x-0 top-0 h-24"
+        style={{
+          background: `radial-gradient(60% 120% at 20% 0%, color-mix(in srgb, var(--${a}) 55%, transparent), transparent), radial-gradient(50% 120% at 80% 0%, color-mix(in srgb, var(--fuchsia) 35%, transparent), transparent), radial-gradient(40% 100% at 55% 0%, color-mix(in srgb, var(--cyan) 30%, transparent), transparent)`,
+          backgroundSize: '160% 100%',
+        }}
+        animate={{ backgroundPosition: ['0% 0%', '100% 0%', '0% 0%'] }}
+        transition={{ duration: 14, repeat: Infinity, ease: 'easeInOut' }}
       />
-      <div className="px-3.5 pb-3.5">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={tab}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-          >
-            {tab === 'profile' ? <ProfileTab /> : tab === 'saved' ? <SavedTab /> : <SecurityTab />}
-          </motion.div>
-        </AnimatePresence>
+      <div className="relative flex flex-wrap items-end gap-4 px-4 pb-4 pt-12">
+        <div className="relative">
+          <motion.span
+            aria-hidden
+            className="absolute -inset-1.5 rounded-full"
+            style={{ background: `conic-gradient(var(--${a}), var(--fuchsia), var(--cyan), var(--${a}))` }}
+            animate={{ rotate: 360 }}
+            transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+          />
+          <span className="relative block rounded-full p-0.5" style={{ background: 'var(--panel-solid)' }}>
+            <Avatar name={name} accent={a} size={64} />
+          </span>
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-[20px] font-extrabold tracking-tight">
+            {profile?.display_name || 'Your account'}
+          </div>
+          <div className="truncate text-[12px] text-[var(--muted)]">{user.email}</div>
+        </div>
+        <div className="grid w-full grid-cols-2 gap-2 sm:w-auto sm:grid-cols-4">
+          {tiles.map((x, i) => (
+            <motion.button
+              key={x.l}
+              onClick={() => onTab(x.go)}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 + i * 0.06 }}
+              whileHover={{ y: -2 }}
+              className="rounded-lg border px-3 py-2 text-left"
+              style={{
+                borderColor: `color-mix(in srgb, ${x.c} 30%, var(--line))`,
+                background: `color-mix(in srgb, ${x.c} 8%, transparent)`,
+              }}
+            >
+              <div className="mono num-glow truncate text-[15px] font-semibold" style={{ color: x.c }}>
+                {x.v}
+              </div>
+              <div className="text-[10.5px] text-[var(--muted)]">{x.l}</div>
+            </motion.button>
+          ))}
+        </div>
       </div>
-    </Card>
+    </motion.div>
+  );
+}
+
+/** Guests see what an account adds, and a preview of it, instead of an empty page. */
+function GuestAccount() {
+  const perks = [
+    {
+      ic: Bookmark,
+      t: 'Save analyses',
+      d: 'Keep each run’s health, findings and amounts, and compare them later.',
+      c: 'var(--cyan)',
+    },
+    {
+      ic: Store,
+      t: 'Your shop name everywhere',
+      d: 'AI win-back emails sign off as your shop.',
+      c: 'var(--amber)',
+    },
+    {
+      ic: Palette,
+      t: 'Your colours and currency',
+      d: 'Pick an accent and the currency money is shown in.',
+      c: 'var(--fuchsia)',
+    },
+    {
+      ic: ShieldCheck,
+      t: 'Secure sign-in',
+      d: 'Password reset by email; only you can read your saved results.',
+      c: 'var(--emerald)',
+    },
+  ];
+  return (
+    <div className="grid gap-3 lg:grid-cols-[1.15fr_1fr]">
+      <Card c="var(--violet)" hover={false} className="p-5">
+        <div className="label" style={{ color: 'var(--violet)' }}>
+          You’re using Blindspot as a guest
+        </div>
+        <h2 className="mt-1.5 text-[26px] font-extrabold leading-tight tracking-tight">
+          Everything works. <span className="grad-text">An account remembers it.</span>
+        </h2>
+        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          {perks.map((x, i) => (
+            <motion.div
+              key={x.t}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.08 + i * 0.07 }}
+              whileHover={{ y: -2 }}
+              className="rounded-lg border p-2.5"
+              style={{
+                borderColor: `color-mix(in srgb, ${x.c} 28%, var(--line))`,
+                background: `color-mix(in srgb, ${x.c} 6%, transparent)`,
+              }}
+            >
+              <div className="flex items-center gap-1.5 text-[12.5px] font-bold">
+                <x.ic size={13} style={{ color: x.c }} /> {x.t}
+              </div>
+              <div className="mt-0.5 text-[11.5px] leading-snug text-[var(--muted)]">{x.d}</div>
+            </motion.div>
+          ))}
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button onClick={() => (location.hash = '/signup')} className="btn btn-primary !h-9 !px-4">
+            Create a free account
+          </button>
+          <button onClick={() => (location.hash = '/login')} className="btn !h-9">
+            <LogIn size={13} /> Log in
+          </button>
+        </div>
+      </Card>
+      {/* a preview of the signed-in page */}
+      <motion.div
+        initial={{ opacity: 0, rotate: 1.5, y: 10 }}
+        animate={{ opacity: 1, rotate: 0, y: 0 }}
+        transition={{ delay: 0.2, type: 'spring', stiffness: 140, damping: 18 }}
+        className="panel relative overflow-hidden p-4"
+      >
+        <span className="chip absolute right-3 top-3" style={{ '--c': 'var(--violet)' } as CSSProperties}>
+          Preview
+        </span>
+        <div
+          className="absolute inset-x-0 top-0 h-20"
+          style={{
+            background:
+              'radial-gradient(60% 120% at 25% 0%, color-mix(in srgb, var(--violet) 45%, transparent), transparent), radial-gradient(50% 120% at 80% 0%, color-mix(in srgb, var(--cyan) 30%, transparent), transparent)',
+          }}
+        />
+        <div className="relative mt-8 flex items-center gap-3">
+          <Avatar name="Alex Morgan" accent="violet" size={52} />
+          <div>
+            <div className="text-[15px] font-extrabold">Alex Morgan</div>
+            <div className="text-[11.5px] text-[var(--muted)]">Northwind Candles</div>
+          </div>
+        </div>
+        <div className="relative mt-4 space-y-1.5">
+          {[
+            {
+              n: 'UK gift shop · Nov 10',
+              h: 66,
+              f: '10 best customers stopped ordering',
+              v: '£93.5K',
+              c: 'var(--amber)',
+            },
+            {
+              n: 'UK gift shop · Oct 12',
+              h: 61,
+              f: '23 products stopped selling',
+              v: '£36.3K',
+              c: 'var(--orange)',
+            },
+            { n: 'Demo shop · Sep 30', h: 45, f: 'Tables loses money', v: '$10.5K', c: 'var(--rose)' },
+          ].map((r, i) => (
+            <motion.div
+              key={r.n}
+              initial={{ opacity: 0, x: 12 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.35 + i * 0.1 }}
+              className="flex items-center gap-2.5 rounded-lg border px-2.5 py-2"
+              style={{ borderColor: 'var(--line)' }}
+            >
+              <Ring value={r.h / 100} size={34} stroke={4} c={r.h >= 60 ? 'var(--cyan)' : 'var(--amber)'}>
+                <span className="mono text-[10px] font-bold">{r.h}</span>
+              </Ring>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[12px] font-bold">{r.n}</span>
+                <span className="block truncate text-[11px] text-[var(--faint)]">{r.f}</span>
+              </span>
+              <Chip c={r.c}>{r.v}</Chip>
+            </motion.div>
+          ))}
+        </div>
+        <div className="relative mt-2 text-[10.5px] text-[var(--faint)]">
+          Example data, to show what saving looks like.
+        </div>
+      </motion.div>
+    </div>
   );
 }
