@@ -199,7 +199,9 @@ export const forecastSalesTool = defineTool({
       rangeTested: z.number(),
       bias: z.number().nullable(),
     }),
-    forecast: z.array(z.object({ month: Month, value: z.number(), low: z.number(), high: z.number() })),
+    forecast: z.array(
+      z.object({ month: Month, value: z.number(), low: z.number().nullable(), high: z.number().nullable() }),
+    ),
     coverage: z.number(),
     notes: z.array(z.string()),
   }),
@@ -297,7 +299,7 @@ export const stockOutsTool = defineTool({
   category: 'Business Intelligence',
   core: false,
   description:
-    "Likely stock-outs: products that usually sell most trading days, went silent for 5-60 trading days, then sold again. Each silence is tested against the product's usual daily rate (Poisson) with Benjamini-Hochberg correction across all products; lost sales are an estimate (usual daily sales x days silent).",
+    "Unusual sales gaps (possible stock-outs): products ordered most trading days that got no orders for 5-60 trading days, then sold again. Counts distinct orders; each gap is tested against the product's usual daily order rate (Poisson), corrected for searching its whole history and across products (Benjamini-Hochberg). Shows that something changed, not why (no stock data). Sales not made is a rough estimate.",
   input: z.object({ top: z.number().int().min(1).max(200).default(30) }),
   output: z.object({
     ok: z.boolean(),
@@ -333,7 +335,7 @@ export const cashRadarTool = defineTool({
   category: 'Business Intelligence',
   core: false,
   description:
-    'Cash-crunch radar: each calendar month as an index against an average month (from full 12-month years), how many years it ran below average, and the months that are at least 15% below average in every year with the money gap at the current sales level.',
+    'Seasonal sales dips: each calendar month as an index against an average month (from full 12-month years), how many years it ran below average, and months at least 15% below average in every year with the revenue difference. Revenue only, not a cash-flow forecast.',
   input: z.object({}),
   output: z.object({
     ok: z.boolean(),
@@ -363,7 +365,7 @@ export const eventImpactTool = defineTool({
   category: 'Business Intelligence',
   core: false,
   description:
-    'Was it the promo? Tests whether sales really changed after a date (a promotion, price change, free shipping), against the same weeks a year earlier so the season is controlled (Welch t-test on weekly log year-over-year ratios, 8 weeks before vs the weeks after). Includes a placebo check: how often an effect this big appears at other weeks where nothing happened.',
+    'Was it the promo? Compares weekly sales before and after a date (a promotion, price change, free shipping) against the same weeks a year earlier, so the season is controlled (Welch t-test on weekly log year-over-year ratios, 8 weeks before vs the weeks after), and reports how many other start dates showed a shift as big (context, not a false-alarm rate). Shows a change around the date, not that the date caused it.',
   input: z.object({
     date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     weeks: z.number().int().min(3).max(26).default(8),

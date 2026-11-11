@@ -60,20 +60,20 @@ const STEPS: Step[] = [
   {
     page: 'customers',
     find: 'Did the warning work before?',
-    title: 'Customers about to leave',
-    body: 'The early warning was replayed 90 days back: customers it flagged really did stay away far more often than the rest.',
+    title: 'Customers worth checking on',
+    body: 'The warning was replayed 90 days back: customers it flagged stayed away almost twice as often as the rest, so it shows who to check on first.',
   },
   {
     page: 'stock',
     find: 'Products that went silent, then sold again',
-    title: 'Sales lost to stock-outs',
-    body: 'Products that suddenly stopped selling and then came back. Each silence is tested so luck can’t explain it.',
+    title: 'Unusual gaps in sales',
+    body: 'Products that suddenly stopped getting orders, then came back. Possible stock-outs: the gap is tested, but the cause needs checking.',
   },
   {
     page: 'prove',
     find: 'Fact-check a claim',
     title: 'Check any belief',
-    body: 'Build a sentence like “average order is higher in Germany” and get true, not true or not enough evidence, from a real test.',
+    body: 'Build a sentence like “average order is higher in Germany” and see whether your data supports it, from a real statistical test.',
   },
   {
     page: 'analyst',

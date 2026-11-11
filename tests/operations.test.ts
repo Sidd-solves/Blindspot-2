@@ -68,6 +68,78 @@ describe('stock-out detector', () => {
     expect(r.items.find((i) => i.product === 'Widget')).toBeUndefined();
   });
 
+  it('splitting an order into more lines changes nothing: evidence counts orders, not rows', () => {
+    const build = (linesPerOrder: number) => {
+      const rows: Row[] = [];
+      for (let d = 0; d < 240; d++) {
+        rows.push({
+          OrderDate: iso(T0 + d * DAY),
+          Order: `b${d}`,
+          Customer: 'x',
+          Product: 'Background',
+          Sales: 5,
+          IsReturn: 0,
+        });
+        if (d >= 100 && d < 114) continue;
+        for (let k = 0; k < linesPerOrder; k++)
+          rows.push({
+            OrderDate: iso(T0 + d * DAY),
+            Order: `w${d}`,
+            Customer: 'y',
+            Product: 'Widget',
+            Sales: 20 / linesPerOrder,
+            IsReturn: 0,
+          });
+      }
+      return stockOuts(ds(rows)).items.find((i) => i.product === 'Widget')!;
+    };
+    const one = build(1),
+      ten = build(10);
+    expect(ten.p).toBe(one.p);
+    expect(ten.rateBefore).toBe(one.rateBefore);
+    expect(ten.lostSales).toBeCloseTo(one.lostSales, 6);
+  });
+
+  it('is calibrated: steady random sales with no stock-outs are not flagged', () => {
+    // 60 products ordered at random (Poisson, about 1 order a trading day) for 400 days, seeded so it's repeatable.
+    let seed = 7;
+    const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const poisson = (l: number) => {
+      let k = 0,
+        p = Math.exp(-l),
+        c = p;
+      const u = rnd();
+      while (u > c) {
+        p *= l / ++k;
+        c += p;
+      }
+      return k;
+    };
+    const rows: Row[] = [];
+    let o = 0;
+    for (let d = 0; d < 400; d++) {
+      rows.push({
+        OrderDate: iso(T0 + d * DAY),
+        Order: `b${o++}`,
+        Customer: 'x',
+        Product: 'Background',
+        Sales: 5,
+        IsReturn: 0,
+      });
+      for (let p = 0; p < 60; p++)
+        for (let k = poisson(0.6 + (p % 5) * 0.2); k > 0; k--)
+          rows.push({
+            OrderDate: iso(T0 + d * DAY),
+            Order: `o${o++}`,
+            Customer: 'y',
+            Product: `P${p}`,
+            Sales: 10,
+            IsReturn: 0,
+          });
+    }
+    expect(stockOuts(ds(rows)).items).toHaveLength(0);
+  });
+
   it('on the real UK shop every reported gap is significant after correction and resumed afterwards', () => {
     const r = stockOuts(loadCaseStudy());
     expect(r.items.length).toBeGreaterThan(0);
@@ -89,7 +161,8 @@ describe('cash-crunch radar', () => {
         v = month < 2 ? 500 : 1000;
       const date = `${2023 + Math.floor(m / 12)}-${String(month + 1).padStart(2, '0')}`;
       rows.push({ OrderDate: `${date}-01`, Order: `a${m}`, Customer: 'x', Sales: v / 2, IsReturn: 0 });
-      rows.push({ OrderDate: `${date}-28`, Order: `b${m}`, Customer: 'x', Sales: v / 2, IsReturn: 0 });
+      const end = new Date(Date.UTC(2023 + Math.floor(m / 12), month + 1, 0)).getUTCDate();
+      rows.push({ OrderDate: `${date}-${end}`, Order: `b${m}`, Customer: 'x', Sales: v / 2, IsReturn: 0 });
     }
     return ds(rows);
   };

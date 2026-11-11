@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useState, type CSSProperties } from 'react';
 import {
   Area,
   CartesianGrid,
@@ -12,7 +12,8 @@ import {
   YAxis,
 } from 'recharts';
 import { Check, CircleDashed, History, LineChart, Minus, ShieldCheck, Target, Trophy, X } from 'lucide-react';
-import { tool, usd } from '../api';
+import { usd } from '../api';
+import { ToolError, useTool } from '../components/useTool';
 import { useStore } from '../store';
 import { Card, CardHead, Chip, CountUp, Empty, Loading, Ring, stagger } from '../components/ui';
 import { ChartTip, axis, glowDefs } from '../components/charts';
@@ -43,7 +44,7 @@ type F = {
     rangeTested: number;
     bias: number | null;
   };
-  forecast: { month: string; value: number; low: number; high: number }[];
+  forecast: { month: string; value: number; low: number | null; high: number | null }[];
   coverage: number;
   notes: string[];
 };
@@ -73,13 +74,10 @@ const pct1 = (x: number) => `${(x * 100).toFixed(1)}%`;
 
 export default function Forecast() {
   const { version } = useStore();
-  const [f, setF] = useState<F | null>(null);
+  const { data: f, error, retry } = useTool<F>('forecast-sales', { horizon: 3 }, [version]);
   const [all, setAll] = useState(false);
-  useEffect(() => {
-    setF(null);
-    tool('forecast-sales', { horizon: 3 }).then((r) => r.ok && setF(r.data));
-  }, [version]);
 
+  if (error) return <ToolError message={error} retry={retry} />;
   if (!f)
     return (
       <Loading
@@ -125,7 +123,7 @@ export default function Forecast() {
       actual: null,
       // Join the forecast line to the last actual month so it reads as a continuation.
       ahead: x.value,
-      range: [x.low, x.high],
+      range: x.low !== null && x.high !== null ? [x.low, x.high] : null,
     })),
   ];
   const joinAt = data.findIndex((d) => d.m === monthName(last.month, true));
@@ -166,13 +164,25 @@ export default function Forecast() {
             />
           </div>
           <div className="text-[12px] text-[var(--muted)]">
-            likely <span className="mono font-semibold text-[var(--text)]">{usd(next.low)}</span> to{' '}
-            <span className="mono font-semibold text-[var(--text)]">{usd(next.high)}</span> (80% range from
-            past misses)
+            {next.low !== null && next.high !== null ? (
+              <>
+                Nominal 80% range{' '}
+                <span className="mono font-semibold text-[var(--text)]">{usd(next.low)}</span> to{' '}
+                <span className="mono font-semibold text-[var(--text)]">{usd(next.high)}</span>
+                {acc.rangeTested > 0 && (
+                  <>
+                    {' '}
+                    · it held in {hits} of {acc.rangeTested} tested months (limited calibration evidence)
+                  </>
+                )}
+              </>
+            ) : (
+              'No range yet: the track record has too few misses to size one.'
+            )}
           </div>
           <div className="mt-3 grid grid-cols-3 gap-2">
             {f.forecast.map((x, i) => {
-              const top = Math.max(...f.forecast.map((y) => y.high)) || 1;
+              const top = Math.max(...f.forecast.map((y) => y.high ?? y.value)) || 1;
               return (
                 <motion.div
                   key={x.month}
@@ -190,14 +200,16 @@ export default function Forecast() {
                       style={{ background: 'linear-gradient(90deg, var(--cyan), var(--violet))' }}
                       initial={{ left: `${(x.value / top) * 100}%`, width: 0 }}
                       animate={{
-                        left: `${(x.low / top) * 100}%`,
-                        width: `${((x.high - x.low) / top) * 100}%`,
+                        left: `${((x.low ?? x.value) / top) * 100}%`,
+                        width: `${Math.max(1.5, (((x.high ?? x.value) - (x.low ?? x.value)) / top) * 100)}%`,
                       }}
                       transition={{ duration: 0.9, delay: 0.25 + i * 0.08 }}
                     />
                   </div>
                   <div className="mt-1 text-[10.5px] text-[var(--faint)]">
-                    {usd(x.low, true)}–{usd(x.high, true)}
+                    {x.low !== null && x.high !== null
+                      ? `${usd(x.low, true)}–${usd(x.high, true)}`
+                      : 'no range yet'}
                   </div>
                 </motion.div>
               );
@@ -227,9 +239,9 @@ export default function Forecast() {
         </div>
         <div className="px-3.5 pb-3.5">
           <div className="mb-1 flex items-center justify-between text-[11.5px]">
-            <span className="font-bold">Inside the range</span>
+            <span className="font-bold">Inside its nominal 80% range</span>
             <span className="mono text-[var(--muted)]">
-              {hits} of {acc.rangeTested} · aim 80%
+              {hits} of {acc.rangeTested} months
             </span>
           </div>
           <div className="flex flex-wrap gap-1">
@@ -337,7 +349,7 @@ export default function Forecast() {
                   className="h-2.5 w-4 rounded"
                   style={{ background: 'color-mix(in srgb, var(--cyan) 22%, transparent)' }}
                 />
-                80% range
+                Nominal 80% range
               </span>
             </div>
           }
@@ -358,7 +370,7 @@ export default function Forecast() {
               />
               <Area
                 dataKey="range"
-                name="80% range"
+                name="Nominal 80% range"
                 stroke="none"
                 fill="var(--cyan)"
                 fillOpacity={0.16}
@@ -500,7 +512,7 @@ export default function Forecast() {
             ],
             [
               'A range from real misses',
-              `The 80% range comes from how far off the forecasts actually were, and it widens further ahead and when there are only a few months to learn from.`,
+              `The nominal 80% range comes from how far off the forecasts actually were and widens when there are few months to learn from. With this few test months its real coverage is uncertain, and months 2 and 3 widen by an assumed √2 and √3 (the track record tests one month ahead).`,
             ],
             [
               'Honest limits',

@@ -21,13 +21,13 @@
 | Optional | Tableau extension + WebSocket bridge (hidden in the app) | Bridge tested with a simulated extension; **unverified** in Tableau |
 | Analysis | Sales forecast: 4 methods replayed on past months, chosen from past errors only, 80% range from real misses | Done, tested (incl. no look-ahead) |
 | Analysis | Customer Radar: early warning (validated on past data) and win-back list matching the lost-customer finding to the penny | Done, tested on the real data |
-| Analysis | Stock & Cash: likely stock-outs (Poisson + BH) and seasonal cash-crunch months | Done, tested |
+| Analysis | Stock & Cash: unusual sales gaps / possible stock-outs (orders, Poisson, scan + BH corrected, calibration-tested) and seasonal sales dips | Done, tested |
 | Analysis | Prove It: promo test vs the same weeks last year with a placebo check; fact-check builder | Done, tested |
 | Output | Proof replay animation, confidence meter, guided tour | Done, checked in the browser |
 | Output | Screenshot audit: chart colors read from any image, contrast and color-blind checks, color-blind preview | Done, palette extraction tested |
 | Optional | AI vision review of a screenshot (Claude) | Built as an explicit button; not exercised in tests (uses credits) |
 
-**Tests:** `npm test` → 220 passed. **Fact check:** 7/7 match on the full dataset.
+**Tests:** `npm test` → 226 passed. **Fact check:** 7/7 match on the full dataset.
 
 ## Known limitations
 1. The real case study is a public dataset from 2009–2011, not the team's own store; "tested on real business data", not "used by a business".

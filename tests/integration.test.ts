@@ -66,6 +66,27 @@ const post = (p: string, body: unknown) =>
   }).then(async (r) => ({ status: r.status, json: await r.json() }));
 
 describe('API + WebSocket bridge (real server, fake Tableau extension)', () => {
+  it('only the site owner can change the shared AI model', async () => {
+    process.env.ADMIN_TOKEN = 'owner-secret-123';
+    try {
+      const send = (auth?: string) =>
+        fetch(base + '/api/settings/model', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(auth ? { Authorization: `Bearer ${auth}` } : {}),
+          },
+          body: JSON.stringify({ model: 'claude-haiku-4-5' }),
+        });
+      expect((await send()).status).toBe(401);
+      expect((await send('wrong-token-xyz')).status).toBe(401);
+      const ok = await send('owner-secret-123');
+      expect(ok.status).toBe(200);
+      expect((await ok.json()).model).toBe('claude-haiku-4-5');
+    } finally {
+      delete process.env.ADMIN_TOKEN;
+    }
+  });
   it('stamps responses with the session dataset id, and the id changes when the data does', async () => {
     const h = { 'x-session-id': 'stamp-test-0001', 'Content-Type': 'application/json' };
     const meta = await fetch(base + '/api/dataset', { headers: h }).then((r) => r.json());

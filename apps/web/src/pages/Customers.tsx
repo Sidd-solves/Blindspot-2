@@ -12,8 +12,9 @@ import {
   Radar,
   UserMinus,
 } from 'lucide-react';
-import { tool, usd } from '../api';
+import { usd } from '../api';
 import { useStore } from '../store';
+import { ToolError, useTool } from '../components/useTool';
 import { Card, CardHead, Chip, CountUp, Empty, Loading, stagger } from '../components/ui';
 import { Confidence } from '../components/Confidence';
 
@@ -180,24 +181,26 @@ function RhythmStrip({ spread }: { spread: EW['spread'] }) {
 
 export default function Customers() {
   const { version, dataset } = useStore();
-  const [ew, setEw] = useState<EW | null>(null),
-    [wb, setWb] = useState<WB | null>(null);
   const [shop, setShop] = useState(''),
+    [shopName, setShopName] = useState('our shop'),
     [open, setOpen] = useState<string | null>(null),
     [copied, setCopied] = useState<string | null>(null),
     [all, setAll] = useState(false);
+  // The shop name only changes the draft messages: wait for typing to pause before rebuilding them.
   useEffect(() => {
-    setEw(null);
-    tool('early-warning', { top: 200 }).then((r) => r.ok && setEw(r.data));
-  }, [version]);
-  useEffect(() => {
-    const t = setTimeout(
-      () => tool('win-back-list', { shopName: shop.trim() || 'our shop' }).then((r) => r.ok && setWb(r.data)),
-      shop ? 300 : 0,
-    );
+    const t = setTimeout(() => setShopName(shop.trim() || 'our shop'), 350);
     return () => clearTimeout(t);
-  }, [version, shop]);
-
+  }, [shop]);
+  const ewQ = useTool<EW>('early-warning', { top: 200 }, [version]);
+  const wbQ = useTool<WB>('win-back-list', { shopName }, [version, shopName]);
+  const [lastWb, setLastWb] = useState<WB | null>(null);
+  useEffect(() => {
+    if (wbQ.data) setLastWb(wbQ.data);
+  }, [wbQ.data]);
+  const ew = ewQ.data,
+    wb = wbQ.data ?? lastWb;
+  const err = ewQ.error ?? wbQ.error;
+  if (err) return <ToolError message={err} retry={() => (ewQ.error ? ewQ.retry() : wbQ.retry())} />;
   if (!ew || !wb)
     return (
       <Loading
@@ -243,7 +246,7 @@ export default function Customers() {
       <Card c="var(--amber)" className="lg:col-span-4" hover={false}>
         <CardHead
           icon={<BellRing size={13} />}
-          title="Slipping away now"
+          title="Worth checking on"
           c="var(--amber)"
           right={
             <Chip c="var(--amber)" pulse>
@@ -312,16 +315,19 @@ export default function Customers() {
               </div>
             ))}
             <div className="text-[11.5px] text-[var(--muted)]">
-              {flagRate > otherRate ? (
+              {b.p !== null && b.p < 0.05 && flagRate > otherRate ? (
                 <>
-                  Flagged customers were{' '}
+                  Flagged customers stayed away{' '}
                   <b className="text-[var(--text)]">{(flagRate / Math.max(1, otherRate)).toFixed(1)}×</b> as
-                  likely to leave (two-proportion z-test, one-sided).
+                  often: {b.flaggedStayedAway} of {b.flagged} vs {b.othersStayedAway} of {b.others}{' '}
+                  (two-proportion z-test, {fmtP(b.p)}, one-sided). Still, {100 - flagRate}% of flagged
+                  customers came back, so treat the list as who to check on first, not who will leave.
                 </>
               ) : (
                 <>
-                  On this data the warning did not beat chance, so treat the list as a reminder, not a
-                  prediction.
+                  On this data the difference ({b.flaggedStayedAway} of {b.flagged} vs {b.othersStayedAway} of{' '}
+                  {b.others}) could be chance{b.p !== null ? ` (${fmtP(b.p)})` : ''}, so treat the list as a
+                  reminder, not a prediction.
                 </>
               )}
             </div>
@@ -455,7 +461,7 @@ export default function Customers() {
       <Card c="var(--amber)" className="lg:col-span-6" hover={false}>
         <CardHead
           icon={<BellRing size={13} />}
-          title="Reach out before they're gone"
+          title="Check in with these first"
           c="var(--amber)"
           right={<Chip c="var(--amber)">by last-year spend</Chip>}
         />

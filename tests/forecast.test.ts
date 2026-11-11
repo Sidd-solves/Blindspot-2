@@ -3,15 +3,17 @@ import { forecastSales, monthlySeries, METHODS } from '@blindspot/analytics';
 import type { Row } from '@blindspot/analytics';
 
 /** One sale row per month (on the 15th), plus an optional last date to mark the final month full or partial. */
-function rows(values: number[], { start = '2022-01', lastDay = '28' } = {}): Row[] {
+function rows(values: number[], { start = '2022-01', lastDay = 'end' } = {}): Row[] {
   const [y0, m0] = start.split('-').map(Number);
   const out: Row[] = values.map((v, i) => {
     const t = y0 * 12 + (m0 - 1) + i;
     const ym = `${Math.floor(t / 12)}-${String((t % 12) + 1).padStart(2, '0')}`;
-    return { OrderDate: `${ym}-15`, Sales: v, IsReturn: 0 };
+    return { OrderDate: `${ym}-01`, Sales: v, IsReturn: 0 };
   });
   const last = out[out.length - 1].OrderDate as string;
-  out.push({ OrderDate: `${last.slice(0, 8)}${lastDay}`, Sales: 0, IsReturn: 0 });
+  const [ly, lm] = last.slice(0, 7).split('-').map(Number);
+  const end = String(new Date(Date.UTC(ly, lm, 0)).getUTCDate());
+  out.push({ OrderDate: `${last.slice(0, 8)}${lastDay === 'end' ? end : lastDay}`, Sales: 0, IsReturn: 0 });
   return out;
 }
 const seasonal = (years: number, scale = 1) =>
@@ -71,9 +73,9 @@ describe('sales forecast', () => {
 
   it('counts months with no sales as zero instead of skipping them', () => {
     const data: Row[] = [
-      { OrderDate: '2024-01-10', Sales: 100, IsReturn: 0 },
+      { OrderDate: '2024-01-01', Sales: 100, IsReturn: 0 },
       { OrderDate: '2024-03-10', Sales: 50, IsReturn: 0 },
-      { OrderDate: '2024-03-30', Sales: 0, IsReturn: 0 },
+      { OrderDate: '2024-03-31', Sales: 0, IsReturn: 0 },
     ];
     const { months } = monthlySeries(data, 'OrderDate', 'Sales');
     expect(months).toEqual([
@@ -85,9 +87,9 @@ describe('sales forecast', () => {
 
   it('uses the same definition of sales as the dashboard: returns are not sales', () => {
     const data: Row[] = [
-      { OrderDate: '2024-01-10', Sales: 100, IsReturn: 0 },
+      { OrderDate: '2024-01-01', Sales: 100, IsReturn: 0 },
       { OrderDate: '2024-01-12', Sales: 40, IsReturn: 1 },
-      { OrderDate: '2024-01-30', Sales: 0, IsReturn: 0 },
+      { OrderDate: '2024-01-31', Sales: 0, IsReturn: 0 },
     ];
     expect(monthlySeries(data, 'OrderDate', 'Sales').months[0].value).toBe(100);
   });
@@ -95,7 +97,8 @@ describe('sales forecast', () => {
   it('ranges widen further out, and each backtest range was built only from earlier misses', () => {
     const noisy = seasonal(3).map((v, i) => v * (1 + 0.1 * Math.sin(i * 5.1)));
     const r = forecastSales(rows(noisy), 'OrderDate', 'Sales');
-    const width = (f: { value: number; low: number; high: number }) => (f.high - f.low) / f.value;
+    const width = (f: { value: number; low: number | null; high: number | null }) =>
+      (f.high! - f.low!) / f.value;
     expect(width(r.forecast[1])).toBeGreaterThan(width(r.forecast[0]));
     expect(width(r.forecast[2])).toBeGreaterThan(width(r.forecast[1]));
     // The first three tested months have no earlier misses to learn from, so they show no range.
@@ -130,5 +133,35 @@ describe('forecast in the product', () => {
     expect(rep.forecast.ok).toBe(true);
     expect(rep.markdown).toMatch(/## Sales forecast \(next 3 months\)/);
     expect(rep.markdown).toMatch(/off by \d+\.\d% on average/);
+  });
+});
+
+describe('forecast fixes from review', () => {
+  it('a £0 forecast that missed keeps counting toward the range, and an all-perfect record shows no fake range', () => {
+    // Three empty months, then £100 every month: the first forecast after the jump is £0 against £100.
+    const r = forecastSales(rows([0, 0, 0, 100, 100, 100, 100, 100, 100, 100]), 'OrderDate', 'Sales');
+    expect(r.ok).toBe(true);
+    const f = r.forecast[0];
+    // The big early miss widens the range instead of disappearing from it.
+    expect(f.low === null || f.high! - f.low! > 0).toBe(true);
+    const perfect = forecastSales(rows([100, 100, 100, 100, 100, 100, 100, 100]), 'OrderDate', 'Sales');
+    expect(perfect.forecast[0].low).toBeNull();
+    expect(perfect.notes.join(' ')).toMatch(/no misses to size a range/);
+  });
+
+  it('a month counts as complete only when the data reaches its last day, and a mid-month start is dropped', () => {
+    const endsOn28 = forecastSales(
+      rows(Array(24).fill(100), { start: '2022-01', lastDay: '28' }),
+      'OrderDate',
+      'Sales',
+    );
+    expect(endsOn28.partialMonth).toBe('2023-12');
+    const midStart: Row[] = [
+      { OrderDate: '2022-01-20', Sales: 30, IsReturn: 0 },
+      ...rows(Array(12).fill(100), { start: '2022-02' }),
+    ];
+    const r = forecastSales(midStart, 'OrderDate', 'Sales');
+    expect(r.history[0].month).toBe('2022-02');
+    expect(r.notes.join(' ')).toMatch(/starts mid-month/);
   });
 });

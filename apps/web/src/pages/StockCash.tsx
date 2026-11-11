@@ -1,9 +1,10 @@
 import { motion } from 'framer-motion';
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { Bar, BarChart, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { CalendarClock, PackageX, PiggyBank, Table2, Wallet } from 'lucide-react';
-import { tool, usd } from '../api';
+import { CalendarClock, Info, PackageX, Table2, Wallet } from 'lucide-react';
+import { usd } from '../api';
 import { useStore } from '../store';
+import { ToolError, useTool } from '../components/useTool';
 import { Card, CardHead, Chip, CountUp, Empty, Loading, stagger } from '../components/ui';
 import { ChartTip, axis } from '../components/charts';
 import { go } from '../App';
@@ -50,15 +51,13 @@ const fmtQ = (q: number) => (q < 0.001 ? 'q < 0.001' : `q = ${q.toFixed(3)}`);
 
 export default function StockCash() {
   const { version, dataset } = useStore();
-  const [so, setSo] = useState<SO | null>(null),
-    [cr, setCr] = useState<CR | null>(null),
-    [all, setAll] = useState(false);
-  useEffect(() => {
-    setSo(null);
-    setCr(null);
-    tool('stock-outs', { top: 200 }).then((r) => r.ok && setSo(r.data));
-    tool('cash-radar', {}).then((r) => r.ok && setCr(r.data));
-  }, [version]);
+  const soQ = useTool<SO>('stock-outs', { top: 200 }, [version]),
+    crQ = useTool<CR>('cash-radar', {}, [version]);
+  const [all, setAll] = useState(false);
+  const so = soQ.data,
+    cr = crQ.data;
+  const err = soQ.error ?? crQ.error;
+  if (err) return <ToolError message={err} retry={() => (soQ.error ? soQ.retry() : crQ.retry())} />;
   if (!so || !cr)
     return (
       <Loading
@@ -105,9 +104,9 @@ export default function StockCash() {
       <Card c="var(--orange)" className="lg:col-span-4" hover={false}>
         <CardHead
           icon={<PackageX size={13} />}
-          title="Likely stock-outs"
+          title="Unusual sales gaps"
           c="var(--orange)"
-          right={so.ok && <Chip c="var(--emerald)">tested · q &lt; 0.01</Chip>}
+          right={so.ok && <Chip c="var(--sky)">possible stock-outs</Chip>}
         />
         <div className="px-3.5 pb-3.5">
           {so.ok ? (
@@ -115,11 +114,15 @@ export default function StockCash() {
               <div className="flex items-baseline gap-2">
                 <CountUp value={so.found} className="text-[30px] font-semibold" />
                 <span className="text-[12px] text-[var(--muted)]">
-                  of {so.scanned.toLocaleString()} regular products went silent, then came back
+                  of {so.scanned.toLocaleString()} regular products had an unusually long gap in orders, then
+                  sold again
                 </span>
                 {so.items.length > 0 && (
                   <Confidence
-                    sure={{ kind: 'tested', p: Math.max(...so.items.map((x) => x.q)), pKind: 'q' }}
+                    sure={{
+                      kind: 'model',
+                      note: `Largest q among the gaps: ${Math.max(...so.items.map((x) => x.q)).toExponential(1)}`,
+                    }}
                     className="ml-auto"
                   />
                 )}
@@ -131,7 +134,7 @@ export default function StockCash() {
                   format={(n) => usd(n)}
                   className="font-semibold text-[var(--text)]"
                 />{' '}
-                of sales missed while they were silent (estimate).
+                of sales not made during those gaps (rough estimate: usual daily sales × days).
               </div>
               <div className="mt-2.5 text-[11.5px] leading-snug text-[var(--faint)]">{so.method}</div>
             </>
@@ -145,12 +148,13 @@ export default function StockCash() {
       <Card c="var(--amber)" className="lg:col-span-8" hover={false}>
         <CardHead
           icon={<CalendarClock size={13} />}
-          title="Which months run short"
+          title="Seasonal sales dips"
           c="var(--amber)"
           right={
             cr.ok && (
               <Chip c="var(--faint)">
-                {cr.years.length} full year{cr.years.length > 1 ? 's' : ''} · 1.0 = an average month
+                {cr.years.length > 1 ? `${cr.years.length} full years` : 'one observed annual cycle'} · 1.0 =
+                an average month
               </Chip>
             )
           }
@@ -201,13 +205,13 @@ export default function StockCash() {
       <Card c="var(--orange)" className="lg:col-span-7" hover={false}>
         <CardHead
           icon={<PackageX size={13} />}
-          title="Products that went silent, then sold again"
+          title="Products with an unusual gap in orders"
           c="var(--orange)"
           right={<Chip c="var(--orange)">biggest miss first</Chip>}
         />
         <div className="px-3.5 pb-3">
           {!so.items.length && (
-            <Empty icon={<PackageX size={20} />} title={so.ok ? 'No unusual silences' : 'Not available'}>
+            <Empty icon={<PackageX size={20} />} title={so.ok ? 'No unusual gaps' : 'Not available'}>
               {so.ok ? 'Every regular product kept selling at its usual pace.' : so.reason}
             </Empty>
           )}
@@ -257,15 +261,17 @@ export default function StockCash() {
             </motion.button>
           )}
           <div className="mt-2 text-[11px] text-[var(--faint)]">
-            Without stock levels in the file, these are likely stock-outs, not confirmed ones. The bar shows
-            when each silence happened. Click a row to see its sales before, during and after.
+            Each gap is longer than this product’s usual order rate makes likely, even allowing for having
+            searched its whole history. The file has no stock levels, so the cause is unknown: a stock-out, a
+            delisting, a seasonal lull or a price change. The bar shows when it happened; click a row to see
+            the sales around it.
           </div>
         </div>
       </Card>
 
       {/* Crunch months */}
       <Card c="var(--amber)" className="lg:col-span-5" hover={false}>
-        <CardHead icon={<Wallet size={13} />} title="Plan for the slow months" c="var(--amber)" />
+        <CardHead icon={<Wallet size={13} />} title="The slow months, in sales" c="var(--amber)" />
         <div className="px-3.5 pb-3.5">
           {cr.ok && cr.crunch.length ? (
             <>
@@ -276,7 +282,7 @@ export default function StockCash() {
                   className="grad-text text-[26px] font-semibold"
                 />
                 <span className="text-[12px] text-[var(--muted)]">
-                  less than {cr.crunch.length} average months bring in
+                  less revenue than {cr.crunch.length} average months
                 </span>
               </div>
               <div className="mt-2 space-y-1.5">
@@ -313,15 +319,17 @@ export default function StockCash() {
                 })}
               </div>
               <div className="mt-2.5 flex items-start gap-2 text-[12px] text-[var(--muted)]">
-                <PiggyBank size={14} className="mt-0.5 flex-none" style={{ color: 'var(--emerald)' }} />
+                <Info size={14} className="mt-0.5 flex-none" style={{ color: 'var(--sky)' }} />
                 <span>
-                  An average month is <b className="text-[var(--text)]">{usd(cr.averageMonth)}</b> at today’s
-                  sales level. Setting aside the gap in the busy months before keeps the slow ones covered.
+                  This is a revenue difference against an average month ({usd(cr.averageMonth)} at today’s
+                  sales level), not a cash forecast: the file has no payment dates, supplier bills, payroll or
+                  bank balance.
+                  {cr.years.length < 2 && ' Based on one observed annual cycle, so it may not repeat.'}
                 </span>
               </div>
               {cr.months.some((m) => m.index >= 1.15) && (
                 <div className="mt-3">
-                  <div className="label mb-1.5">Where the cushion comes from</div>
+                  <div className="label mb-1.5">The strongest months</div>
                   <div className="grid grid-cols-3 gap-1.5">
                     {cr.months
                       .filter((m) => m.index >= 1.15)
@@ -352,7 +360,7 @@ export default function StockCash() {
           ) : (
             <div className="text-[12px] text-[var(--muted)]">
               {cr.ok
-                ? 'No month runs at least 15% below average every year. Cash flow is fairly even.'
+                ? 'No month runs at least 15% below average in every year seen. Sales are fairly even through the year.'
                 : cr.reason}
             </div>
           )}

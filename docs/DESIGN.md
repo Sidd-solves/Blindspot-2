@@ -5,7 +5,7 @@ Each choice below has a cost. This page says what we chose, why, and what we gav
 ## 1. The math is separate from the AI
 **Choice.** All numbers come from deterministic TypeScript: cleaning, statistics, findings, scenarios and reports. Claude only picks tools, explains their results and proposes ideas.
 
-**Why.** A store owner acts on these numbers. Code gives the same answer every time, runs in seconds, costs nothing per run and can be tested (220 tests, 81% line coverage on the engine and API). A language model gives none of those guarantees for arithmetic.
+**Why.** A store owner acts on these numbers. Code gives the same answer every time, runs in seconds, costs nothing per run and can be tested (226 tests, 82% line coverage on the engine and API). A language model gives none of those guarantees for arithmetic.
 
 **Trade-off.** Every new kind of analysis has to be written as code, and the AI can't answer questions that no tool covers. It says so instead of guessing.
 
@@ -30,7 +30,7 @@ Each choice below has a cost. This page says what we chose, why, and what we gav
 
 **Trade-off.** Each new check must describe exactly which rows it used, and that description is tested. That's more work per check, by design.
 
-## 5. Labels say how sure we are
+## 5. Labels say what kind of evidence it is
 **Choice.** Every finding is labeled **measured** (counted directly), **tested** (passed a statistical test, with its p- or q-value) or **rule of thumb** (an accepted heuristic, such as "3+ orders then 90 days silent = lapsed").
 
 **Why.** A count, a test result and a heuristic deserve different amounts of trust. Hiding the difference would make the confident-sounding numbers less believable, not more.
@@ -50,6 +50,13 @@ Each choice below has a cost. This page says what we chose, why, and what we gav
 **Why.** A forecast without a track record is a guess with a chart. Choosing the method in hindsight would make the accuracy look better than it is, so the choice itself is replayed.
 
 **Trade-off.** Simple methods can't use outside information (promotions, stock-outs, prices). With fewer than 6 full months of history, no forecast is shown at all, and with under a year, seasonal methods are skipped.
+
+## 7b. Months count only when they're complete, and ranges say how calibrated they are
+**Choice.** A month counts as finished only if the data reaches its last day, and a first month that starts mid-month is left out. The forecast range is labeled a *nominal* 80% range with its real historical coverage beside it (for example "held in 6 of 9 tested months"), and it is hidden rather than shown as zero-width when there are no misses yet. Misses are measured against the typical sales level, so a £0 forecast that missed still counts.
+
+**Why.** An export that ends on the 28th, or starts on the 20th, would otherwise look like a collapse or a dip. Nine test months can't establish calibration, so the page says so.
+
+**Trade-off.** A file that does cover a whole month but has no sale on its last day loses that month. Months 2 and 3 widen by an assumed √2 and √3; only one-month-ahead accuracy is tested.
 
 ## 8. Read the file the way it is
 **Choice.** No template to fill in. The reader scores every column by name (eight languages) and by its values, recognizes six store platforms' exports, unpivots month-per-column crosstabs and rebuilds tables from PDFs. Then it shows exactly how it read the file before showing any result.
@@ -71,3 +78,11 @@ Each choice below has a cost. This page says what we chose, why, and what we gav
 **Why.** It has to work instantly for anyone who clicks the link, on a budget of zero.
 
 **Trade-off.** The public site analyzes up to 100,000 rows per upload. The engine itself handles a million (`npm run bench`).
+
+## 11. Claims stop short of cause
+**Choice.** Comparisons are worded as comparisons: "sales rose after the change", "supported by this comparison", "evidence points the other way", "unusual sales gaps (possible stock-outs)", "customers worth checking on", "seasonal sales dips" (revenue, not cash). Every promotion result carries a note that a before/after comparison can't prove the cause, and shifts at other dates are shown as context, not as a false-alarm rate.
+
+**Why.** A historical comparison can't separate a promotion from everything else that changed that month, a sales gap from its reason, or a revenue dip from a cash shortage. Saying more than the test shows would undo the trust the rest of the product earns.
+
+**Trade-off.** The wording is less exciting. It's also defensible to anyone who checks.
+

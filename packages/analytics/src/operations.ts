@@ -1,21 +1,24 @@
 /**
- * Stock & cash: products whose sales went silent and came back (likely stock-outs), and the months when cash
- * reliably runs low (seasonal dips).
+ * Unusual sales gaps and seasonal sales dips.
  *
- * Stock-outs. Without inventory data a stock-out can't be seen directly, but its footprint can: a product that sells
- * most trading days suddenly sells nothing for a stretch, then sells again. For each product we find its longest
- * silent stretch of 5–60 *trading days* (days the shop sold anything, so closures and weekends don't count), and ask how
- * likely that silence is by chance given how often the product sold in the 8 trading weeks before (Poisson: P = e^−λk).
- * Only stretches that stay significant after Benjamini–Hochberg correction across all products are reported, and only
- * when sales resumed at a similar level afterwards. The lost sales are an estimate: the usual daily sales × the days.
+ * Sales gaps. Without inventory data a stock-out can't be seen, only a possible footprint: a product that is ordered
+ * most trading days suddenly gets no orders for a stretch, then sells again. For each product we find its longest
+ * silent stretch of 5–60 *trading days* (days the shop sold anything, so closures and weekends don't count) and ask how
+ * likely a silence that long is at the product's usual daily *order* rate (distinct orders, so an export that splits an
+ * order into many lines changes nothing). Because that stretch was picked as the longest in the whole history, its
+ * chance is multiplied by the number of places it could have started (Bonferroni over the scan), then corrected across
+ * products (Benjamini–Hochberg). The Poisson model assumes a steady order rate; seasonal or bursty products can break
+ * that, and sales coming back doesn't prove the cause was stock. So these are "unusual gaps worth checking", with
+ * a rough estimate of sales not made (usual daily sales × days).
  *
- * Cash crunch. Each calendar month's share of a year's sales (from full years only), shown as an index against an
- * average month, with how many of the years agree, and the money gap of the slow months at the current sales level.
+ * Seasonal dips. Each calendar month's sales against an average month, from full 12-month years, with how many years
+ * agree. This is revenue only: without cash in and out (payment terms, suppliers, payroll) it can't say cash runs out.
  */
 import type { Dataset, Row } from './types';
 import { detectFields } from './profile';
 import { bhAdjust } from './stats';
 import { DAY, toMs } from './time';
+import { reachesMonthEnd } from './forecast';
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 const dayKey = (t: number) => Math.floor(t / DAY);
@@ -53,7 +56,7 @@ export function stockOuts(ds: Dataset): StockOutReport {
     ['Product', 'Description', 'Item', 'Title'].find((c) => ds.rows[0] && c in ds.rows[0]) ??
     [...fm.highCardDims, ...fm.dims].find((c) => /product|item|sku|title|description/i.test(c));
   const method =
-    'Longest run of 5–60 trading days with no sales per product, tested against its usual daily rate (Poisson), Benjamini–Hochberg corrected across products (q < 0.01); sales had to resume at half the usual rate or more.';
+    'Longest run of 5–60 trading days with no orders per product, against its usual daily order rate (Poisson), corrected for searching the whole history for that gap and across products (Benjamini–Hochberg, q < 0.01); orders had to resume at half the usual rate or more. Flags unusual gaps; the file can’t show why sales stopped.';
   if (!fm.date || !productCol)
     return {
       ok: false,
@@ -65,10 +68,13 @@ export function stockOuts(ds: Dataset): StockOutReport {
       range: null,
     };
 
-  // Trading days: any sale that day. Per product: order count and sales per trading day.
+  // Trading days: any sale that day. Per product and day: distinct orders and sales. Orders, not lines, so an export
+  // that splits one order into many lines can't make the evidence look stronger.
   const trading = new Set<number>();
-  const per = new Map<string, Map<number, { n: number; v: number }>>();
+  const per = new Map<string, Map<number, { n: number; v: number; orders: Set<string> }>>();
+  let rowNo = 0;
   for (const r of ds.rows as Row[]) {
+    rowNo++;
     if (r.IsReturn === 1) continue;
     const t = toMs(r[fm.date]);
     if (!Number.isFinite(t)) continue;
@@ -77,8 +83,9 @@ export function stockOuts(ds: Dataset): StockOutReport {
     const p = String(r[productCol] ?? '');
     if (!p) continue;
     const m = per.get(p) ?? new Map();
-    const e = m.get(d) ?? { n: 0, v: 0 };
-    e.n += 1;
+    const e = m.get(d) ?? { n: 0, v: 0, orders: new Set<string>() };
+    e.orders.add(r.Order != null && r.Order !== '' ? String(r.Order) : `row${rowNo}`);
+    e.n = e.orders.size;
     e.v += (r[fm.measure] as number) || 0;
     m.set(d, e);
     per.set(p, m);
@@ -127,7 +134,11 @@ export function stockOuts(ds: Dataset): StockOutReport {
     const rateBefore = sum(before, (e) => e.n) / before.length;
     const rateAfter = after.length ? sum(after, (e) => e.n) / after.length : 0;
     if (rateBefore < 0.33 || after.length < 10 || rateAfter < rateBefore * 0.5) continue;
-    const pRaw = Math.exp(-rateBefore * k);
+    // The gap was picked *because* it was the longest, so the chance of a silence this long somewhere in this
+    // product's history is up to (number of places it could start) × the chance at one place (Bonferroni over the
+    // scan). Without this, searching every interval would make ordinary quiet spells look significant.
+    const positions = Math.max(1, days.length - WINDOW - k);
+    const pRaw = Math.min(1, Math.exp(-rateBefore * k) * positions);
     const dailySales = sum(before, (e) => e.v) / before.length;
     cands.push({
       product,
@@ -210,7 +221,8 @@ export function cashRadar(ds: Dataset): CashRadar {
   const last = new Date(maxT);
   let endY = last.getUTCFullYear(),
     endM = last.getUTCMonth();
-  if (last.getUTCDate() < 28) {
+  // The last month counts only if the data reaches its last day.
+  if (!reachesMonthEnd(last.toISOString().slice(0, 10))) {
     endM--;
     if (endM < 0) {
       endM = 11;

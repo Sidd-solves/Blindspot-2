@@ -202,7 +202,8 @@ app.get('/api/settings', (_req, res) =>
     restConfigured: !!(env.TABLEAU_SERVER_URL && env.TABLEAU_PAT_NAME),
   }),
 );
-app.post('/api/settings/model', express.json({ limit: '1kb' }), (req, res) => {
+// The model is shared by every visitor (and sets the cost per question), so only the site owner may change it.
+app.post('/api/settings/model', requireAdmin, express.json({ limit: '1kb' }), (req, res) => {
   const m = z.enum(MODELS).safeParse(req.body?.model);
   if (!m.success)
     return res

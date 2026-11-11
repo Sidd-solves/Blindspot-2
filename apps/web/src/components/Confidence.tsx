@@ -2,10 +2,12 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useState } from 'react';
 
 /**
- * How sure is this number? Three bars, the same everywhere:
+ * Evidence indicator: what kind of evidence stands behind a number. The kinds are different, not points on one
+ * certainty scale, so the hover card always names the kind first; the bars are a quick visual cue only.
  *   measured (counted from the rows) ··· 3 bars
  *   tested, p or q < 0.01 ·············· 3 bars   · tested, < 0.05 ··· 2 bars   · not significant ··· 1 bar
  *   forecast with a replayed track record · 2 bars
+ *   unusual under a model ·············· 2 bars
  *   rule of thumb / planning estimate ·· 1 bar
  */
 export type Sure =
@@ -13,7 +15,8 @@ export type Sure =
   | { kind: 'tested'; p: number | null; pKind?: 'p' | 'q' }
   | { kind: 'rule' }
   | { kind: 'estimate'; note?: string }
-  | { kind: 'forecast'; note?: string };
+  | { kind: 'forecast'; note?: string }
+  | { kind: 'model'; note?: string };
 
 const LOOK = {
   measured: {
@@ -29,7 +32,12 @@ const LOOK = {
   forecast: {
     c: 'var(--cyan)',
     label: 'Forecast with a track record',
-    hint: 'Replayed on past months before being shown.',
+    hint: 'Replayed on past months before being shown; with few months, its range is only roughly calibrated.',
+  },
+  model: {
+    c: 'var(--sky)',
+    label: 'Unusual under a model',
+    hint: 'Unlikely if the usual pattern had held. It shows that something changed, not why.',
   },
   rule: {
     c: 'var(--amber)',
@@ -70,7 +78,7 @@ export function Confidence({ sure, className = '' }: { sure: Sure; className?: s
           : sure.p !== null && sure.p < 0.05
             ? 2
             : 1
-        : sure.kind === 'forecast'
+        : sure.kind === 'forecast' || sure.kind === 'model'
           ? 2
           : 1;
   const detail =
@@ -88,7 +96,7 @@ export function Confidence({ sure, className = '' }: { sure: Sure; className?: s
       onBlur={() => setOpen(false)}
       tabIndex={0}
       role="img"
-      aria-label={`${look.label}${detail ? `, ${detail}` : ''}`}
+      aria-label={`Evidence: ${look.label}${detail ? `, ${detail}` : ''}`}
     >
       {[0, 1, 2].map((i) => (
         <motion.span
@@ -110,6 +118,9 @@ export function Confidence({ sure, className = '' }: { sure: Sure; className?: s
             className="panel pointer-events-none absolute bottom-full right-0 z-50 mb-1.5 w-[210px] px-2.5 py-2 text-left"
             style={{ background: 'var(--panel-solid)' }}
           >
+            <span className="block text-[10px] font-bold uppercase tracking-wider text-[var(--faint)]">
+              Evidence type
+            </span>
             <span className="block text-[11.5px] font-extrabold" style={{ color: look.c }}>
               {look.label}
             </span>

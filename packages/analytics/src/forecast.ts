@@ -107,7 +107,8 @@ export interface ForecastResult {
     /** Average signed error: > 0 means forecasts ran low. */
     bias: number | null;
   };
-  forecast: { month: string; value: number; low: number; high: number }[];
+  /** low/high are null when the track record can't size a range yet. */
+  forecast: { month: string; value: number; low: number | null; high: number | null }[];
   coverage: number;
   notes: string[];
 }
@@ -118,6 +119,12 @@ const nextMonth = (m: string, k = 1) => {
   return `${Math.floor(t / 12)}-${String((t % 12) + 1).padStart(2, '0')}`;
 };
 const round2 = (n: number) => Math.round(n * 100) / 100;
+/** Does this YYYY-MM-DD date fall on the last day of its month? */
+export const reachesMonthEnd = (d: string) => {
+  if (d.length < 10) return false;
+  const [y, m] = d.slice(0, 7).split('-').map(Number);
+  return Number(d.slice(8, 10)) === new Date(Date.UTC(y, m, 0)).getUTCDate();
+};
 
 /** One-sided 90th-percentile Student-t values by degrees of freedom (1–30); beyond that, the normal 1.2816. */
 const T90 = [
@@ -137,7 +144,8 @@ const halfWidth = (rel: number[]) =>
 export function monthlySeries(rows: Row[], date: string, measure: string) {
   const sales = rows[0] && 'IsReturn' in rows[0] ? rows.filter((r) => r.IsReturn !== 1) : rows;
   const by = new Map<string, number>();
-  let maxDay = '';
+  let maxDay = '',
+    minDay = '';
   for (const r of sales) {
     const d = r[date];
     if (typeof d !== 'string' || d.length < 7) continue;
@@ -146,17 +154,28 @@ export function monthlySeries(rows: Row[], date: string, measure: string) {
   }
   for (const r of rows) {
     const d = r[date];
-    if (typeof d === 'string' && d > maxDay) maxDay = d;
+    if (typeof d !== 'string') continue;
+    if (d > maxDay) maxDay = d;
+    if (!minDay || d < minDay) minDay = d;
   }
   const keys = [...by.keys()].sort();
   if (!keys.length)
-    return { months: [] as { month: string; value: number }[], partial: null as string | null };
+    return {
+      months: [] as { month: string; value: number }[],
+      partial: null as string | null,
+      partialStart: null as string | null,
+    };
   const months: { month: string; value: number }[] = [];
   for (let m = keys[0]; m <= keys[keys.length - 1]; m = nextMonth(m))
     months.push({ month: m, value: by.get(m) ?? 0 });
-  // An unfinished last month would look like a collapse, so it is left out of both training and testing.
-  const partial = Number(maxDay.slice(8, 10)) < 28 ? months[months.length - 1].month : null;
-  return { months: partial ? months.slice(0, -1) : months, partial };
+  // A month counts as complete only if the data reaches its last day (the file can't say what period it was exported
+  // for). An unfinished last month would look like a collapse, and a first month that starts mid-month like a dip,
+  // so both are left out of training and testing.
+  const partial = !reachesMonthEnd(maxDay) ? months[months.length - 1].month : null;
+  const partialStart = Number(minDay.slice(8, 10)) > 1 && months.length > 1 ? months[0].month : null;
+  let kept = partial ? months.slice(0, -1) : months;
+  if (partialStart && kept.length && kept[0].month === partialStart) kept = kept.slice(1);
+  return { months: kept, partial, partialStart };
 }
 
 /**
@@ -207,7 +226,7 @@ export function forecastSales(
     notes: [],
   });
   if (!date) return empty('Needs a date column to forecast.');
-  const { months, partial } = monthlySeries(rows, date, measure);
+  const { months, partial, partialStart } = monthlySeries(rows, date, measure);
   const y = months.map((m) => m.value);
   if (y.length < 6)
     return empty(
@@ -230,14 +249,19 @@ export function forecastSales(
     let low: number | null = null,
       high: number | null = null,
       inside: boolean | null = null;
+    // Misses are measured against the typical level (the larger of the forecast and the recent average), so a £0
+    // forecast that missed £100 still counts toward the range instead of being dropped as "undefined".
+    const scale = Math.max(predicted, sum(past.slice(-3)) / Math.min(3, past.length)) || 1;
     if (rel.length >= 3) {
       const w = halfWidth(rel);
-      low = Math.max(0, predicted * (1 - w));
-      high = predicted * (1 + w);
-      inside = actual >= low && actual <= high;
+      if (w > 0) {
+        low = Math.max(0, predicted - w * scale);
+        high = predicted + w * scale;
+        inside = actual >= low && actual <= high;
+      }
     }
     const error = predicted > 0 ? (actual - predicted) / predicted : null;
-    if (error !== null) rel.push(error);
+    rel.push((actual - predicted) / scale);
     backtest.push({
       month: months[t].month,
       actual: round2(actual),
@@ -267,7 +291,11 @@ export function forecastSales(
 
   // The real forecast: the method the process would pick now, and a range from all of its past misses.
   const pick = choose(errs, y.length);
-  const w = rel.length >= 3 ? halfWidth(rel) : null;
+  // No range when there are too few tested months, or when every tested month was hit exactly (a zero-width range
+  // would claim certainty the track record can't show).
+  const w0 = rel.length >= 3 ? halfWidth(rel) : null;
+  const w = w0 && w0 > 0 ? w0 : null;
+  const level = Math.max(sum(y.slice(-3)) / Math.min(3, y.length), 0);
   const last = months[months.length - 1].month;
   const forecast = Array.from({ length: horizon }, (_, i) => {
     const h = i + 1;
@@ -277,16 +305,24 @@ export function forecastSales(
     return {
       month: nextMonth(last, h),
       value: round2(value),
-      low: round2(w === null ? value : Math.max(0, value * (1 - w * widen))),
-      high: round2(w === null ? value : value * (1 + w * widen)),
+      low: w === null ? null : round2(Math.max(0, value - w * widen * (Math.max(value, level) || 1))),
+      high: w === null ? null : round2(value + w * widen * (Math.max(value, level) || 1)),
     };
   });
 
   const notes: string[] = [];
   if (y.length < 13) notes.push('Less than a year of history, so seasonal methods were not used.');
   if (partial) notes.push(`${partial} is unfinished, so it was left out of training and testing.`);
+  if (partialStart)
+    notes.push(`${partialStart} starts mid-month, so it was left out of training and testing.`);
   if (rel.length < 3)
     notes.push('Too few tested months to measure a range yet; the forecast is shown as a single number.');
+  else if (w === null)
+    notes.push('Every tested month was forecast exactly, so there are no misses to size a range from yet.');
+  if (w !== null && horizon > 1)
+    notes.push(
+      'Months 2 and 3 widen the one-month range by √2 and √3 (an assumption); the track record tests one month ahead.',
+    );
 
   return {
     ok: true,

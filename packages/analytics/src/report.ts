@@ -311,10 +311,11 @@ export function executiveSummary(ds: Dataset, findings: Finding[]) {
       ? [
           fc.forecast
             .map(
-              (x) => `- **${monthLabel(x.month)}:** ${usd(x.value)} (likely ${usd(x.low)} to ${usd(x.high)})`,
+              (x) =>
+                `- **${monthLabel(x.month)}:** ${usd(x.value)}${x.low !== null && x.high !== null ? ` (nominal 80% range ${usd(x.low)} to ${usd(x.high)})` : ''}`,
             )
             .join('\n'),
-          `Method: ${fc.method!.label.toLowerCase()}. Track record: replayed on the last ${fc.accuracy.months} months using only the data available at the time, it was off by ${((fc.accuracy.wape ?? 0) * 100).toFixed(1)}% on average${fc.accuracy.rangeTested ? `, and ${Math.round((fc.accuracy.hitRate ?? 0) * fc.accuracy.rangeTested)} of ${fc.accuracy.rangeTested} months landed inside the 80% range` : ''}. A forecast assumes the coming months behave like the past ones.`,
+          `Method: ${fc.method!.label.toLowerCase()}. Track record: replayed on the last ${fc.accuracy.months} months using only the data available at the time, it was off by ${((fc.accuracy.wape ?? 0) * 100).toFixed(1)}% on average${fc.accuracy.rangeTested ? `, and ${Math.round((fc.accuracy.hitRate ?? 0) * fc.accuracy.rangeTested)} of ${fc.accuracy.rangeTested} months landed inside its nominal 80% range (limited calibration evidence)` : ''}. A forecast assumes the coming months behave like the past ones.`,
         ]
       : [`Not shown: ${fc.reason}`]),
     '',

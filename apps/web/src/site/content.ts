@@ -17,7 +17,7 @@ export const CATCHES = [
   { k: 'outlier', t: 'Relying on a few huge orders', d: 'When a handful of big orders carry the year.' },
   {
     k: 'seasonality',
-    t: 'Seasonal cash crunches',
+    t: 'Seasonal sales dips',
     d: "When most of the year's money lands in a few months.",
   },
   { k: 'data-quality', t: 'Messy records', d: 'Duplicates, missing customers, fees mixed into sales.' },

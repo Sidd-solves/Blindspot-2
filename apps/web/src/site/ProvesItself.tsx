@@ -137,7 +137,7 @@ export function ProvesItself() {
               className="flex w-full items-center justify-between text-left"
             >
               <span className="flex items-center gap-2 text-[14px] font-extrabold">
-                <BellRing size={16} style={{ color: 'var(--amber)' }} /> Customers about to leave
+                <BellRing size={16} style={{ color: 'var(--amber)' }} /> Customers worth checking on
               </span>
               <ArrowRight size={14} className="text-[var(--muted)]" />
             </button>
@@ -211,7 +211,7 @@ export function ProvesItself() {
               className="flex w-full items-center justify-between text-left"
             >
               <span className="flex items-center gap-2 text-[14px] font-extrabold">
-                <PackageX size={16} style={{ color: 'var(--orange)' }} /> Likely stock-outs
+                <PackageX size={16} style={{ color: 'var(--orange)' }} /> Unusual sales gaps
               </span>
               <ArrowRight size={14} className="text-[var(--muted)]" />
             </button>
@@ -219,7 +219,9 @@ export function ProvesItself() {
               <>
                 <div className="mt-2 flex items-baseline gap-2">
                   <CountUp value={so.found} className="text-[28px] font-semibold" />
-                  <span className="text-[12px] text-[var(--muted)]">silences luck can’t explain</span>
+                  <span className="text-[12px] text-[var(--muted)]">
+                    products with an unusual gap in orders
+                  </span>
                 </div>
                 <div className="mt-1.5 space-y-1">
                   {so.items.slice(0, 3).map((i: any) => (
@@ -267,7 +269,7 @@ export function ProvesItself() {
                       style={{ color: c }}
                     >
                       {ok ? <BadgeCheck size={11} /> : <CircleSlash size={11} />}
-                      {ok ? 'True' : 'Not true'}
+                      {ok ? 'Supported' : 'Evidence points the other way'}
                     </div>
                     <div className="text-[12px] font-semibold leading-snug">{h.claim}</div>
                   </motion.div>

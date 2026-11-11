@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import {
   Bar,
   CartesianGrid,
@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { tool, usd } from '../api';
 import { useStore } from '../store';
+import { ToolError } from '../components/useTool';
 import { Card, CardHead, Chip, Dropdown, Loading, Tabs, stagger } from '../components/ui';
 import { ChartTip, axis } from '../components/charts';
 import { Confidence } from '../components/Confidence';
@@ -110,19 +111,29 @@ function PromoTest({ weeks }: { weeks: string[] }) {
     [field, setField] = useState<string | null>(null),
     [value, setValue] = useState<string | null>(null),
     [res, setRes] = useState<Impact | null>(null),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    [err, setErr] = useState<string | null>(null),
+    [attempt, setAttempt] = useState(0);
+  const seq = useRef(0);
   const values = useValues(field);
   useEffect(() => {
-    if (!week) return;
+    // A new question clears the old answer at once, and a late answer to an old question is ignored.
+    const id = ++seq.current;
+    setRes(null);
+    setErr(null);
+    if (!week || (field && !value)) return setBusy(false);
     setBusy(true);
     tool('event-impact', {
       date: week,
       weeks: Number(after),
       ...(field && value ? { filter: { field, value } } : {}),
-    })
-      .then((r) => r.ok && setRes(r.data))
-      .finally(() => setBusy(false));
-  }, [week, after, field, value]);
+    }).then((r) => {
+      if (id !== seq.current) return;
+      if (r.ok) setRes(r.data);
+      else setErr(r.error?.message ?? 'The test failed.');
+      setBusy(false);
+    });
+  }, [week, after, field, value, attempt]);
 
   const v = res?.verdict;
   // The weekly t-test and the placebo check can disagree on short windows: say so instead of picking one.
@@ -216,8 +227,8 @@ function PromoTest({ weeks }: { weeks: string[] }) {
                 ],
                 [
                   '3',
-                  'Placebo check',
-                  'The same test runs at every other week. If big “effects” happen there too, it says so.',
+                  'Other dates',
+                  'The same comparison runs at every other start date. If shifts this big are common, it says so.',
                 ],
               ].map(([n, t, d], i) => (
                 <motion.div
@@ -251,11 +262,12 @@ function PromoTest({ weeks }: { weeks: string[] }) {
             steps={[
               'Lining up the same weeks last year…',
               'Testing before vs after…',
-              'Running the placebo check…',
+              'Comparing with other dates…',
             ]}
           />
         )}
         {res && !busy && !res.ok && <div className="text-[12px] text-[var(--muted)]">{res.reason}</div>}
+        {err && !busy && <ToolError message={err} retry={() => setAttempt((x) => x + 1)} />}
         <AnimatePresence mode="wait">
           {res && !busy && res.ok && (
             <motion.div
@@ -272,16 +284,16 @@ function PromoTest({ weeks }: { weeks: string[] }) {
                   >
                     {v === 'no-clear-change' ? <CircleSlash size={12} /> : <BadgeCheck size={12} />}
                     {v === 'rose'
-                      ? 'It worked'
+                      ? 'Sales rose after the change'
                       : v === 'fell'
-                        ? 'Sales fell'
+                        ? 'Sales fell after the change'
                         : unusual
                           ? 'Unusual, not proven'
                           : 'No clear change'}
                   </div>
                   <div className="mt-1 text-[13px] font-bold leading-snug">
                     {unusual
-                      ? `${res.label}: ${res.effect! > 0 ? '+' : ''}${(res.effect! * 100).toFixed(0)}% vs the season. No other week moved this much, but ${res.postWeeks} weeks is too few to rule out chance.`
+                      ? `${res.label}: ${res.effect! > 0 ? '+' : ''}${(res.effect! * 100).toFixed(0)}% vs the season. No other start date shifted this much, but ${res.postWeeks} weeks is too few to rule out chance.`
                       : v === 'no-clear-change'
                         ? `${res.label}: ${(res.effect! * 100).toFixed(0)}% vs what the season explains, which could easily be chance.`
                         : `${res.label}: ${res.effect! > 0 ? '+' : ''}${(res.effect! * 100).toFixed(0)}% beyond what the season explains.`}
@@ -309,13 +321,13 @@ function PromoTest({ weeks }: { weeks: string[] }) {
                   title="The same test at every other week where nothing was marked."
                 >
                   <div className="flex items-center gap-1 text-[11px] text-[var(--muted)]">
-                    <Dices size={11} /> Placebo check
+                    <Dices size={11} /> Other dates
                   </div>
                   <div className="mono text-[15px] font-semibold">
                     {res.placebo.asBig} of {res.placebo.tested}
                   </div>
                   <div className="text-[11px] text-[var(--muted)]">
-                    other weeks showed an effect this big by chance
+                    other start dates showed a shift this big (context, not a false-alarm rate)
                   </div>
                 </div>
               </div>
@@ -356,7 +368,9 @@ function PromoTest({ weeks }: { weeks: string[] }) {
               </div>
               <div className="text-[11px] text-[var(--faint)]">
                 Shaded: the weeks after the change. Dashed: what last year’s same weeks predicted, scaled to
-                how this year was running before the change.
+                how this year was running before the change. This compares sales before and after the date. It
+                doesn’t prove the change caused the difference: anything else that changed at the same time
+                would show up here too.
               </div>
             </motion.div>
           )}
@@ -373,9 +387,9 @@ const METRICS = {
   'Number of orders': { level: 'order', metric: 'count' },
 } as const;
 const VERDICT = {
-  supported: { c: 'var(--emerald)', label: 'True', icon: BadgeCheck },
-  rejected: { c: 'var(--amber)', label: 'Not true', icon: CircleSlash },
-  'small-effect': { c: 'var(--sky)', label: 'True, but tiny', icon: Scale },
+  supported: { c: 'var(--emerald)', label: 'Supported by this comparison', icon: BadgeCheck },
+  rejected: { c: 'var(--amber)', label: 'Evidence points the other way', icon: CircleSlash },
+  'small-effect': { c: 'var(--sky)', label: 'Supported, but below the size that matters', icon: Scale },
   inconclusive: { c: 'var(--faint)', label: 'Not enough evidence', icon: HelpCircle },
 } as const;
 
@@ -452,13 +466,27 @@ function FactCheck({ weeks }: { weeks: string[] }) {
     };
   }, [metric, dir, mode, field, a, b, span, end, measure, date]);
 
+  const seq = useRef(0);
+  const [err, setErr] = useState<string | null>(null);
+  // Changing the sentence clears the old verdict, so the answer on screen always matches the question.
+  useEffect(() => {
+    seq.current++;
+    setRes(null);
+    setErr(null);
+    setBusy(false);
+  }, [claim]);
   const check = () => {
     if (!claim) return;
+    const id = ++seq.current;
     setBusy(true);
     setRes(null);
-    tool('test-hypotheses', { hypotheses: [claim], includeLibrary: false, useAI: false })
-      .then((r) => r.ok && setRes(r.data.results[0]))
-      .finally(() => setBusy(false));
+    setErr(null);
+    tool('test-hypotheses', { hypotheses: [claim], includeLibrary: false, useAI: false }).then((r) => {
+      if (id !== seq.current) return;
+      if (r.ok) setRes(r.data.results[0]);
+      else setErr(r.error?.message ?? 'The check failed.');
+      setBusy(false);
+    });
   };
   const V = res ? VERDICT[res.verdict] : null;
   const ev = res?.evidence;
@@ -611,9 +639,13 @@ function FactCheck({ weeks }: { weeks: string[] }) {
                 </div>
               )}
               <div className="mt-2 text-[11.5px] leading-snug text-[var(--muted)]">{res.summary}</div>
+              <div className="mt-1 text-[11px] text-[var(--faint)]">
+                A comparison shows whether the difference is there in your data, not what causes it.
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
+        {err && !busy && <ToolError message={err} retry={check} />}
         {!res && !busy && (
           <div className="text-[11.5px] text-[var(--faint)]">
             Build the sentence, then check it. The answer comes from a statistical test on your rows, not from

@@ -13,7 +13,7 @@ import {
   X,
   ChevronDown,
 } from 'lucide-react';
-import { ago, get, post, TOOL_CAT } from '../api';
+import { ago, get, post, SID, TOOL_CAT } from '../api';
 import { useStore } from '../store';
 import { Card, CardHead, Chip, Dropdown, Loading, stagger } from '../components/ui';
 import { UploadZone } from '../components/Upload';
@@ -26,6 +26,7 @@ const MODEL_LABEL: Record<string, string> = {
 
 export default function Settings() {
   const { refresh, dataset } = useStore();
+  const [modelErr, setModelErr] = useState('');
   const [cfg, setCfg] = useState<any>(null),
     [tools, setTools] = useState<any[]>([]),
     [q, setQ] = useState(''),
@@ -106,13 +107,34 @@ export default function Settings() {
               options={cfg.models.map((m: string) => MODEL_LABEL[m])}
               onChange={async (v) => {
                 const id = Object.keys(MODEL_LABEL).find((k) => MODEL_LABEL[k] === v[0]);
-                if (id) setCfg({ ...cfg, ...(await post('/api/settings/model', { model: id })) });
-                refresh();
+                if (!id) return;
+                try {
+                  const t = sessionStorage.getItem('ciq-admin') ?? '';
+                  const r = await fetch('/api/settings/model', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'X-Session-Id': SID,
+                      ...(t ? { Authorization: `Bearer ${t}` } : {}),
+                    },
+                    body: JSON.stringify({ model: id }),
+                  });
+                  const j = await r.json();
+                  if (!r.ok) throw new Error(j.error?.message);
+                  setModelErr('');
+                  setCfg({ ...cfg, ...j });
+                  refresh();
+                } catch {
+                  setModelErr(
+                    'Only the site owner can change the model, because it applies to every visitor. Enter the admin token below to change it.',
+                  );
+                }
               }}
             />
           ) : (
             <Loading steps={['Loading settings…']} />
           )}
+          {modelErr && <div className="text-[11px] text-[var(--amber)]">{modelErr}</div>}
           <div className="text-[11px] text-[var(--muted)]">
             {cfg?.aiConfigured
               ? 'Chat and vision use this model.'

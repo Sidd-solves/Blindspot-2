@@ -8,6 +8,7 @@ import {
   analyzeSmart,
   round,
   type Row,
+  reachesMonthEnd,
 } from '@blindspot/analytics';
 import { defineTool, ToolError, num, memo } from '../core';
 
@@ -108,14 +109,13 @@ export const buildDashboard = defineTool({
           120,
           true,
         );
-        // Flag an unfinished last month (data ending before the 28th) so it isn't compared like a full month.
+        // Flag an unfinished last month (data not reaching the month's last day) so it isn't compared like a full month.
         let maxDay = '';
         for (const r of v.rows) {
           const d = r[fm.date!];
           if (typeof d === 'string' && d > maxDay) maxDay = d;
         }
-        if (monthly.length && Number(maxDay.slice(8, 10)) < 28)
-          (monthly[monthly.length - 1] as any).partial = true;
+        if (monthly.length && !reachesMonthEnd(maxDay)) (monthly[monthly.length - 1] as any).partial = true;
         charts.push({ id: 'trend', type: 'line', title: `${fm.measure} by month`, data: monthly });
       }
       if (dim)
