@@ -15,6 +15,7 @@ import { tool, usd, pct, SEV, evidenceText } from '../api';
 import { useStore } from '../store';
 import { Card, Chip, CountUp, Loading, Markdown, stagger } from '../components/ui';
 import { Confidence, sureOf } from '../components/Confidence';
+import { ForecastRange, RangeCoverage } from '../components/ForecastRange';
 
 const download = (name: string, text: string) => {
   const a = document.createElement('a');
@@ -272,7 +273,7 @@ export default function Reports() {
                 className="mb-2 mt-5 text-[11px] font-extrabold uppercase tracking-[.1em]"
                 style={{ color: 'var(--cyan)' }}
               >
-                Sales forecast · next 3 months
+                Sales forecast · next 3 months · nominal 80% ranges
               </h3>
               <div className="grid gap-2 sm:grid-cols-3">
                 {rep.forecast.forecast.map((x: any, i: number) => (
@@ -293,14 +294,14 @@ export default function Reports() {
                     </div>
                     <div className="mono text-[15px] font-semibold">{usd(x.value)}</div>
                     <div className="text-[11px] text-[var(--faint)]">
-                      likely {usd(x.low, true)} to {usd(x.high, true)}
+                      <ForecastRange low={x.low} high={x.high} compact />
                     </div>
                   </motion.div>
                 ))}
               </div>
               <div className="mt-1.5 text-[11.5px] text-[var(--muted)]">
-                Track record: replayed on the last {rep.forecast.accuracy.months} months using only the data
-                available at the time, off by {(rep.forecast.accuracy.wape * 100).toFixed(1)}% on average.
+                Track record:{' '}
+                <RangeCoverage accuracy={rep.forecast.accuracy} horizon={rep.forecast.forecast.length} />
               </div>
             </>
           )}

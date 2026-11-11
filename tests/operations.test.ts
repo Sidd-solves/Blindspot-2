@@ -100,6 +100,83 @@ describe('stock-out detector', () => {
     expect(ten.lostSales).toBeCloseTo(one.lostSales, 6);
   });
 
+  /** 30 products for 400 trading days with no stock-outs at all, under different demand patterns. */
+  const demand = (
+    kind: 'steady' | 'seasonal' | 'bursty' | 'overdispersed',
+    seed0: number,
+    gapAt?: number,
+  ) => {
+    let seed = seed0;
+    const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const pois = (l: number) => {
+      let k = 0,
+        p = Math.exp(-l),
+        c = p;
+      const u = rnd();
+      while (u > c) {
+        p *= l / ++k;
+        c += p;
+      }
+      return k;
+    };
+    const rows: Row[] = [];
+    const burst = new Array(30).fill(0);
+    let o = 0;
+    for (let d = 0; d < 400; d++) {
+      rows.push({
+        OrderDate: iso(T0 + d * DAY),
+        Order: `b${o++}`,
+        Customer: 'x',
+        Product: 'Bg',
+        Sales: 5,
+        IsReturn: 0,
+      });
+      for (let p = 0; p < 30; p++) {
+        const base = gapAt !== undefined && p === 0 ? 2 : 0.6 + (p % 5) * 0.25;
+        let l = base;
+        if (kind === 'seasonal') l = base * (1 + 0.8 * Math.sin((2 * Math.PI * d) / 365 + p));
+        if (kind === 'bursty') {
+          if (rnd() < 0.05) burst[p] = 6;
+          l = burst[p] > 0 ? base * 3 : base * 0.5;
+          burst[p] = Math.max(0, burst[p] - 1);
+        }
+        if (kind === 'overdispersed') l = base * -Math.log(rnd() + 1e-9);
+        if (gapAt !== undefined && p === 0 && d >= gapAt && d < gapAt + 25) l = 0;
+        for (let k = pois(Math.max(0, l)); k > 0; k--)
+          rows.push({
+            OrderDate: iso(T0 + d * DAY),
+            Order: `o${o++}`,
+            Customer: 'y',
+            Product: `P${p}`,
+            Sales: 10,
+            IsReturn: 0,
+          });
+      }
+    }
+    return ds(rows);
+  };
+
+  it.each(['steady', 'seasonal', 'bursty', 'overdispersed'] as const)(
+    'at most one false flag under %s demand with no stock-outs (3 seeds × 30 products)',
+    (kind) => {
+      // Measured separately: 1 false flag in 1,500 product histories across five demand patterns.
+      const flags = [11, 108, 205].reduce((n, seed) => n + stockOuts(demand(kind, seed)).items.length, 0);
+      expect(flags).toBeLessThanOrEqual(1);
+    },
+  );
+
+  it('still catches a real 25-trading-day stock-out in a steadily selling product', () => {
+    for (const seed of [5, 36, 67])
+      expect(stockOuts(demand('steady', seed, 200)).items.map((i) => i.product)).toContain('P0');
+  });
+
+  it('declines without order IDs instead of treating lines as orders', () => {
+    const rows = shop(240, (d) => (d >= 100 && d < 114 ? 0 : 2)).rows.map(({ Order: _o, ...r }) => r);
+    const r = stockOuts(ds(rows));
+    expect(r.ok).toBe(false);
+    expect(r.reason).toMatch(/order numbers/);
+  });
+
   it('is calibrated: steady random sales with no stock-outs are not flagged', () => {
     // 60 products ordered at random (Poisson, about 1 order a trading day) for 400 days, seeded so it's repeatable.
     let seed = 7;

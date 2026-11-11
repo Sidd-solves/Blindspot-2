@@ -5,7 +5,7 @@ Each choice below has a cost. This page says what we chose, why, and what we gav
 ## 1. The math is separate from the AI
 **Choice.** All numbers come from deterministic TypeScript: cleaning, statistics, findings, scenarios and reports. Claude only picks tools, explains their results and proposes ideas.
 
-**Why.** A store owner acts on these numbers. Code gives the same answer every time, runs in seconds, costs nothing per run and can be tested (226 tests, 82% line coverage on the engine and API). A language model gives none of those guarantees for arithmetic.
+**Why.** A store owner acts on these numbers. Code gives the same answer every time, runs in seconds, costs nothing per run and can be tested (232 tests, 82% line coverage on the engine and API). A language model gives none of those guarantees for arithmetic.
 
 **Trade-off.** Every new kind of analysis has to be written as code, and the AI can't answer questions that no tool covers. It says so instead of guessing.
 
@@ -85,4 +85,11 @@ Each choice below has a cost. This page says what we chose, why, and what we gav
 **Why.** A historical comparison can't separate a promotion from everything else that changed that month, a sales gap from its reason, or a revenue dip from a cash shortage. Saying more than the test shows would undo the trust the rest of the product earns.
 
 **Trade-off.** The wording is less exciting. It's also defensible to anyone who checks.
+
+## 12. A detector is judged on shops where nothing happened
+**Choice.** The sales-gap detector is tested on simulated shops with *no* stock-outs under steady, seasonal, declining, bursty and overdispersed demand, and on whether it still catches a real gap. It counts orders, not lines; it declines files without order numbers; and it slows each product's expected rate by that product's own burstiness.
+
+**Why.** The first version flagged 72 of 300 bursty products that never ran out. A detector that cries wolf on lumpy demand would send owners chasing problems that aren't there.
+
+**Trade-off.** Real stock-outs in bursty products are rarely detectable from sales alone (1 of 10 in the simulation, vs 10 of 10 for steady sellers). The page says the cause is unknown either way.
 

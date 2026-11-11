@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import { tool, usd } from '../api';
 import { useStore } from '../store';
-import { ToolError } from '../components/useTool';
+import { ToolError, useTool } from '../components/useTool';
 import { Card, CardHead, Chip, Dropdown, Loading, Tabs, stagger } from '../components/ui';
 import { ChartTip, axis } from '../components/charts';
 import { Confidence } from '../components/Confidence';
@@ -72,26 +72,31 @@ const short = (iso: string) =>
     timeZone: 'UTC',
   });
 
+/** The top values of a field (for the dropdowns), with its own error state and retry. */
 function useValues(field: string | null) {
   const { version, dataset } = useStore();
-  const [vals, setVals] = useState<string[]>([]);
-  useEffect(() => {
-    setVals([]);
-    if (!field) return;
-    tool('query-data', {
-      metric: 'sum',
-      measure: dataset?.fields.measure,
-      groupBy: [field],
-      sort: 'desc',
-      limit: 40,
-    }).then(
-      (r) =>
-        r.ok &&
-        setVals((r.data.rows as any[]).map((row) => String(row[0])).filter((v) => v && v !== '(blank)')),
-    );
-  }, [field, version]);
-  return vals;
+  const q = useTool<any>(
+    'query-data',
+    { metric: 'sum', measure: dataset?.fields.measure, groupBy: [field], sort: 'desc', limit: 40 },
+    [field, version],
+    !!field,
+  );
+  const vals = useMemo(
+    () =>
+      field && q.data
+        ? (q.data.rows as any[]).map((row) => String(row[0])).filter((v) => v && v !== '(blank)')
+        : [],
+    [q.data, field],
+  );
+  return { vals, error: field ? q.error : null, retry: q.retry, loading: !!field && q.loading };
 }
+
+/** A small inline note when a dropdown's values didn't load. */
+const ValuesError = ({ retry }: { retry: () => void }) => (
+  <button onClick={retry} className="text-[11.5px] font-semibold" style={{ color: 'var(--rose)' }}>
+    Values didn’t load · try again
+  </button>
+);
 
 /* ------------------------------------------------------------------ Was it the promo? */
 function PromoTest({ weeks }: { weeks: string[] }) {
@@ -115,7 +120,8 @@ function PromoTest({ weeks }: { weeks: string[] }) {
     [err, setErr] = useState<string | null>(null),
     [attempt, setAttempt] = useState(0);
   const seq = useRef(0);
-  const values = useValues(field);
+  const valuesQ = useValues(field);
+  const values = valuesQ.vals;
   useEffect(() => {
     // A new question clears the old answer at once, and a late answer to an old question is ignored.
     const id = ++seq.current;
@@ -185,12 +191,13 @@ function PromoTest({ weeks }: { weeks: string[] }) {
             <Dropdown
               value={value ? [value] : []}
               options={values}
+              placeholder={valuesQ.loading ? 'Loading…' : 'Select...'}
               onChange={(x) => setValue(x[0])}
-              placeholder="Select..."
               width={170}
               c="var(--fuchsia)"
             />
           )}
+          {valuesQ.error && <ValuesError retry={valuesQ.retry} />}
           <span className="text-[var(--muted)]">and judge</span>
           <Tabs
             layoutId="promo-weeks"
@@ -411,7 +418,8 @@ function FactCheck({ weeks }: { weeks: string[] }) {
     [span, setSpan] = useState<'last 90 days' | 'last 6 months'>('last 90 days');
   const [res, setRes] = useState<Claim | null>(null),
     [busy, setBusy] = useState(false);
-  const values = useValues(field);
+  const valuesQ = useValues(field);
+  const values = valuesQ.vals;
   const end = weeks.length ? weeks[weeks.length - 1] : null;
   const date = dataset?.fields.date ?? 'OrderDate';
   const measure = dataset?.fields.measure ?? 'Sales';
@@ -548,11 +556,13 @@ function FactCheck({ weeks }: { weeks: string[] }) {
                 <Dropdown
                   value={a ? [a] : []}
                   options={values}
+                  placeholder={valuesQ.loading ? 'Loading…' : 'Select...'}
                   onChange={(x) => setA(x[0])}
                   width={150}
                   c="var(--emerald)"
                 />
               )}
+              {valuesQ.error && <ValuesError retry={valuesQ.retry} />}
               <span className="text-[var(--muted)]">than for</span>
               <Dropdown
                 value={b ? [b] : []}
@@ -660,11 +670,14 @@ function FactCheck({ weeks }: { weeks: string[] }) {
 /* ------------------------------------------------------------------ Already checked */
 function AlreadyChecked() {
   const { version } = useStore();
-  const [rows, setRows] = useState<(Claim & { id: string; claim: string })[] | null>(null);
-  useEffect(() => {
-    setRows(null);
-    tool('test-hypotheses', { useAI: false }).then((r) => r.ok && setRows(r.data.results));
-  }, [version]);
+  const q = useTool<any>('test-hypotheses', { useAI: false }, [version]);
+  if (q.error)
+    return (
+      <div className="lg:col-span-12">
+        <ToolError message={q.error} retry={q.retry} />
+      </div>
+    );
+  const rows = q.data?.results as (Claim & { id: string; claim: string })[] | undefined;
   if (!rows) return null;
   return (
     <Card c="var(--lime)" className="lg:col-span-12" hover={false}>
@@ -709,17 +722,17 @@ function AlreadyChecked() {
 
 export default function ProveIt() {
   const { version, dataset } = useStore();
-  const [weeks, setWeeks] = useState<string[] | null>(null);
-  useEffect(() => {
-    setWeeks(null);
-    tool('query-data', { metric: 'count', timeGrain: 'week', sort: 'key', limit: 500 }).then((r) =>
-      setWeeks(
-        r.ok
-          ? (r.data.rows as any[]).map((row) => String(row[0])).filter((w) => /^\d{4}-\d{2}-\d{2}$/.test(w))
-          : [],
-      ),
-    );
-  }, [version]);
+  const wq = useTool<any>('query-data', { metric: 'count', timeGrain: 'week', sort: 'key', limit: 500 }, [
+    version,
+  ]);
+  const weeks = useMemo(
+    () =>
+      wq.data
+        ? (wq.data.rows as any[]).map((row) => String(row[0])).filter((w) => /^\d{4}-\d{2}-\d{2}$/.test(w))
+        : null,
+    [wq.data],
+  );
+  if (wq.error) return <ToolError message={wq.error} retry={wq.retry} />;
   if (!weeks) return <Loading steps={['Reading your weeks…']} />;
   return (
     <motion.div

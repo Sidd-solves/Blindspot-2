@@ -299,7 +299,7 @@ export const stockOutsTool = defineTool({
   category: 'Business Intelligence',
   core: false,
   description:
-    "Unusual sales gaps (possible stock-outs): products ordered most trading days that got no orders for 5-60 trading days, then sold again. Counts distinct orders; each gap is tested against the product's usual daily order rate (Poisson), corrected for searching its whole history and across products (Benjamini-Hochberg). Shows that something changed, not why (no stock data). Sales not made is a rough estimate.",
+    "Unusual sales gaps (possible stock-outs): products ordered most trading days that got no orders for 5-60 trading days, then sold again. Counts distinct orders; each gap is tested against the product's usual daily order rate (Poisson, slowed by the product's own burstiness), corrected for searching its whole history and across products (Benjamini-Hochberg). Needs order IDs. Shows that something changed, not why (no stock data). Sales not made is a rough estimate.",
   input: z.object({ top: z.number().int().min(1).max(200).default(30) }),
   output: z.object({
     ok: z.boolean(),

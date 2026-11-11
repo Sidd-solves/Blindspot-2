@@ -18,6 +18,7 @@ import { useStore } from '../store';
 import { Card, CardHead, Chip, CountUp, Empty, Loading, Ring, stagger } from '../components/ui';
 import { ChartTip, axis, glowDefs } from '../components/charts';
 import { Confidence } from '../components/Confidence';
+import { ForecastRange } from '../components/ForecastRange';
 
 type F = {
   ok: boolean;
@@ -164,21 +165,14 @@ export default function Forecast() {
             />
           </div>
           <div className="text-[12px] text-[var(--muted)]">
-            {next.low !== null && next.high !== null ? (
+            <ForecastRange low={next.low} high={next.high} />
+            {next.low !== null && acc.rangeTested > 0 && (
               <>
-                Nominal 80% range{' '}
-                <span className="mono font-semibold text-[var(--text)]">{usd(next.low)}</span> to{' '}
-                <span className="mono font-semibold text-[var(--text)]">{usd(next.high)}</span>
-                {acc.rangeTested > 0 && (
-                  <>
-                    {' '}
-                    · it held in {hits} of {acc.rangeTested} tested months (limited calibration evidence)
-                  </>
-                )}
+                {' '}
+                · it held in {hits} of {acc.rangeTested} tested months (limited calibration evidence)
               </>
-            ) : (
-              'No range yet: the track record has too few misses to size one.'
             )}
+            {next.low === null && ': the track record has too few misses to size one.'}
           </div>
           <div className="mt-3 grid grid-cols-3 gap-2">
             {f.forecast.map((x, i) => {

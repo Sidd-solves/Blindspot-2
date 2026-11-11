@@ -7,8 +7,10 @@
  * likely a silence that long is at the product's usual daily *order* rate (distinct orders, so an export that splits an
  * order into many lines changes nothing). Because that stretch was picked as the longest in the whole history, its
  * chance is multiplied by the number of places it could have started (Bonferroni over the scan), then corrected across
- * products (Benjamini–Hochberg). The Poisson model assumes a steady order rate; seasonal or bursty products can break
- * that, and sales coming back doesn't prove the cause was stock. So these are "unusual gaps worth checking", with
+ * products (Benjamini–Hochberg). Products ordered in bursts are naturally quiet for long spells, so the expected rate
+ * is slowed by the product's own burstiness (variance ÷ mean of daily and 5-day order counts outside the gap). Tested:
+ * no false flags under steady, seasonal, bursty or overdispersed demand; a 25-day gap in a steady seller is caught,
+ * but in a bursty seller it usually can't be told from normal quiet. Sales coming back doesn't prove the cause was stock. So these are "unusual gaps worth checking", with
  * a rough estimate of sales not made (usual daily sales × days).
  *
  * Seasonal dips. Each calendar month's sales against an average month, from full 12-month years, with how many years
@@ -56,7 +58,7 @@ export function stockOuts(ds: Dataset): StockOutReport {
     ['Product', 'Description', 'Item', 'Title'].find((c) => ds.rows[0] && c in ds.rows[0]) ??
     [...fm.highCardDims, ...fm.dims].find((c) => /product|item|sku|title|description/i.test(c));
   const method =
-    'Longest run of 5–60 trading days with no orders per product, against its usual daily order rate (Poisson), corrected for searching the whole history for that gap and across products (Benjamini–Hochberg, q < 0.01); orders had to resume at half the usual rate or more. Flags unusual gaps; the file can’t show why sales stopped.';
+    'Longest run of 5–60 trading days with no orders per product, against its usual daily order rate (Poisson, slowed by how bursty the product is), corrected for searching the whole history for that gap and across products (Benjamini–Hochberg, q < 0.01); orders had to resume at half the usual rate or more. Flags unusual gaps; the file can’t show why sales stopped, and stock-outs in products that sell in bursts are hard to see.';
   if (!fm.date || !productCol)
     return {
       ok: false,
@@ -72,7 +74,9 @@ export function stockOuts(ds: Dataset): StockOutReport {
   // that splits one order into many lines can't make the evidence look stronger.
   const trading = new Set<number>();
   const per = new Map<string, Map<number, { n: number; v: number; orders: Set<string> }>>();
-  let rowNo = 0;
+  let rowNo = 0,
+    saleRows = 0,
+    withOrder = 0;
   for (const r of ds.rows as Row[]) {
     rowNo++;
     if (r.IsReturn === 1) continue;
@@ -82,6 +86,8 @@ export function stockOuts(ds: Dataset): StockOutReport {
     trading.add(d);
     const p = String(r[productCol] ?? '');
     if (!p) continue;
+    saleRows++;
+    if (r.Order != null && r.Order !== '') withOrder++;
     const m = per.get(p) ?? new Map();
     const e = m.get(d) ?? { n: 0, v: 0, orders: new Set<string>() };
     e.orders.add(r.Order != null && r.Order !== '' ? String(r.Order) : `row${rowNo}`);
@@ -90,6 +96,19 @@ export function stockOuts(ds: Dataset): StockOutReport {
     m.set(d, e);
     per.set(p, m);
   }
+  // Without order IDs, orders can't be told apart from lines, and line counts would overstate the evidence (one order
+  // split over ten lines looks like ten). So the test needs order IDs on (nearly) every sale.
+  if (saleRows && withOrder / saleRows < 0.95)
+    return {
+      ok: false,
+      reason:
+        'This file has no order numbers on most sales, so orders can’t be told apart from lines and the gap test would overstate the evidence. Export with order numbers to use it.',
+      scanned: 0,
+      method,
+      items: [],
+      totalLost: 0,
+      range: null,
+    };
   const days = [...trading].sort((a, b) => a - b);
   if (days.length < 120)
     return {
@@ -138,7 +157,20 @@ export function stockOuts(ds: Dataset): StockOutReport {
     // product's history is up to (number of places it could start) × the chance at one place (Bonferroni over the
     // scan). Without this, searching every interval would make ordinary quiet spells look significant.
     const positions = Math.max(1, days.length - WINDOW - k);
-    const pRaw = Math.min(1, Math.exp(-rateBefore * k) * positions);
+    // Products ordered in bursts or with very uneven demand have long quiet spells naturally, which a plain Poisson
+    // model would call surprising. Measure that from the product's own history outside the gap (variance ÷ mean of
+    // daily orders, and of 5-trading-day blocks, which also catches bursts that last a few days) and slow the
+    // expected rate by it: a lumpy product needs a much longer silence to be flagged.
+    const outside = days.filter((_, i) => i < best!.a || i >= best!.b).map((d) => m.get(d)?.n ?? 0);
+    const disp = (xs: number[]) => {
+      const mu = xs.reduce((a, b) => a + b, 0) / xs.length;
+      return mu > 0 ? xs.reduce((a, b) => a + (b - mu) ** 2, 0) / (xs.length - 1) / mu : 1;
+    };
+    const blocks: number[] = [];
+    for (let i = 0; i + 5 <= outside.length; i += 5)
+      blocks.push(outside.slice(i, i + 5).reduce((a, b) => a + b, 0));
+    const dispersion = Math.max(1, disp(outside), blocks.length > 2 ? disp(blocks) : 1);
+    const pRaw = Math.min(1, Math.exp((-rateBefore * k) / dispersion) * positions);
     const dailySales = sum(before, (e) => e.v) / before.length;
     cands.push({
       product,

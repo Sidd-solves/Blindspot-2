@@ -27,7 +27,7 @@
 | Output | Screenshot audit: chart colors read from any image, contrast and color-blind checks, color-blind preview | Done, palette extraction tested |
 | Optional | AI vision review of a screenshot (Claude) | Built as an explicit button; not exercised in tests (uses credits) |
 
-**Tests:** `npm test` → 226 passed. **Fact check:** 7/7 match on the full dataset.
+**Tests:** `npm test` → 232 passed. **Fact check:** 7/7 match on the full dataset.
 
 ## Known limitations
 1. The real case study is a public dataset from 2009–2011, not the team's own store; "tested on real business data", not "used by a business".

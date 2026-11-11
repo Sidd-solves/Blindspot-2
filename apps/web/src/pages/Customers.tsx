@@ -193,12 +193,14 @@ export default function Customers() {
   }, [shop]);
   const ewQ = useTool<EW>('early-warning', { top: 200 }, [version]);
   const wbQ = useTool<WB>('win-back-list', { shopName }, [version, shopName]);
-  const [lastWb, setLastWb] = useState<WB | null>(null);
+  // Keep the previous list on screen only while the shop name is being edited on the same data. A list from an
+  // earlier dataset or filter (an older `version`) is never shown next to new results.
+  const [lastWb, setLastWb] = useState<{ version: number; data: WB } | null>(null);
   useEffect(() => {
-    if (wbQ.data) setLastWb(wbQ.data);
-  }, [wbQ.data]);
+    if (wbQ.data) setLastWb({ version, data: wbQ.data });
+  }, [wbQ.data, version]);
   const ew = ewQ.data,
-    wb = wbQ.data ?? lastWb;
+    wb = wbQ.data ?? (lastWb?.version === version ? lastWb.data : null);
   const err = ewQ.error ?? wbQ.error;
   if (err) return <ToolError message={err} retry={() => (ewQ.error ? ewQ.retry() : wbQ.retry())} />;
   if (!ew || !wb)
