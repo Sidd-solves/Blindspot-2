@@ -45,6 +45,7 @@ export const CHAT_TOOLS = [
   'win-back-list',
   'stock-outs',
   'cash-radar',
+  'event-impact',
   'suggest-annotations',
   'generate-executive-summary',
 ];

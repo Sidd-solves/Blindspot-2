@@ -10,6 +10,7 @@ import {
   LineChart,
   Radar,
   PackageX,
+  Gavel,
   ScanEye,
   FileText,
   Settings as Cog,
@@ -30,6 +31,7 @@ const Simulator = lazy(() => import('./pages/Simulator'));
 const Forecast = lazy(() => import('./pages/Forecast'));
 const Customers = lazy(() => import('./pages/Customers'));
 const StockCash = lazy(() => import('./pages/StockCash'));
+const ProveIt = lazy(() => import('./pages/ProveIt'));
 const Audit = lazy(() => import('./pages/Audit'));
 const Reports = lazy(() => import('./pages/Reports'));
 const Settings = lazy(() => import('./pages/Settings'));
@@ -76,6 +78,7 @@ export const NAV = [
   { id: 'risk', label: 'Risk Intelligence', icon: ShieldAlert, c: 'var(--rose)', el: Risk },
   { id: 'customers', label: 'Customer Radar', icon: Radar, c: 'var(--blue)', el: Customers },
   { id: 'stock', label: 'Stock & Cash', icon: PackageX, c: 'var(--orange)', el: StockCash },
+  { id: 'prove', label: 'Prove It', icon: Gavel, c: 'var(--lime)', el: ProveIt },
   {
     id: 'simulator',
     label: 'Scenario Simulator',

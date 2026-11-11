@@ -13,6 +13,7 @@ import {
   winBackList,
   stockOuts,
   cashRadar,
+  eventImpact,
 } from '@blindspot/analytics';
 import { defineTool, memo } from '../core';
 import { DashboardSpecSchema } from './design';
@@ -357,6 +358,48 @@ export const cashRadarTool = defineTool({
   },
 });
 
+export const eventImpactTool = defineTool({
+  name: 'event-impact',
+  category: 'Business Intelligence',
+  core: false,
+  description:
+    'Was it the promo? Tests whether sales really changed after a date (a promotion, price change, free shipping), against the same weeks a year earlier so the season is controlled (Welch t-test on weekly log year-over-year ratios, 8 weeks before vs the weeks after). Includes a placebo check: how often an effect this big appears at other weeks where nothing happened.',
+  input: z.object({
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    weeks: z.number().int().min(3).max(26).default(8),
+    filter: z.object({ field: z.string().max(100), value: z.string().max(200) }).optional(),
+  }),
+  output: z.object({
+    ok: z.boolean(),
+    reason: z.string().optional(),
+    date: z.string(),
+    label: z.string(),
+    control: z.enum(['same-weeks-last-year', 'none']),
+    preWeeks: z.number(),
+    postWeeks: z.number(),
+    effect: z.number().nullable(),
+    actual: z.number(),
+    expected: z.number(),
+    extra: z.number(),
+    p: z.number().nullable(),
+    pTwoSided: z.number().nullable(),
+    method: z.string(),
+    verdict: z.enum(['rose', 'fell', 'no-clear-change', 'not-enough-data']),
+    placebo: z.object({ tested: z.number(), asBig: z.number(), rate: z.number().nullable() }),
+    weekly: z.array(
+      z.object({
+        week: z.string(),
+        actual: z.number(),
+        expected: z.number(),
+        phase: z.enum(['before', 'after']),
+      }),
+    ),
+  }),
+  async handler(ctx, i) {
+    return eventImpact(ctx.state.view(), i);
+  },
+});
+
 export const EXTRA_TOOLS = [
   runScenario,
   recommendActions,
@@ -367,4 +410,5 @@ export const EXTRA_TOOLS = [
   winBackTool,
   stockOutsTool,
   cashRadarTool,
+  eventImpactTool,
 ];
