@@ -5,14 +5,15 @@ import { simulateScenario } from './scenario';
 import { numeric } from './profile';
 import { sum } from './stats';
 
-const usd = (n: number | null) => (n === null ? 'n/a' : '$' + Math.round(n).toLocaleString('en-US'));
+import { money } from './money';
 
 export const baselineOf = (ds: Dataset) => {
   const fm = detectFields(ds);
   return { revenue: sum(numeric(ds.rows, fm.measure)), profit: fm.profit ? sum(numeric(ds.rows, fm.profit)) : 0 };
 };
 
-export function toStory(f: Finding) {
+export function toStory(f: Finding, currency = 'USD') {
+  const usd = (n: number | null) => money(n, currency);
   return {
     problem: f.title, evidence: f.explanation,
     businessImpact: f.impactUsd !== null ? `${usd(f.impactUsd)}: ${f.impactBasis}.` : 'Not quantifiable from the loaded data.',
@@ -20,9 +21,56 @@ export function toStory(f: Finding) {
   };
 }
 
+/** The fixed report template: every topic always appears, with what was found or why it couldn't be checked. */
+export const REPORT_TOPICS = [
+  { key: 'customers', label: 'Customer dependence', cats: ['concentration'] },
+  { key: 'profit', label: 'Profit and pricing', cats: ['profitability', 'pricing'] },
+  { key: 'trend', label: 'Sales trend', cats: ['trend', 'anomaly'] },
+  { key: 'retention', label: 'Repeat customers', cats: ['retention'] },
+  { key: 'returns', label: 'Returns and cancellations', cats: ['returns'] },
+  { key: 'products', label: 'Products', cats: ['product'] },
+  { key: 'seasonality', label: 'Seasonality', cats: ['seasonality'] },
+  { key: 'orders', label: 'Large-order dependence', cats: ['outlier'] },
+  { key: 'data', label: 'Data quality', cats: ['data-quality'] },
+] as const;
+
+export function reportTopics(ds: Dataset, findings: Finding[]) {
+  const fm = detectFields(ds), rows = ds.rows;
+  const tx = rows.length > 0 && 'Order' in rows[0] && 'Customer' in rows[0];
+  const hasReturns = rows.length > 0 && 'IsReturn' in rows[0];
+  let months = 0;
+  if (fm.date) { let mn = Infinity, mx = -Infinity; for (const r of rows) { const t = Date.parse(String(r[fm.date]).slice(0, 10)); if (t < mn) mn = t; if (t > mx) mx = t; } months = (mx - mn) / (30.4 * 86400000); }
+  const missing: Record<string, string | null> = {
+    customers: fm.highCardDims.length ? null : 'Needs a customer or product column.',
+    profit: fm.profit ? null : 'Needs a profit or product-cost column.',
+    trend: fm.date ? (months >= 6 ? null : 'Needs at least 6 months of dated sales.') : 'Needs a date column.',
+    retention: tx && fm.date ? null : 'Needs customer IDs and order IDs.',
+    returns: hasReturns ? null : 'Needs returns or cancellations in the data.',
+    products: tx && months >= 15 ? null : 'Needs order lines with products and 15+ months of history.',
+    seasonality: fm.date && months >= 12 ? null : 'Needs at least 12 months of dated sales.',
+    orders: null, data: null,
+  };
+  return REPORT_TOPICS.map((t) => {
+    const hits = findings.filter((f) => (t.cats as readonly string[]).includes(f.category));
+    const status = hits.length ? 'issue' : missing[t.key] ? 'not-in-data' : 'clear';
+    return { key: t.key, label: t.label, status, note: hits.length ? hits[0].title : missing[t.key] ?? 'Checked: no problem found.', count: hits.length, severity: hits[0]?.severity ?? null };
+  });
+}
+
+export function roadmapFrom(recs: ReturnType<typeof recommend>) {
+  const phase = (effort: string) => recs.filter((r) => r.effort === effort).map((r) => r.intervention);
+  return [
+    { when: '0–30 days', title: 'Quick wins', items: phase('low') },
+    { when: '30–90 days', title: 'Bigger fixes', items: phase('medium') },
+    { when: '90–180 days', title: 'Long-term', items: phase('high') },
+  ];
+}
+
 export function executiveSummary(ds: Dataset, findings: Finding[]) {
+  const usd = (n: number | null) => money(n, ds.currency);
   const base = baselineOf(ds);
-  const recs = recommend(findings.slice(0, 6));
+  const recs = recommend(findings.slice(0, 8));
+  const topics = reportTopics(ds, findings), roadmap = roadmapFrom(recs);
   const top = findings.slice(0, 3);
   const sc = simulateScenario(base, { churnReductionPct: 5, opexReductionPct: 8 });
   const md = [
@@ -35,12 +83,12 @@ export function executiveSummary(ds: Dataset, findings: Finding[]) {
     ...recs.slice(0, 3).map((r, i) => `${i + 1}. ${r.intervention} (effort: ${r.effort}; expected ${r.benefitKind} benefit: ${usd(r.expectedBenefitUsd)}; ${r.benefitBasis}).`),
     '', '## Financial assumptions',
     `Illustrative scenario (churn -5%, opex -8%) yields **+${usd(sc.delta.profit)}** profit using: ` + sc.formulas.join('; ') + '.',
+    '', '## Every topic checked',
+    ...topics.map((t) => `- **${t.label}:** ${t.status === 'issue' ? '⚠ ' + t.note : t.status === 'clear' ? '✓ ' + t.note : 'Not in your data. ' + t.note}`),
     '', '## Roadmap',
-    '- **0-30 days:** fix loss-making pricing, validate outlier data.',
-    '- **30-90 days:** regional recovery pilot, discount approval tiers.',
-    '- **90-180 days:** account diversification program, re-measure.',
+    ...roadmap.map((p) => `- **${p.when} (${p.title}):** ${p.items.length ? p.items.join(' ') : 'Nothing urgent in this phase.'}`),
   ].join('\n');
-  return { markdown: md, topFindings: top, recommendations: recs.slice(0, 3), scenario: sc };
+  return { markdown: md, topFindings: top, recommendations: recs.slice(0, 3), scenario: sc, topics, roadmap };
 }
 
 export function documentation(ds: Dataset, findings: Finding[], methods: string[] = []) {

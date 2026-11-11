@@ -55,7 +55,7 @@ function analyzeUncached(ds: Dataset): Finding[] {
         : `${c.groupsFor80Pct} of ${c.groupCount} ${plural(dim)} generate 80% of ${fm.measure}. Losing one of the top accounts hits revenue directly. Top: ${top.map((g) => `${g.key} (${pct(g.share)})`).join(', ')}.`,
       evidence: { top5Share: c.top5Share, top1Share: c.top1Share, hhi: c.hhi, groupsFor80Pct: c.groupsFor80Pct, topGroups: top },
       impactUsd: geo ? null : round(c.groups.slice(0, 3).reduce((s, g) => s + g.value, 0)),
-      impactBasis: geo ? null : `Revenue exposure if the top 3 ${plural(dim)} were lost (exposure, not a forecast)`,
+      impactBasis: geo ? null : `Sales from just your top 3 ${plural(dim)} (out of ${c.groupCount.toLocaleString()}, and ${$(c.total)} total): what you'd lose if they left`,
       nextAction: geo ? `Test one or two new markets where you already have some buyers.` : `Set a diversification target and give the top ${plural(dim)} a named owner and retention plan.`,
     }));
   }

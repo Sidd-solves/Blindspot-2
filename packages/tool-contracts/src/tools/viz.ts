@@ -40,6 +40,10 @@ export const buildDashboard = defineTool({
     const charts: { id: string; type: string; title: string; data: Record<string, unknown>[] }[] = [];
     if (fm.date) {
       const monthly = aggregate(v.rows.map((r) => ({ ...r, __m: typeof r[fm.date!] === 'string' ? monthKey(r[fm.date!] as string) : null })), '__m', fm.measure, 'sum', 120, true);
+      // Flag an unfinished last month (data ending before the 28th) so it isn't compared like a full month.
+      let maxDay = '';
+      for (const r of v.rows) { const d = r[fm.date!]; if (typeof d === 'string' && d > maxDay) maxDay = d; }
+      if (monthly.length && Number(maxDay.slice(8, 10)) < 28) (monthly[monthly.length - 1] as any).partial = true;
       charts.push({ id: 'trend', type: 'line', title: `${fm.measure} by month`, data: monthly });
     }
     if (dim) charts.push({ id: 'segments', type: 'bar', title: `${fm.measure} by ${dim}`, data: aggregate(v.rows, dim, fm.measure, 'sum', 12, false) });
@@ -74,7 +78,7 @@ export const transformToStory = defineTool({
   description: 'Turn findings into a Problem, Evidence, Business impact, Recommendation narrative.',
   input: z.object({ top: z.number().int().min(1).max(10).default(3) }),
   output: z.object({ stories: z.array(z.object({ problem: z.string(), evidence: z.string(), businessImpact: z.string(), recommendation: z.string() })) }),
-  async handler(ctx, { top }) { return { stories: analyzeSmart(ctx.state.view()).slice(0, top).map(toStory) }; },
+  async handler(ctx, { top }) { const v = ctx.state.view(); return { stories: analyzeSmart(v).slice(0, top).map((f) => toStory(f, v.currency)) }; },
 });
 
 export const confirmChartFields = defineTool({

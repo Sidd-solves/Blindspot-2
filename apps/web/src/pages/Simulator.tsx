@@ -8,11 +8,11 @@ import { Card, CardHead, Chip, CountUp, Tabs, stagger, Loading } from '../compon
 import { ChartTip, axis } from '../components/charts';
 
 type Levers = { churnReductionPct: number; conversionLiftPts: number; wasteReductionPct: number; opexReductionPct: number };
-const LEVERS: { k: keyof Levers; label: string; max: number; step: number; unit: string; c: string; icon: any }[] = [
-  { k: 'churnReductionPct', label: 'Churn reduction', max: 30, step: 1, unit: '%', c: 'var(--violet)', icon: UserCheck },
-  { k: 'conversionLiftPts', label: 'Conversion lift', max: 3, step: 0.1, unit: ' pts', c: 'var(--cyan)', icon: MousePointerClick },
-  { k: 'wasteReductionPct', label: 'Inventory waste cut', max: 50, step: 1, unit: '%', c: 'var(--emerald)', icon: Recycle },
-  { k: 'opexReductionPct', label: 'Opex reduction', max: 20, step: 1, unit: '%', c: 'var(--amber)', icon: Building2 },
+const LEVERS: { k: keyof Levers; label: string; hint: string; max: number; step: number; unit: string; c: string; icon: any }[] = [
+  { k: 'churnReductionPct', label: 'Keep more customers', hint: 'Fewer customers stop buying from you each year', max: 30, step: 1, unit: '%', c: 'var(--violet)', icon: UserCheck },
+  { k: 'conversionLiftPts', label: 'Turn more visitors into buyers', hint: 'More of the people who visit your store place an order', max: 3, step: 0.1, unit: ' pts', c: 'var(--cyan)', icon: MousePointerClick },
+  { k: 'wasteReductionPct', label: 'Waste less stock', hint: 'Less inventory lost to damage, expiry or dead stock', max: 50, step: 1, unit: '%', c: 'var(--emerald)', icon: Recycle },
+  { k: 'opexReductionPct', label: 'Lower running costs', hint: 'Cut costs like software, rent and shipping', max: 20, step: 1, unit: '%', c: 'var(--amber)', icon: Building2 },
 ];
 const PRESETS: Record<string, Levers> = {
   conservative: { churnReductionPct: 3, conversionLiftPts: 0.2, wasteReductionPct: 5, opexReductionPct: 3 },
@@ -20,8 +20,8 @@ const PRESETS: Record<string, Levers> = {
   stretch: { churnReductionPct: 12, conversionLiftPts: 1, wasteReductionPct: 25, opexReductionPct: 12 },
 };
 const ASSUME = [
-  { k: 'annualChurnRate', label: 'Annual churn rate', def: 0.2 }, { k: 'baselineConversion', label: 'Baseline conversion', def: 0.03 },
-  { k: 'wasteRateOfCogs', label: 'Waste as % of COGS', def: 0.04 }, { k: 'opexRateOfRevenue', label: 'Opex as % of revenue', def: 0.12 },
+  { k: 'annualChurnRate', label: 'Customers lost per year', def: 0.2 }, { k: 'baselineConversion', label: 'Visitors who buy today', def: 0.03 },
+  { k: 'wasteRateOfCogs', label: 'Stock wasted (% of product cost)', def: 0.04 }, { k: 'opexRateOfRevenue', label: 'Running costs (% of sales)', def: 0.12 },
 ];
 
 export default function Simulator() {
@@ -30,7 +30,7 @@ export default function Simulator() {
   const [lv, setLv] = useState<Levers>(PRESETS.target);
   const [as, setAs] = useState<Record<string, number>>(Object.fromEntries(ASSUME.map((a) => [a.k, a.def])));
   const [res, setRes] = useState<any>(null);
-  const [openA, setOpenA] = useState(false);
+  const [openA, setOpenA] = useState(false), [openF, setOpenF] = useState(false);
   const t = useRef<number>();
   useEffect(() => {
     clearTimeout(t.current);
@@ -65,13 +65,14 @@ export default function Simulator() {
                   <motion.span key={v} initial={{ scale: 1.25, color: l.c }} animate={{ scale: 1, color: 'var(--text)' }} className="mono text-[12.5px] font-semibold">{l.step < 1 ? v.toFixed(1) : v}{l.unit}</motion.span>
                 </div>
                 <input type="range" min={0} max={l.max} step={l.step} value={v} onChange={(e) => { setPreset('custom'); setLv({ ...lv, [l.k]: Number(e.target.value) }); }} aria-label={l.label} />
-                {res && <div className="mt-1 text-[10.5px] text-[var(--faint)]">adds <span className="mono font-semibold" style={{ color: l.c }}>{usd(res.contributions[{ churnReductionPct: 'churn', conversionLiftPts: 'conversion', wasteReductionPct: 'waste', opexReductionPct: 'opex' }[l.k]])}</span> profit</div>}
+                <div className="mt-0.5 text-[10.5px] text-[var(--muted)]">{l.hint}</div>
+                {res && <div className="mt-0.5 text-[10.5px] text-[var(--faint)]">adds <span className="mono font-semibold" style={{ color: l.c }}>{usd(res.contributions[{ churnReductionPct: 'churn', conversionLiftPts: 'conversion', wasteReductionPct: 'waste', opexReductionPct: 'opex' }[l.k]])}</span> profit</div>}
               </div>
             );
           })}
         </div>
         <button onClick={() => setOpenA(!openA)} className="row-hover flex w-full items-center justify-between border-t px-3.5 py-2.5 text-[12px] font-bold" style={{ borderColor: 'var(--line)' }}>
-          <span className="flex items-center gap-1.5"><FlaskConical size={13} style={{ color: 'var(--amber)' }} />Assumptions</span><ChevronDown size={14} style={{ transform: openA ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} />
+          <span className="flex items-center gap-1.5"><FlaskConical size={13} style={{ color: 'var(--amber)' }} />Your numbers (edit to match your business)</span><ChevronDown size={14} style={{ transform: openA ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} />
         </button>
         <AnimatePresence initial={false}>
           {openA && (
@@ -93,7 +94,7 @@ export default function Simulator() {
           {!res ? <Loading steps={['Loading baseline…', 'Applying levers…', 'Computing profit…']} /> : (
             <div className="flex flex-wrap items-center gap-5">
               <div>
-                <div className="label flex items-center gap-1"><Sparkles size={11} style={{ color: 'var(--fuchsia)' }} />Profit uplift</div>
+                <div className="label flex items-center gap-1"><Sparkles size={11} style={{ color: 'var(--fuchsia)' }} />Extra profit per year (estimate)</div>
                 <div className="flex items-baseline gap-1"><span className="text-[30px] font-semibold" style={{ color: 'var(--emerald)' }}>+</span><CountUp value={res.delta.profit} format={(n) => usd(n)} className="grad-text text-[34px] font-semibold tracking-tight" duration={0.6} /></div>
                 <div className="text-[11px] text-[var(--muted)]">{pct(res.delta.profit / Math.max(1, res.baseline.profit))} over baseline {usd(res.baseline.profit, true)}</div>
               </div>
@@ -131,8 +132,9 @@ export default function Simulator() {
 
         <div className="grid gap-3 md:grid-cols-2">
           <Card c="var(--blue)" hover={false} className="p-3.5">
-            <div className="label mb-2 flex items-center gap-1"><Sigma size={11} style={{ color: 'var(--blue)' }} />Formulas</div>
-            <div className="space-y-1.5">{res?.formulas.map((f: string, i: number) => <motion.div key={f} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }} className="mono rounded-md px-2 py-1 text-[10.5px] leading-relaxed" style={{ background: 'var(--line)' }}>{f}</motion.div>)}</div>
+            <button onClick={() => setOpenF(!openF)} className="label flex w-full items-center justify-between"><span className="flex items-center gap-1"><Sigma size={11} style={{ color: 'var(--blue)' }} />How we calculate this</span><ChevronDown size={13} style={{ transform: openF ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} /></button>
+            {!openF && <div className="mt-2 text-[11.5px] text-[var(--muted)]">Every number here comes from a simple, visible formula using your sales and the numbers you set. Nothing is guessed by AI.</div>}
+            <AnimatePresence initial={false}>{openF && <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="mt-2 space-y-1.5 overflow-hidden">{res?.formulas.map((f: string) => <div key={f} className="mono rounded-md px-2 py-1 text-[10.5px] leading-relaxed" style={{ background: 'var(--line)' }}>{f}</div>)}</motion.div>}</AnimatePresence>
           </Card>
           <Card c="var(--amber)" hover={false} className="p-3.5">
             <div className="label mb-2 flex items-center gap-1"><Info size={11} style={{ color: 'var(--amber)' }} />Compare with a fix</div>

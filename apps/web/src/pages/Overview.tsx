@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { useEffect, useState, type CSSProperties } from 'react';
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, ComposedChart, Line, ReferenceArea, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { Activity, ArrowRight, Crosshair, DollarSign, Gauge, Layers, Lightbulb, PieChart, Radar, ShoppingCart, TrendingUp, Zap } from 'lucide-react';
+import { Activity, ArrowRight, Check, Crosshair, DollarSign, FlaskConical, Gauge, Layers, Lightbulb, PieChart, Radar, ShoppingCart, TrendingUp, X } from 'lucide-react';
 import { useStore } from '../store';
 import { ago, get, pct, SEV, CAT, tool, usd } from '../api';
 import { Card, CardHead, Chip, CountUp, Meter, Ring, Sparkline, stagger, Loading } from '../components/ui';
@@ -44,32 +44,55 @@ function DriversCard() {
   );
 }
 
+/** Layer 3 on the front page: the strongest ideas the math supports (built-in library only, so it's free). */
+function IdeasCard() {
+  const { version } = useStore();
+  const [res, setRes] = useState<any[] | null>(null);
+  useEffect(() => { setRes(null); tool('test-hypotheses', { useAI: false }).then((r) => setRes(r.ok ? r.data.results : [])); }, [version]);
+  const shown = (res ?? []).filter((h) => h.verdict !== 'inconclusive').slice(0, 4);
+  return (
+    <Card c="var(--fuchsia)" className="md:col-span-6 xl:col-span-4">
+      <CardHead icon={<FlaskConical size={13} />} title="Ideas checked by math" c="var(--fuchsia)" right={<button className="btn !h-6 !px-2 text-[11px]" onClick={() => go('analyst')}>All<ArrowRight size={11} /></button>} />
+      <div className="space-y-1.5 px-3 pb-3">
+        {!res && <div className="space-y-2">{[0, 1, 2].map((i) => <div key={i} className="skeleton h-9" />)}</div>}
+        {res && shown.length === 0 && <div className="text-[12px] text-[var(--muted)]">None of the built-in ideas apply to this data.</div>}
+        {shown.map((h, i) => (
+          <motion.div key={h.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }} className="rounded-lg px-2 py-1.5" style={{ background: 'var(--line)', borderLeft: `3px solid ${h.verdict === 'supported' ? 'var(--emerald)' : 'var(--rose)'}` }}>
+            <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider" style={{ color: h.verdict === 'supported' ? 'var(--emerald)' : 'var(--rose)' }}>{h.verdict === 'supported' ? <Check size={11} /> : <X size={11} />}{h.verdict === 'supported' ? 'True' : 'False'}</div>
+            <div className="text-[11.5px] font-bold leading-snug">{h.claim}</div>
+            <div className="truncate text-[10.5px] text-[var(--muted)]" title={h.summary}>{h.summary}</div>
+          </motion.div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
 export default function Overview() {
-  const { dash, findings, bySeverity, actions, dataset, loading, version, conn } = useStore();
+  const { dash, findings, bySeverity, actions, dataset, loading, version } = useStore();
   const [conc, setConc] = useState<any>(null);
-  const [activity, setActivity] = useState<any[]>([]);
-  const [now, setNow] = useState(Date.now());
-  useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
   useEffect(() => {
     if (!dataset) return;
     const dim = dataset.fields.highCardDims[0];
-    if (dim) tool('interpret-concentration', { dimension: dim, limit: 12 }).then((r) => setConc(r.ok ? r.data : null));
-    const load = () => get('/api/activity').then(setActivity).catch(() => {});
-    load(); const t = setInterval(load, 4000); return () => clearInterval(t);
+    const dim2 = dataset.fields.highCardDims.find((d) => /customer|client|account/i.test(d)) ?? dataset.fields.highCardDims.find((d) => !/^(order|invoice)/i.test(d) && !/country|region|state/i.test(d));
+    if (dim2) tool('interpret-concentration', { dimension: dim2, limit: 12 }).then((r) => setConc(r.ok ? r.data : null)); else setConc(null);
   }, [version]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!dash) return <Loading steps={['Loading dataset…', 'Profiling columns…', 'Detecting risks…', 'Ranking findings…']} />;
   const trend = dash.charts.find((c) => c.type === 'line')?.data ?? [];
   const seg = dash.charts.find((c) => c.type === 'bar');
-  const series = trend.map((d: any) => d.y);
-  const half = Math.floor(series.length / 2);
+  // An unfinished last month is excluded from the comparison (it would look like a fake drop).
+  const series = trend.filter((d: any) => !d.partial).map((d: any) => d.y);
+  const partialMonth = trend.find((d: any) => d.partial)?.x;
   // With 18+ months, compare against the same months last year so seasonality doesn't fake growth.
   const yoy = series.length >= 18;
   const recentSum = series.slice(-6).reduce((a: number, b: number) => a + b, 0), priorSum = (yoy ? series.slice(-18, -12) : series.slice(-12, -6)).reduce((a: number, b: number) => a + b, 0);
   const momentum = priorSum ? (recentSum - priorSum) / priorSum : 0;
-  const riskIndex = Math.min(100, Math.round(findings.reduce((s, f) => s + (SEV[f.severity]?.w ?? 1) * f.confidence, 0) * 3.2));
-  // Largest single exposure: exposures overlap (e.g. concentration and outliers share revenue), so summing would double count.
-  const exposure = Math.max(0, ...findings.map((f) => f.impactUsd ?? 0));
+  // Health: start at 100 and subtract per problem (critical 20, high 10, medium 5, low 1), scaled by how well-proven it is.
+  const PENALTY: Record<string, number> = { critical: 20, high: 10, medium: 5, low: 1 };
+  const health = Math.max(0, Math.round(100 - findings.reduce((s, f) => s + (PENALTY[f.severity] ?? 1) * f.confidence, 0)));
+  const band = health >= 80 ? { label: 'Healthy', c: 'var(--emerald)', advice: 'Keep an eye on the few items below.' } : health >= 60 ? { label: 'Fair', c: 'var(--cyan)', advice: 'A few problems are worth fixing soon.' } : health >= 40 ? { label: 'Needs attention', c: 'var(--amber)', advice: 'Several problems are costing you money; start with the one below.' } : { label: 'At risk', c: 'var(--rose)', advice: 'Serious problems are costing you money; fix the one below this week.' };
+  const top = findings[0];
   const fmt = (k: { format: string; value: number }) => (k.format === 'usd' ? (n: number) => usd(n, k.value >= 10000) : k.format === 'pct' ? (n: number) => pct(n) : (n: number) => Math.round(n).toLocaleString());
 
   return (
@@ -86,7 +109,7 @@ export default function Overview() {
               </div>
               {spark.length > 1 ? <Sparkline data={spark.slice(-12)} c={st.c} /> : k.format === 'pct' ? <Ring value={Math.max(0, k.value) * 4} size={42} stroke={5} c={st.c}><span className="mono text-[9px]">{pct(k.value, 0)}</span></Ring> : <div className="flex items-end gap-[3px]">{series.slice(-10).map((v: number, j: number) => <motion.span key={j} className="w-[5px] rounded-sm" style={{ background: st.c, opacity: 0.35 + j / 16 }} initial={{ height: 0 }} animate={{ height: 6 + (v / Math.max(...series)) * 20 }} transition={{ delay: j * 0.04 }} />)}</div>}
             </div>
-            {i === 0 && <div className="mt-1.5 flex items-center gap-1.5 text-[11px]"><Chip c={momentum >= 0 ? 'var(--emerald)' : 'var(--rose)'}>{momentum >= 0 ? '▲' : '▼'} {pct(Math.abs(momentum))}</Chip><span className="text-[var(--faint)]">{yoy ? 'last 6 mo vs same months last year' : 'last 6 mo vs prior 6'}</span></div>}
+            {i === 0 && <div className="mt-1.5 flex items-center gap-1.5 text-[11px]"><Chip c={momentum >= 0 ? 'var(--emerald)' : 'var(--rose)'}>{momentum >= 0 ? '▲' : '▼'} {pct(Math.abs(momentum))}</Chip><span className="text-[var(--faint)]">{yoy ? 'last 6 full months vs same months last year' : 'last 6 full months vs prior 6'}</span></div>}
             {i === 1 && <div className="mt-1.5 text-[11px] text-[var(--faint)]">{k.label === 'Avg order' ? 'revenue per order' : 'after cost of goods'}</div>}
             {i === 2 && (k.format === 'pct' ? <div className="mt-1.5"><Meter value={Math.max(0, k.value) * 4} c={st.c} h={4} /></div> : <div className="mt-1.5 text-[11px] text-[var(--faint)]">known buyers</div>)}
             {i === 3 && <div className="mt-1.5 text-[11px] text-[var(--faint)]">{dataset?.rows.toLocaleString()} sales lines analysed</div>}
@@ -95,7 +118,7 @@ export default function Overview() {
       })}
 
       <Card c="var(--violet)" className="md:col-span-6 xl:col-span-8" hover={false}>
-        <CardHead icon={<Activity size={13} />} title={`${dataset?.fields.measure ?? 'Revenue'} trend`} c="var(--violet)" right={<div className="flex items-center gap-1.5"><Chip c="var(--rose)">Shaded: last 6 months</Chip></div>} />
+        <CardHead icon={<Activity size={13} />} title={`${dataset?.fields.measure ?? 'Revenue'} trend`} c="var(--violet)" right={<div className="flex items-center gap-1.5">{partialMonth && <Chip c="var(--faint)">{partialMonth} is a partial month</Chip>}<Chip c="var(--rose)">Shaded: last 6 months</Chip></div>} />
         <div className="h-[230px] px-1 pb-2">
           <ResponsiveContainer>
             <AreaChart data={trend} margin={{ top: 8, right: 14, left: 0, bottom: 0 }}>
@@ -111,11 +134,11 @@ export default function Overview() {
         </div>
       </Card>
 
-      <Card c="var(--rose)" className="p-3.5 md:col-span-3 xl:col-span-4 xl:row-span-2" onClick={() => go('risk')}>
-        <div className="flex items-center justify-between"><div className="label flex items-center gap-1"><Radar size={11} style={{ color: 'var(--rose)' }} />Risk index</div><ArrowRight size={13} className="text-[var(--faint)]" /></div>
+      <Card c={band.c} className="p-3.5 md:col-span-3 xl:col-span-4 xl:row-span-2">
+        <div className="flex items-center justify-between"><div className="label flex items-center gap-1"><Radar size={11} style={{ color: band.c }} />Business health</div><Chip c={band.c}>{band.label}</Chip></div>
         <div className="mt-2 flex items-center gap-4">
-          <Ring value={riskIndex / 100} size={104} stroke={9} c={riskIndex > 66 ? 'var(--rose)' : riskIndex > 33 ? 'var(--amber)' : 'var(--emerald)'}>
-            <div><CountUp value={riskIndex} className="text-[26px] font-semibold" /><div className="text-[9.5px] font-bold uppercase tracking-wider text-[var(--faint)]">of 100</div></div>
+          <Ring value={health / 100} size={104} stroke={9} c={band.c}>
+            <div><CountUp value={health} className="text-[26px] font-semibold" /><div className="text-[9.5px] font-bold uppercase tracking-wider text-[var(--faint)]">out of 100</div></div>
           </Ring>
           <div className="flex-1 space-y-1.5">
             {Object.entries(SEV).map(([k, s]) => (
@@ -127,30 +150,33 @@ export default function Overview() {
             ))}
           </div>
         </div>
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          <div className="tint rounded-lg p-2" style={{ '--c': 'var(--rose)' } as CSSProperties}><div className="label">Largest exposure</div><CountUp value={exposure} format={(n) => usd(n, true)} className="text-[15px] font-semibold" /></div>
-          <div className="tint rounded-lg p-2" style={{ '--c': 'var(--violet)' } as CSSProperties}><div className="label">Findings</div><CountUp value={findings.length} className="text-[15px] font-semibold" /></div>
-        </div>
-        <div className="mt-3 label">Top finding by category</div>
+        <p className="mt-2.5 text-[11.5px] leading-relaxed text-[var(--muted)]">100 means Blindspot found nothing wrong. Every problem takes points off, more for serious, well-proven ones. {band.advice}</p>
+        {top && (
+          <motion.button whileHover={{ y: -1 }} onClick={() => go('risk', `?f=${encodeURIComponent(top.id)}`)} className="tint mt-2.5 w-full rounded-lg p-2.5 text-left" style={{ '--c': SEV[top.severity].c } as CSSProperties}>
+            <div className="label" style={{ color: SEV[top.severity].c }}>Fix this first</div>
+            <div className="mt-0.5 text-[12.5px] font-extrabold leading-snug">{top.title}</div>
+            {top.impactUsd ? <div className="mt-1 text-[11px] text-[var(--muted)]"><span className="mono font-semibold" style={{ color: SEV[top.severity].c }}>{usd(top.impactUsd)}</span> at stake: {top.impactBasis?.toLowerCase()}</div> : null}
+          </motion.button>
+        )}
+        <div className="mt-3 label">Biggest problem in each area</div>
         <div className="mt-1.5 space-y-1">
           {Object.entries(CAT).filter(([k]) => findings.some((f) => f.category === k)).map(([k, c], i) => {
             const f = findings.find((x) => x.category === k)!;
             return (
-              <motion.div key={k} initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 + i * 0.06 }} className="flex items-center gap-2 text-[11.5px]">
-                <span className="h-5 w-1 rounded-full" style={{ background: c.c, boxShadow: `0 0 6px ${c.c}` }} />
+              <motion.button key={k} onClick={() => go('risk', `?f=${encodeURIComponent(f.id)}`)} initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 + i * 0.06 }} className="row-hover flex w-full items-center gap-2 rounded-md px-1 py-0.5 text-left text-[11.5px]">
+                <span className="h-5 w-1 flex-none rounded-full" style={{ background: c.c, boxShadow: `0 0 6px ${c.c}` }} />
                 <span className="w-24 flex-none font-bold" style={{ color: c.c }}>{c.label}</span>
                 <span className="truncate text-[var(--muted)]">{f.title}</span>
-              </motion.div>
+              </motion.button>
             );
           })}
         </div>
-        <div className="mt-3 text-[10px] text-[var(--faint)]" title="Sum of severity weight (critical 4 … low 1) x confidence across findings, scaled and capped at 100">How it's computed: severity weight × confidence, summed and capped at 100.</div>
       </Card>
 
       <Card c="var(--orange)" className="md:col-span-6 xl:col-span-5">
         <CardHead icon={<Crosshair size={13} />} title="Top findings" c="var(--orange)" right={<button className="btn !h-6 !px-2 text-[11px]" onClick={() => go('risk')}>All<ArrowRight size={11} /></button>} />
         <div className="px-1.5 pb-2">
-          {loading && !findings.length ? <div className="space-y-2 p-2">{[0, 1, 2, 3].map((i) => <div key={i} className="skeleton h-7" />)}</div> : findings.slice(0, 6).map((f, i) => (
+          {loading && !findings.length ? <div className="space-y-2 p-2">{[0, 1, 2, 3].map((i) => <div key={i} className="skeleton h-7" />)}</div> : findings.length === 0 ? <div className="px-2 pb-2 text-[12px] text-[var(--muted)]">No problems found in this data.</div> : findings.slice(0, 6).map((f, i) => (
             <motion.button key={f.id} onClick={() => go('risk', `?f=${encodeURIComponent(f.id)}`)} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.05 * i }} className="row-hover flex w-full items-center gap-2.5 rounded-lg px-2 py-[7px] text-left">
               <span className="h-6 w-1 flex-none rounded-full" style={{ background: SEV[f.severity].c, boxShadow: `0 0 8px ${SEV[f.severity].c}` }} />
               <span className="min-w-0 flex-1"><span className="block truncate text-[12.5px] font-bold">{f.title}</span><span className="block truncate text-[10.5px] text-[var(--faint)]">{CAT[f.category]?.label} · {Math.round(f.confidence * 100)}% confidence</span></span>
@@ -161,76 +187,57 @@ export default function Overview() {
       </Card>
 
       <Card c="var(--violet)" className="md:col-span-3 xl:col-span-3">
-        <CardHead icon={<PieChart size={13} />} title={conc ? `${conc.dimension} concentration` : 'Concentration'} c="var(--violet)" right={conc && <Chip c={conc.risk === 'high' ? 'var(--rose)' : conc.risk === 'medium' ? 'var(--amber)' : 'var(--emerald)'}>{conc.risk}</Chip>} />
+        <CardHead icon={<PieChart size={13} />} title={conc ? `Who your sales depend on` : 'Who your sales depend on'} c="var(--violet)" right={conc && <Chip c={conc.risk === 'high' ? 'var(--rose)' : conc.risk === 'medium' ? 'var(--amber)' : 'var(--emerald)'}>{conc.risk} risk</Chip>} />
         {conc ? (
           <>
-            <div className="flex items-baseline gap-1.5 px-3.5"><CountUp value={conc.top5Share * 100} format={(n) => `${n.toFixed(1)}%`} className="text-[20px] font-semibold" /><span className="text-[11px] text-[var(--muted)]">from top 5</span></div>
-            <div className="h-[128px] px-1">
+            <div className="flex items-baseline gap-1.5 px-3.5"><CountUp value={conc.top5Share * 100} format={(n) => `${n.toFixed(1)}%`} className="text-[20px] font-semibold" /><span className="text-[11px] text-[var(--muted)]">of sales from your top 5 {conc.dimension.toLowerCase()}s</span></div>
+            <div className="h-[118px] px-1">
               <ResponsiveContainer>
                 <ComposedChart data={conc.groups.slice(0, 10).map((g: any) => ({ ...g, cum: g.cumShare * 100, sh: g.share * 100 }))} margin={{ top: 6, right: 8, left: -22, bottom: 0 }}>
                   <XAxis dataKey="key" hide />
                   <YAxis {...axis} domain={[0, 100]} />
                   <Tooltip content={<ChartTip fmt={(v) => `${v.toFixed(1)}%`} />} />
                   <Bar dataKey="sh" name="Share" radius={[3, 3, 0, 0]} animationDuration={900}>{conc.groups.slice(0, 10).map((_: any, i: number) => <Cell key={i} fill={i < 5 ? 'var(--violet)' : 'var(--line-strong)'} />)}</Bar>
-                  <Line dataKey="cum" name="Cumulative" stroke="var(--cyan)" strokeWidth={2} dot={false} type="monotone" />
+                  <Line dataKey="cum" name="Running total" stroke="var(--cyan)" strokeWidth={2} dot={false} type="monotone" />
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
-            <div className="px-3.5 pb-3 text-[11px] text-[var(--muted)]"><span className="mono font-semibold text-[var(--text)]">{conc.groupsFor80Pct}</span> of {conc.groupCount} drive 80% · HHI <span className="mono">{conc.hhi}</span></div>
+            <div className="px-3.5 pb-3 text-[11px] text-[var(--muted)]">Just <span className="mono font-semibold text-[var(--text)]">{conc.groupsFor80Pct}</span> of {conc.groupCount.toLocaleString()} {conc.dimension.toLowerCase()}s bring in 80% of sales.</div>
           </>
-        ) : <div className="p-4"><div className="skeleton h-32" /></div>}
+        ) : <div className="px-3.5 pb-3 text-[12px] text-[var(--muted)]">This data has no customer or product column to check.</div>}
       </Card>
 
       <Card c="var(--emerald)" className="md:col-span-3 xl:col-span-4">
-        <CardHead icon={<Lightbulb size={13} />} title="Recommended actions" c="var(--emerald)" right={<button className="btn !h-6 !px-2 text-[11px]" onClick={() => go('simulator')}>Model it<ArrowRight size={11} /></button>} />
+        <CardHead icon={<Lightbulb size={13} />} title="What to do about it" c="var(--emerald)" right={<button className="btn !h-6 !px-2 text-[11px]" onClick={() => go('simulator')}>Model it<ArrowRight size={11} /></button>} />
         <div className="space-y-1.5 px-3 pb-3">
+          {actions.length === 0 && <div className="text-[12px] text-[var(--muted)]">Nothing to fix right now.</div>}
           {actions.slice(0, 3).map((a, i) => (
             <motion.div key={a.findingId} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 * i }} className="tint rounded-lg p-2" style={{ '--c': 'var(--emerald)' } as CSSProperties}>
-              <div className="flex items-center justify-between gap-2"><span className="mono grid h-5 w-5 place-items-center rounded-md text-[10.5px] font-bold" style={{ background: 'var(--emerald)', color: 'white' }}>{i + 1}</span><span className="flex-1 truncate text-[12px] font-bold">{a.intervention}</span></div>
-              <div className="mt-1 flex items-center gap-1.5 pl-7 text-[10.5px]"><Chip c="var(--emerald)">{usd(a.expectedBenefitUsd, true)} {a.benefitKind}</Chip><Chip c={a.effort === 'low' ? 'var(--cyan)' : a.effort === 'medium' ? 'var(--amber)' : 'var(--rose)'}>{a.effort} effort</Chip><span className="truncate text-[var(--faint)]">hypothetical</span></div>
+              <div className="flex items-center justify-between gap-2"><span className="mono grid h-5 w-5 flex-none place-items-center rounded-md text-[10.5px] font-bold" style={{ background: 'var(--emerald)', color: 'white' }}>{i + 1}</span><span className="flex-1 text-[12px] font-bold leading-snug">{a.intervention}</span></div>
+              <div className="mt-1 flex flex-wrap items-center gap-1.5 pl-7 text-[10.5px]">{a.expectedBenefitUsd ? <Chip c="var(--emerald)">could win back {usd(a.expectedBenefitUsd, true)}</Chip> : null}<Chip c={a.effort === 'low' ? 'var(--cyan)' : a.effort === 'medium' ? 'var(--amber)' : 'var(--rose)'}>{a.effort === 'low' ? 'easy' : a.effort === 'medium' ? 'moderate' : 'hard'}</Chip><span className="text-[var(--faint)]">estimate</span></div>
             </motion.div>
           ))}
         </div>
       </Card>
 
-      {!seg && <DriversCard />}
-      {seg && <Card c="var(--cyan)" className="md:col-span-3 xl:col-span-4">
-        <CardHead icon={<Layers size={13} />} title={seg?.title ?? 'Segments'} c="var(--cyan)" />
-        <div className="h-[150px] px-1 pb-2">
-          <ResponsiveContainer>
-            <BarChart data={seg?.data ?? []} layout="vertical" margin={{ top: 0, right: 16, left: 6, bottom: 0 }}>
-              <XAxis type="number" hide />
-              <YAxis type="category" dataKey="x" {...axis} width={80} />
-              <Tooltip content={<ChartTip fmt={(v) => usd(v)} />} cursor={{ fill: 'var(--line)' }} />
-              <Bar dataKey="y" name="Revenue" radius={[0, 5, 5, 0]} barSize={14} animationDuration={1000}>{(seg?.data ?? []).map((_: any, i: number) => <Cell key={i} fill={['var(--cyan)', 'var(--blue)', 'var(--violet)', 'var(--fuchsia)', 'var(--rose)'][i % 5]} />)}</Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </Card>}
+      {seg && (seg.data?.length ?? 0) >= 2 ? (
+        <Card c="var(--cyan)" className="md:col-span-3 xl:col-span-4">
+          <CardHead icon={<Layers size={13} />} title={seg.title} c="var(--cyan)" />
+          <div className="space-y-1.5 px-3.5 pb-3">
+            {seg.data.slice(0, 7).map((d: any, i: number) => {
+              const max = seg.data[0].y || 1, c = ['var(--cyan)', 'var(--blue)', 'var(--violet)', 'var(--fuchsia)', 'var(--rose)', 'var(--amber)', 'var(--emerald)'][i % 7];
+              return (
+                <motion.div key={d.x} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }} className="text-[11.5px]">
+                  <div className="flex justify-between"><span className="truncate font-semibold">{d.x}</span><span className="mono">{usd(d.y, true)}</span></div>
+                  <Meter value={d.y / max} c={c} h={5} />
+                </motion.div>
+              );
+            })}
+          </div>
+        </Card>
+      ) : <DriversCard />}
 
-      <Card c="var(--blue)" className="md:col-span-3 xl:col-span-4">
-        <CardHead icon={<Zap size={13} />} title="Live activity" c="var(--blue)" right={<Chip c="var(--emerald)" pulse>Live</Chip>} />
-        <div className="max-h-[150px] space-y-0.5 overflow-y-auto px-2 pb-2">
-          {activity.slice(0, 8).map((a, i) => (
-            <motion.div key={a.at + a.tool} layout initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.02 }} className="flex items-center gap-2 rounded-md px-1.5 py-1 text-[11.5px]">
-              <span className="h-1.5 w-1.5 rounded-full" style={{ background: a.ok ? 'var(--emerald)' : 'var(--rose)' }} />
-              <span className="mono truncate font-semibold">{a.tool}</span>
-              <span className="mono ml-auto text-[10.5px] text-[var(--faint)]">{a.ms}ms · {ago(a.at, now)}</span>
-            </motion.div>
-          ))}
-        </div>
-      </Card>
-
-      <Card c="var(--fuchsia)" className="p-3 md:col-span-6 xl:col-span-4">
-        <div className="label mb-2">Connections</div>
-        <div className="grid grid-cols-2 gap-1.5 text-[11.5px]">
-          {conn && (['tableau', 'bridge', 'mcp', 'ai'] as const).map((k) => {
-            const s = conn[k]; const good = ['connected', 'running', 'ok', 'configured'].includes(s.status);
-            return <div key={k} className="tint flex items-center gap-2 rounded-lg px-2 py-1.5" style={{ '--c': good ? 'var(--emerald)' : 'var(--amber)' } as CSSProperties} title={s.detail}><span className="pulse-dot" style={{ '--c': good ? 'var(--emerald)' : 'var(--amber)' } as CSSProperties} /><span className="font-bold uppercase">{k}</span><span className="ml-auto truncate text-[10.5px] text-[var(--muted)]">{s.status.replace('_', ' ')}</span></div>;
-          })}
-        </div>
-        <div className="mt-2 truncate text-[10.5px] text-[var(--faint)]">{dataset?.label} · {dataset?.name} · {half * 2} months</div>
-      </Card>
+      <IdeasCard />
     </motion.div>
   );
 }

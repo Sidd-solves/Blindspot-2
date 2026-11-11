@@ -11,6 +11,7 @@ import Simulator from './pages/Simulator';
 import Audit from './pages/Audit';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 export const NAV = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard, c: 'var(--violet)', el: Overview },
@@ -111,7 +112,7 @@ export default function App() {
           </header>
           {/* Enter-only transition: an exit animation would block navigation whenever the browser throttles frames. */}
           <motion.div key={page} initial={{ opacity: 0, y: 10, filter: 'blur(4px)' }} animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }} transition={{ duration: 0.22 }} className="p-4 md:p-5">
-            <Page />
+            <ErrorBoundary resetKey={page}><Page /></ErrorBoundary>
           </motion.div>
         </main>
       </div>

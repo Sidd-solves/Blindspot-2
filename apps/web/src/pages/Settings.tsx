@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { Bot, Check, Database, KeyRound, Lock, RotateCcw, Search, ShieldCheck, Wrench, X } from 'lucide-react';
-import { get, post, TOOL_CAT } from '../api';
+import { ago, get, post, TOOL_CAT } from '../api';
 import { useStore } from '../store';
 import { Card, CardHead, Chip, Dropdown, Loading, stagger } from '../components/ui';
 import { UploadZone } from '../components/Upload';
@@ -13,7 +13,8 @@ export default function Settings() {
   const [cfg, setCfg] = useState<any>(null), [tools, setTools] = useState<any[]>([]), [q, setQ] = useState(''), [cat, setCat] = useState<string[]>([]);
   const [up, setUp] = useState<{ msg?: string }>({});
   const [admin, setAdmin] = useState(() => { try { return sessionStorage.getItem('ciq-admin') ?? ''; } catch { return ''; } });
-  useEffect(() => { get('/api/settings').then(setCfg); get('/api/tools').then(setTools); }, []);
+  const [activity, setActivity] = useState<any[]>([]);
+  useEffect(() => { get('/api/settings').then(setCfg); get('/api/tools').then(setTools); const load = () => get('/api/activity').then(setActivity).catch(() => {}); load(); const t = setInterval(load, 5000); return () => clearInterval(t); }, []);
   const filtered = useMemo(() => tools.filter((t) => (!cat.length || cat.includes(t.category)) && (t.name + t.description).toLowerCase().includes(q.toLowerCase())), [tools, q, cat]);
   const security = cfg ? [
     { ok: true, t: 'Zod validation on every tool input and output' }, { ok: true, t: 'Tool allowlist; unknown tools rejected' }, { ok: true, t: 'Rate limits, payload caps, request timeouts' },
@@ -61,6 +62,15 @@ export default function Settings() {
         <div className="label mb-2 flex items-center gap-1"><ShieldCheck size={11} style={{ color: 'var(--emerald)' }} />Security posture</div>
         <div className="space-y-1.5">{security.map((s, i) => <motion.div key={s.t} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }} className="flex items-center gap-2 text-[11.5px]"><span className="grid h-4 w-4 flex-none place-items-center rounded-full" style={{ background: s.ok ? 'var(--emerald)' : 'var(--amber)' }}>{s.ok ? <Check size={10} color="white" /> : <X size={10} color="white" />}</span><span className={s.ok ? '' : 'text-[var(--muted)]'}>{s.t}{!s.ok && ' (off in dev)'}</span></motion.div>)}</div>
         <div className="mt-3 grid grid-cols-3 gap-1.5">{Object.entries(TOOL_CAT).map(([k, c]) => { const n = tools.filter((t) => t.category === k).length; return n ? <div key={k} className="tint rounded-md px-1.5 py-1 text-center" style={{ '--c': c } as CSSProperties}><div className="mono text-[13px] font-semibold" style={{ color: c }}>{n}</div><div className="truncate text-[9px] font-bold text-[var(--muted)]">{k}</div></div> : null; })}</div>
+      </Card>
+      <Card c="var(--blue)" hover={false} className="lg:col-span-12">
+        <CardHead icon={<Wrench size={13} />} title="Recent activity (technical)" c="var(--blue)" right={<Chip c="var(--emerald)" pulse>Live</Chip>} />
+        <div className="grid max-h-[180px] gap-x-4 overflow-y-auto px-3 pb-3 md:grid-cols-2">
+          {activity.length === 0 && <div className="text-[11.5px] text-[var(--faint)]">No analysis has run yet.</div>}
+          {activity.slice(0, 16).map((a, i) => (
+            <div key={a.at + a.tool + i} className="flex items-center gap-2 py-0.5 text-[11px]"><span className="h-1.5 w-1.5 rounded-full" style={{ background: a.ok ? 'var(--emerald)' : 'var(--rose)' }} /><span className="mono truncate">{a.tool}</span><span className="mono ml-auto text-[10px] text-[var(--faint)]">{a.ms}ms · {ago(a.at)}</span></div>
+          ))}
+        </div>
       </Card>
     </motion.div>
   );

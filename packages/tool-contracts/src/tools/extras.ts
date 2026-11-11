@@ -26,7 +26,7 @@ export const generateExecutiveSummary = defineTool({
   name: 'generate-executive-summary', category: 'Business Intelligence', core: false,
   description: 'Management report: top 3 findings, implications, priority recommendations, financial assumptions and a roadmap, as Markdown.',
   input: z.object({}),
-  output: z.object({ markdown: z.string(), topFindings: z.array(z.record(z.unknown())), recommendations: z.array(z.record(z.unknown())), scenario: z.record(z.unknown()) }),
+  output: z.object({ markdown: z.string(), topFindings: z.array(z.record(z.unknown())), recommendations: z.array(z.record(z.unknown())), scenario: z.record(z.unknown()), topics: z.array(z.record(z.unknown())), roadmap: z.array(z.record(z.unknown())) }),
   async handler(ctx) { const v = ctx.state.view(); return executiveSummary(v, analyzeSmart(v)) as any; },
 });
 

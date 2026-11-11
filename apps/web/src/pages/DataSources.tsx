@@ -94,8 +94,13 @@ export default function DataSources() {
       <div className="grid gap-3 lg:col-span-5">
         <Card c={SHOPIFY} hover={false}>
           <CardHead icon={<FileSpreadsheet size={13} />} title="No setup: upload a Shopify export" c={SHOPIFY} />
+          <ol className="space-y-1 px-3.5 pb-2 text-[11px] text-[var(--muted)]">
+            {['In your Shopify admin, open Orders.', 'Click Export (top right).', 'Choose "All orders" and "CSV for Excel, Numbers, or other spreadsheet programs".', 'Click Export orders. Shopify emails you the file (or downloads it).', 'Drop that file below.'].map((s, i) => (
+              <li key={s} className="flex gap-2"><span className="mono grid h-4 w-4 flex-none place-items-center rounded text-[9.5px] font-bold text-white" style={{ background: SHOPIFY }}>{i + 1}</span>{s}</li>
+            ))}
+          </ol>
           <div className="px-3.5 pb-1.5">
-            <UploadZone c={SHOPIFY} compact icon={<ShoppingBag size={20} />} title="Drop orders_export.csv" hint="Shopify admin → Orders → Export → CSV" />
+            <UploadZone c={SHOPIFY} compact icon={<ShoppingBag size={20} />} title="Drop your Shopify orders export" hint="We spot Shopify's format automatically" />
           </div>
         </Card>
         <Card c="var(--blue)" hover={false}>
@@ -111,7 +116,9 @@ export default function DataSources() {
             <div className="flex flex-wrap items-center gap-1.5"><span className="text-[13px] font-extrabold">Real case study: UK online gift shop</span><Chip c="var(--violet)">Real data</Chip></div>
             <div className="mt-0.5 text-[11.5px] text-[var(--muted)]">Two years of a real online retailer's sales (2009–2011), messy as real data is: returns, duplicates, fees and unknown customers. A 25% sample of customers, from the UCI Machine Learning Repository.</div>
           </div>
-          <button className="btn btn-primary" onClick={async () => { await post('/api/dataset/case-study', {}); refresh(); }} disabled={dataset?.source === 'case-study'}>{dataset?.source === 'case-study' ? <><Check size={13} />Loaded</> : <><BookOpen size={13} />Load real data</>}</button>
+          {dataset?.source === 'case-study'
+            ? <Chip c="var(--emerald)" pulse><Check size={11} />You're viewing this now</Chip>
+            : <button className="btn btn-primary" onClick={async () => { await post('/api/dataset/case-study', {}); refresh(); }}><BookOpen size={13} />Switch to this shop</button>}
         </div>
       </Card>}
       {dataset?.prep && <Card c="var(--amber)" hover={false} className="p-3.5 lg:col-span-5">
@@ -129,7 +136,7 @@ export default function DataSources() {
         <div className="flex flex-wrap items-center gap-3">
           <span className="grid h-8 w-8 place-items-center rounded-lg tint" style={{ '--c': 'var(--violet)', color: 'var(--violet)' } as CSSProperties}><Sparkles size={15} /></span>
           <div className="min-w-0 flex-1"><div className="text-[12.5px] font-extrabold">Currently analysing: {dataset?.name}</div><div className="text-[11px] text-[var(--muted)]">{dataset?.label} · {dataset?.rows.toLocaleString()} rows</div>{dataset?.citation && <div className="mt-0.5 text-[10px] text-[var(--faint)]">Source: {dataset.citation}</div>}</div>
-          <button className="btn" onClick={async () => { await post('/api/dataset/sample', {}); refresh(); }}><RotateCcw size={13} />Use demo shop</button>
+          {dataset?.source !== 'sample' && <button className="btn" onClick={async () => { await post('/api/dataset/sample', {}); refresh(); }}><RotateCcw size={13} />Switch to fake demo shop</button>}
           <button className="btn btn-primary" onClick={() => go('overview')}>See insights</button>
         </div>
       </Card>
