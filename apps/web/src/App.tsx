@@ -12,6 +12,19 @@ import Audit from './pages/Audit';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import SiteLayout, { type SiteId } from './site/SiteLayout';
+import SiteHome from './site/Home';
+import SiteHow from './site/How';
+import SiteFeatures from './site/Features';
+import SiteResults from './site/Results';
+
+const SITE_PAGES: Record<SiteId, () => JSX.Element> = { home: SiteHome, how: SiteHow, features: SiteFeatures, results: SiteResults };
+/** Marketing site lives at #/, #/how, #/features, #/results; everything else is the app. */
+const siteRoute = (): SiteId | null => {
+  const h = location.hash.replace(/^#/, '').split('?')[0];
+  if (h === '' || h === '/') return 'home';
+  return (['how', 'features', 'results'] as SiteId[]).find((s) => h === `/${s}`) ?? null;
+};
 
 export const NAV = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard, c: 'var(--violet)', el: Overview },
@@ -56,8 +69,10 @@ function FilterBar() {
 
 export default function App() {
   const [page, setPage] = useState<PageId>(current());
+  const [site, setSite] = useState<SiteId | null>(siteRoute());
   const { dataset, extension, health, loading, refresh } = useStore();
-  useEffect(() => { const h = () => setPage(current()); window.addEventListener('hashchange', h); return () => window.removeEventListener('hashchange', h); }, []);
+  useEffect(() => { const h = () => { setPage(current()); setSite(siteRoute()); }; window.addEventListener('hashchange', h); return () => window.removeEventListener('hashchange', h); }, []);
+  if (site) { const SitePage = SITE_PAGES[site]; return <SiteLayout page={site}><ErrorBoundary resetKey={site}><SitePage /></ErrorBoundary></SiteLayout>; }
   const nav = NAV.find((n) => n.id === page)!;
   const Page = nav.el;
   return (
@@ -69,12 +84,12 @@ export default function App() {
 
       <div className="relative z-10 flex min-h-full flex-col md:flex-row">
         <aside className="no-print flex-none md:sticky md:top-0 md:h-screen md:w-[208px] md:border-r" style={{ borderColor: 'var(--line)' }}>
-          <div className="flex items-center gap-2 px-4 py-3.5">
+          <button onClick={() => { location.hash = '/'; }} title="Back to the Blindspot site" className="flex w-full items-center gap-2 px-4 py-3.5 text-left">
             <motion.div initial={{ rotate: -20, scale: 0.6 }} animate={{ rotate: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 260 }} className="grid h-7 w-7 place-items-center rounded-lg" style={{ background: 'linear-gradient(135deg, var(--violet), var(--cyan))', boxShadow: '0 6px 18px -6px var(--violet)' }}>
               <svg width="16" height="16" viewBox="0 0 32 32"><path d="M7 21l6-7 5 4 7-9" stroke="white" strokeWidth="3.4" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
             </motion.div>
             <div className="leading-tight"><div className="text-[14px] font-extrabold tracking-tight">Blind<span className="grad-text">spot</span></div><div className="text-[9.5px] font-bold uppercase tracking-[.14em] text-[var(--faint)]">AI analyst for small business</div></div>
-          </div>
+          </button>
           <nav className="flex gap-0.5 overflow-x-auto px-2 pb-2 md:flex-col md:overflow-visible">
             {NAV.map((n) => {
               const on = n.id === page;

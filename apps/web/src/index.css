@@ -65,3 +65,26 @@ input[type=range]::-moz-range-thumb { width: 12px; height: 12px; border-radius: 
   body { background: white; color: black; } .no-print { display: none !important; } .orb, .grid-bg { display: none; }
   .panel { box-shadow: none; backdrop-filter: none; border-color: #ddd; background: white; } .print-full { position: static !important; width: 100% !important; margin: 0 !important; }
 }
+
+/* ---------- Marketing site: always-dark showcase theme ---------- */
+.site-dark {
+  --bg: #04050b; --bg2: #080a16; --panel: rgba(14, 16, 32, 0.62); --panel-solid: #0c0e1e; --line: rgba(150, 140, 255, 0.10); --line-strong: rgba(150,140,255,0.22);
+  --text: #f1f0ff; --muted: #a3a6cc; --faint: #686c96;
+  --violet: #a78bfa; --cyan: #22d3ee; --emerald: #34d399; --amber: #fbbf24; --rose: #fb7185; --blue: #60a5fa; --fuchsia: #e879f9; --orange: #fb923c; --sky: #38bdf8; --lime: #a3e635;
+  --glow: 0.42; background: var(--bg); color: var(--text);
+}
+.beam { position: relative; isolation: isolate; }
+.beam::before { content: ""; position: absolute; inset: -1px; border-radius: inherit; padding: 1px; z-index: -1;
+  background: conic-gradient(from var(--a, 0deg), transparent 0deg, var(--c, var(--violet)) 60deg, transparent 120deg, transparent 360deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude;
+  opacity: .0; transition: opacity .35s; animation: beam-spin 4s linear infinite; }
+.beam:hover::before, .beam.on::before { opacity: 1; }
+@property --a { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+@keyframes beam-spin { to { --a: 360deg; } }
+.marquee { display: flex; gap: 10px; width: max-content; animation: marquee 38s linear infinite; }
+.marquee:hover { animation-play-state: paused; }
+@keyframes marquee { to { transform: translateX(-50%); } }
+.scanline { position: absolute; left: 0; right: 0; height: 60px; background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--cyan) 22%, transparent), transparent); animation: scan-y 3.2s ease-in-out infinite; pointer-events: none; }
+@keyframes scan-y { 0% { top: -60px; } 100% { top: 100%; } }
+.text-glow { text-shadow: 0 0 28px color-mix(in srgb, var(--violet) 55%, transparent); }
+@media (prefers-reduced-motion: reduce) { .marquee { animation-duration: 120s; } .beam::before { animation-duration: 16s; } .scanline { animation-duration: 9s; } }

@@ -4,8 +4,13 @@ const adminToken = () => { try { return sessionStorage.getItem('ciq-admin') ?? '
 
 export async function tool<T = any>(name: string, input: unknown = {}): Promise<ToolResult<T>> {
   const t = adminToken();
-  const r = await fetch(`/api/tools/${name}`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(t ? { Authorization: `Bearer ${t}` } : {}) }, body: JSON.stringify(input) });
-  return r.json();
+  // Never throws: a down or restarting server becomes a normal error result the UI can show.
+  try {
+    const r = await fetch(`/api/tools/${name}`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(t ? { Authorization: `Bearer ${t}` } : {}) }, body: JSON.stringify(input) });
+    return await r.json();
+  } catch {
+    return { ok: false, tool: name, ms: 0, error: { code: 'UNREACHABLE', message: 'The server is starting up or unreachable. Try again in a moment.' } };
+  }
 }
 export async function get<T = any>(path: string): Promise<T> { const r = await fetch(path); if (!r.ok) throw new Error((await r.json()).error?.message ?? r.statusText); return r.json(); }
 export async function post<T = any>(path: string, body: unknown, type = 'application/json'): Promise<T> {
