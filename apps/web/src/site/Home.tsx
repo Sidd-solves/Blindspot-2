@@ -7,6 +7,7 @@ import { CountUp, Reveal, Ring } from '../components/ui';
 import { Aurora, BeamCard, Marquee } from './Effects';
 import { CATCHES } from './content';
 import { openApp, siteGo } from './SiteLayout';
+import { useOpenSample } from './Start';
 
 export function useHealth() {
   const { findings } = useStore();
@@ -41,6 +42,7 @@ export function LivePreview() {
 }
 
 export default function Home() {
+  const sample = useOpenSample();
   const { findings, dataset } = useStore();
   const [ideas, setIdeas] = useState<any[]>([]);
   useEffect(() => { tool('test-hypotheses', { useAI: false }).then((r) => r.ok && setIdeas(r.data.results)); }, [dataset?.name]);
@@ -67,8 +69,8 @@ export default function Home() {
               Connect your Shopify store or drop in a spreadsheet. Blindspot finds what's quietly costing you money, proves it with real numbers, and tells you what to fix first. In seconds.
             </motion.p>
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.85 }} className="mt-7 flex flex-wrap gap-2">
-              <motion.button whileTap={{ scale: 0.95 }} whileHover={{ scale: 1.03 }} className="btn btn-primary !h-11 !px-5 text-[13px]" onClick={() => openApp()}><Eye size={15} />See it on a real shop</motion.button>
-              <motion.button whileTap={{ scale: 0.95 }} whileHover={{ scale: 1.03 }} className="btn !h-11 !px-5 text-[13px]" onClick={() => openApp('data')}><ShoppingBag size={15} style={{ color: 'var(--emerald)' }} />Connect your store</motion.button>
+              <motion.button whileTap={{ scale: 0.95 }} whileHover={{ scale: 1.03 }} className="btn btn-primary !h-11 !px-5 text-[13px]" onClick={() => sample.open('overview')}><Eye size={15} />See it on a real shop</motion.button>
+              <motion.button whileTap={{ scale: 0.95 }} whileHover={{ scale: 1.03 }} className="btn !h-11 !px-5 text-[13px]" onClick={() => openApp()}><ShoppingBag size={15} style={{ color: 'var(--emerald)' }} />Connect your store</motion.button>
             </motion.div>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }} className="mt-5 flex flex-wrap gap-4 text-[11.5px] text-[var(--muted)]">
               {['Free to try', 'No account needed', 'Read-only access'].map((t) => <span key={t} className="flex items-center gap-1"><Check size={12} style={{ color: 'var(--emerald)' }} />{t}</span>)}
@@ -138,6 +140,7 @@ export default function Home() {
 }
 
 export function FinalCta() {
+  const sample = useOpenSample();
   return (
     <section className="mx-auto max-w-6xl px-4 pb-20 md:px-6">
       <Reveal><div className="relative overflow-hidden rounded-3xl border p-10 text-center" style={{ borderColor: 'var(--line)' }}>
@@ -146,8 +149,8 @@ export function FinalCta() {
           <h2 className="text-glow text-[28px] font-extrabold leading-tight tracking-tight md:text-[40px]">Dashboards show what happened.<br /><span className="grad-text">Blindspot shows what you're missing.</span></h2>
           <p className="mt-3 text-[13px] text-[var(--muted)]">Built by a Shopify store owner, for store owners.</p>
           <div className="mt-6 flex flex-wrap justify-center gap-2">
-            <motion.button whileTap={{ scale: 0.95 }} whileHover={{ scale: 1.04 }} className="btn btn-primary !h-11 !px-6 text-[13px]" onClick={() => openApp()}><Eye size={15} />See it on a real shop</motion.button>
-            <motion.button whileTap={{ scale: 0.95 }} whileHover={{ scale: 1.04 }} className="btn !h-11 !px-6 text-[13px]" onClick={() => openApp('data')}><ShoppingBag size={15} style={{ color: 'var(--emerald)' }} />Connect your store</motion.button>
+            <motion.button whileTap={{ scale: 0.95 }} whileHover={{ scale: 1.04 }} className="btn btn-primary !h-11 !px-6 text-[13px]" onClick={() => sample.open('overview')}><Eye size={15} />See it on a real shop</motion.button>
+            <motion.button whileTap={{ scale: 0.95 }} whileHover={{ scale: 1.04 }} className="btn !h-11 !px-6 text-[13px]" onClick={() => openApp()}><ShoppingBag size={15} style={{ color: 'var(--emerald)' }} />Connect your store</motion.button>
           </div>
         </div>
       </div></Reveal>

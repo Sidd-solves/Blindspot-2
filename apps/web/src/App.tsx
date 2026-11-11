@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useState, type CSSProperties } from 'react';
-import { LayoutDashboard, Database, Sparkles, ShieldAlert, SlidersHorizontal, ScanEye, FileText, Settings as Cog, Moon, Sun, RefreshCw, Filter, X } from 'lucide-react';
+import { Table2, LayoutDashboard, Database, Sparkles, ShieldAlert, SlidersHorizontal, ScanEye, FileText, Settings as Cog, Moon, Sun, RefreshCw, Filter, X } from 'lucide-react';
 import { useStore } from './store';
 import { Chip, Dropdown } from './components/ui';
 import Overview from './pages/Overview';
@@ -11,24 +11,30 @@ import Simulator from './pages/Simulator';
 import Audit from './pages/Audit';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
+import SourceData from './pages/SourceData';
+import { CurrencyPicker } from './components/Currency';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import SiteLayout, { type SiteId } from './site/SiteLayout';
 import SiteHome from './site/Home';
 import SiteHow from './site/How';
 import SiteFeatures from './site/Features';
 import SiteResults from './site/Results';
+import SiteStart from './site/Start';
+import SiteGuide from './site/Guide';
 
-const SITE_PAGES: Record<SiteId, () => JSX.Element> = { home: SiteHome, how: SiteHow, features: SiteFeatures, results: SiteResults };
-/** Marketing site lives at #/, #/how, #/features, #/results; everything else is the app. */
-const siteRoute = (): SiteId | null => {
+const SITE_PAGES: Record<SiteId | 'start', () => JSX.Element> = { home: SiteHome, how: SiteHow, features: SiteFeatures, results: SiteResults, start: SiteStart };
+/** Marketing site lives at #/, #/how, #/features, #/results, the start page at #/start and guides at #/guide/<id>; everything else is the app. */
+const siteRoute = (): string | null => {
   const h = location.hash.replace(/^#/, '').split('?')[0];
   if (h === '' || h === '/') return 'home';
-  return (['how', 'features', 'results'] as SiteId[]).find((s) => h === `/${s}`) ?? null;
+  if (h.startsWith('/guide/')) return h.slice(1);
+  return (['how', 'features', 'results', 'start'] as const).find((s) => h === `/${s}`) ?? null;
 };
 
 export const NAV = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard, c: 'var(--violet)', el: Overview },
   { id: 'data', label: 'Data Sources', icon: Database, c: 'var(--emerald)', el: DataSources },
+  { id: 'source', label: 'Source Data', icon: Table2, c: 'var(--sky)', el: SourceData },
   { id: 'analyst', label: 'AI Analyst', icon: Sparkles, c: 'var(--fuchsia)', el: Analyst },
   { id: 'risk', label: 'Risk Intelligence', icon: ShieldAlert, c: 'var(--rose)', el: Risk },
   { id: 'simulator', label: 'Scenario Simulator', icon: SlidersHorizontal, c: 'var(--emerald)', el: Simulator },
@@ -69,10 +75,11 @@ function FilterBar() {
 
 export default function App() {
   const [page, setPage] = useState<PageId>(current());
-  const [site, setSite] = useState<SiteId | null>(siteRoute());
+  const [site, setSite] = useState<string | null>(siteRoute());
   const { dataset, extension, health, loading, refresh } = useStore();
   useEffect(() => { const h = () => { setPage(current()); setSite(siteRoute()); }; window.addEventListener('hashchange', h); return () => window.removeEventListener('hashchange', h); }, []);
-  if (site) { const SitePage = SITE_PAGES[site]; return <SiteLayout page={site}><ErrorBoundary resetKey={site}><SitePage /></ErrorBoundary></SiteLayout>; }
+  if (site?.startsWith('guide/')) return <SiteLayout page={site}><ErrorBoundary resetKey={site}><SiteGuide id={site.slice(6)} /></ErrorBoundary></SiteLayout>;
+  if (site) { const SitePage = SITE_PAGES[site as SiteId | 'start']; return <SiteLayout page={site}><ErrorBoundary resetKey={site}><SitePage /></ErrorBoundary></SiteLayout>; }
   const nav = NAV.find((n) => n.id === page)!;
   const Page = nav.el;
   return (
@@ -121,6 +128,7 @@ export default function App() {
             </div>
             <div className="ml-auto flex flex-wrap items-center gap-2">
               <FilterBar />
+              <CurrencyPicker />
               <button className="btn !px-2" onClick={refresh} aria-label="Refresh analysis"><RefreshCw size={14} className={loading ? 'spin' : ''} /></button>
               <ThemeToggle />
             </div>

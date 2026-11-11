@@ -16,6 +16,7 @@ import { zodToJsonSchema } from './zod-json';
 import { fetchShopifyDataset, ShopifyError } from './shopify';
 import { loadCaseStudy, caseStudyAvailable, CASE_STUDY_CITATION } from './case-study';
 import { analyzeSmart, profileData as profile } from '@blindspot/analytics';
+import { CURRENCIES, ratesFor, withDisplayCurrency } from './fx';
 
 // Load the repo-root .env for local runs (hosted platforms inject real env vars, which take precedence).
 const rootEnv = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../.env');
@@ -48,6 +49,12 @@ app.use((_req, res, next) => { res.set({ 'X-Content-Type-Options': 'nosniff', 'R
 app.use('/api', cors({ origin: (o, cb) => cb(null, !o || ORIGINS.includes(o)), credentials: false }));
 app.use('/api', rateLimit({ windowMs: 60_000, limit: 300, standardHeaders: true, legacyHeaders: false }));
 const chatLimit = rateLimit({ windowMs: 60_000, limit: 20 });
+// Each visitor can pick a display currency (X-Display-Currency); money in findings and reports is converted for them.
+app.use('/api', (req, _res, next) => {
+  const cur = req.headers['x-display-currency'] ?? req.query.cur;
+  if (!cur) return next();
+  withDisplayCurrency(sessions.get(sid(req)).view().currency ?? 'USD', cur, () => next()).catch(next);
+});
 
 function requireAdmin(req: Request, res: Response, next: NextFunction) {
   const want = env.ADMIN_TOKEN;
@@ -93,6 +100,41 @@ app.get('/api/crosstab', (req, res) => {
   const cols = new Set(profileData(state.view()).columns.map((c) => c.name));
   for (const f of [q.data.row, q.data.col, q.data.measure, q.data.ratioOf].filter(Boolean) as string[]) if (!cols.has(f)) return res.status(400).json({ error: { code: 'UNKNOWN_FIELD', message: `Unknown field ${f}` } });
   res.json(crosstab(state.view().rows, q.data.row, q.data.col, q.data.measure, q.data.ratioOf));
+});
+
+app.get('/api/fx', async (req, res) => {
+  const base = z.string().regex(/^[A-Z]{3}$/).catch('USD').parse(req.query.base);
+  const t = await ratesFor(base in CURRENCIES ? base : 'USD');
+  res.json({ ...t, names: CURRENCIES });
+});
+
+/** The exact rows being analysed (after cleaning and the visitor's filters), so anyone can check the numbers. */
+app.get('/api/rows', (req, res) => {
+  const q = z.object({ offset: z.coerce.number().int().min(0).default(0), limit: z.coerce.number().int().min(1).max(200).default(50), q: z.string().max(100).default('') }).parse(req.query);
+  const v = sessions.get(sid(req)).view(), all = v.rows, needle = q.q.trim().toLowerCase();
+  const columns = all.length ? Object.keys(all[0]) : [];
+  const matched = needle ? all.filter((r) => columns.some((c) => String(r[c] ?? '').toLowerCase().includes(needle))) : all;
+  const fm = detectFields(v), tx = all[0] && 'IsReturn' in all[0];
+  let sales = 0, returns = 0;
+  const orders = new Set<string>(), customers = new Set<string>();
+  for (const r of all) {
+    const m = typeof r[fm.measure] === 'number' ? (r[fm.measure] as number) : 0;
+    if ('Customer' in r && r.Customer !== 'Unknown customer' && r.Customer !== 'Guest checkout') customers.add(String(r.Customer));
+    if (tx && r.IsReturn === 1) { returns += m; continue; }
+    sales += m;
+    if ('Order' in r) orders.add(String(r.Order));
+  }
+  res.json({ columns, total: all.length, matched: matched.length, rows: matched.slice(q.offset, q.offset + q.limit), measure: fm.measure, currency: v.currency ?? 'USD',
+    totals: { sales: Math.round(sales), returns: Math.round(returns), orders: orders.size || all.length, customers: customers.size, lines: all.length } });
+});
+
+app.get('/api/rows.csv', (req, res) => {
+  const v = sessions.get(sid(req)).view(), cols = v.rows.length ? Object.keys(v.rows[0]) : [];
+  const esc = (x: unknown) => { const t = x == null ? '' : String(x); return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t; };
+  res.set({ 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': `attachment; filename="${v.name.replace(/[^\w -]/g, '').trim() || 'data'}.csv"` });
+  res.write(cols.join(',') + '\n');
+  for (let i = 0; i < v.rows.length; i += 5000) res.write(v.rows.slice(i, i + 5000).map((r) => cols.map((c) => esc(r[c])).join(',')).join('\n') + '\n');
+  res.end();
 });
 
 app.post('/api/dataset/csv', express.text({ type: ['text/csv', 'text/plain'], limit: '15mb' }), (req, res) => {

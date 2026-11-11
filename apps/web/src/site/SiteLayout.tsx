@@ -11,7 +11,7 @@ export const SITE = [
 ] as const;
 export type SiteId = (typeof SITE)[number]['id'];
 export const siteGo = (id: SiteId) => { location.hash = SITE.find((s) => s.id === id)!.hash.slice(1); window.scrollTo({ top: 0, behavior: 'smooth' }); };
-export const openApp = (page = 'overview') => { location.hash = `/${page}`; window.scrollTo({ top: 0 }); };
+export const openApp = (page = 'start') => { location.hash = `/${page}`; window.scrollTo({ top: 0 }); };
 
 export const Logo = ({ size = 15 }: { size?: number }) => (
   <button onClick={() => siteGo('home')} className="flex items-center gap-2" aria-label="Blindspot home">
@@ -22,7 +22,7 @@ export const Logo = ({ size = 15 }: { size?: number }) => (
   </button>
 );
 
-export default function SiteLayout({ page, children }: { page: SiteId; children: ReactNode }) {
+export default function SiteLayout({ page, children }: { page: string; children: ReactNode }) {
   return (
     <div className="site-dark relative min-h-screen overflow-x-hidden">
       <Spotlight />
