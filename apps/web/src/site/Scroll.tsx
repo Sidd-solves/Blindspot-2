@@ -126,180 +126,182 @@ function StepVisual({ i }: { i: number }) {
     { t: '509 orders reversed within 2 days', v: '£114,284', c: 'var(--sky)' },
   ];
   return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={i}
-        initial={{ opacity: 0, y: 24, scale: 0.97, filter: 'blur(6px)' }}
-        animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
-        exit={{ opacity: 0, y: -24, scale: 0.97, filter: 'blur(6px)' }}
-        transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-        className="panel relative w-full overflow-hidden p-4"
-        style={{
-          backdropFilter: 'blur(18px)',
-          background: 'color-mix(in srgb, var(--panel) 78%, transparent)',
-        }}
-      >
-        {i === 0 && (
-          <div>
-            <motion.div
-              className="grid place-items-center rounded-xl border-2 border-dashed py-6 text-[12.5px] text-[var(--muted)]"
-              style={{ borderColor: 'color-mix(in srgb, var(--cyan) 55%, var(--line))' }}
-              animate={{
-                borderColor: [
-                  'color-mix(in srgb, var(--cyan) 55%, var(--line))',
-                  'color-mix(in srgb, var(--violet) 55%, var(--line))',
-                ],
-              }}
-              transition={{ duration: 2, repeat: Infinity, repeatType: 'reverse' }}
-            >
-              Drop files here
-            </motion.div>
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              {files.map((f, k) => (
+    <div className="grid [&>*]:[grid-area:1/1]">
+      <AnimatePresence initial={false}>
+        <motion.div
+          key={i}
+          initial={{ opacity: 0, y: 14, scale: 0.985 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -14, scale: 0.985 }}
+          transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+          className="panel relative w-full overflow-hidden p-4"
+          style={{
+            backdropFilter: 'blur(18px)',
+            background: 'color-mix(in srgb, var(--panel) 78%, transparent)',
+          }}
+        >
+          {i === 0 && (
+            <div>
+              <motion.div
+                className="grid place-items-center rounded-xl border-2 border-dashed py-6 text-[12.5px] text-[var(--muted)]"
+                style={{ borderColor: 'color-mix(in srgb, var(--cyan) 55%, var(--line))' }}
+                animate={{
+                  borderColor: [
+                    'color-mix(in srgb, var(--cyan) 55%, var(--line))',
+                    'color-mix(in srgb, var(--violet) 55%, var(--line))',
+                  ],
+                }}
+                transition={{ duration: 2, repeat: Infinity, repeatType: 'reverse' }}
+              >
+                Drop files here
+              </motion.div>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                {files.map((f, k) => (
+                  <motion.div
+                    key={f.n}
+                    initial={{ opacity: 0, y: -40, rotate: k % 2 ? 8 : -8 }}
+                    animate={{ opacity: 1, y: 0, rotate: 0 }}
+                    transition={{ delay: k * 0.04, type: 'spring', stiffness: 420, damping: 26 }}
+                    className="flex items-center gap-2 rounded-lg border px-2 py-1.5 text-[11.5px]"
+                    style={{ borderColor: 'var(--line)' }}
+                  >
+                    <f.ic size={14} style={{ color: f.c }} />
+                    <span className="truncate">{f.n}</span>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          )}
+          {i === 1 && (
+            <div className="space-y-1.5">
+              {finds.map((f, k) => (
                 <motion.div
-                  key={f.n}
-                  initial={{ opacity: 0, y: -40, rotate: k % 2 ? 8 : -8 }}
-                  animate={{ opacity: 1, y: 0, rotate: 0 }}
-                  transition={{ delay: 0.1 + k * 0.12, type: 'spring', stiffness: 200, damping: 16 }}
-                  className="flex items-center gap-2 rounded-lg border px-2 py-1.5 text-[11.5px]"
+                  key={f.t}
+                  initial={{ opacity: 0, x: 30 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: k * 0.035, duration: 0.2 }}
+                  className="flex items-center gap-2 rounded-lg border px-2.5 py-2 text-[12px]"
                   style={{ borderColor: 'var(--line)' }}
                 >
-                  <f.ic size={14} style={{ color: f.c }} />
-                  <span className="truncate">{f.n}</span>
+                  <span
+                    className="h-2 w-2 rounded-full"
+                    style={{ background: f.c, boxShadow: `0 0 8px ${f.c}` }}
+                  />
+                  <span className="min-w-0 flex-1 truncate font-semibold">{f.t}</span>
+                  <span className="mono" style={{ color: f.c }}>
+                    {f.v}
+                  </span>
                 </motion.div>
               ))}
             </div>
-          </div>
-        )}
-        {i === 1 && (
-          <div className="space-y-1.5">
-            {finds.map((f, k) => (
+          )}
+          {i === 2 && (
+            <div>
+              <div className="grid grid-cols-[1fr_auto] gap-x-3 text-[11px] text-[var(--faint)]">
+                <span>customer · order date</span>
+                <span>sales</span>
+              </div>
+              {[
+                ['15749 · 18 Apr 2011', '£37,994.90'],
+                ['16180 · 31 Aug 2011', '£10,254.18'],
+                ['13027 · 18 Aug 2011', '£9,912.00'],
+                ['17504 · 17 May 2011', '£7,096.33'],
+              ].map(([a, b], k) => (
+                <motion.div
+                  key={a}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: k * 0.03, duration: 0.15 }}
+                  className="mono grid grid-cols-[1fr_auto] gap-x-3 border-b py-1 text-[11.5px]"
+                  style={{ borderColor: 'var(--line)' }}
+                >
+                  <span>{a}</span>
+                  <span>{b}</span>
+                </motion.div>
+              ))}
               <motion.div
-                key={f.t}
-                initial={{ opacity: 0, x: 30 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: k * 0.1 }}
-                className="flex items-center gap-2 rounded-lg border px-2.5 py-2 text-[12px]"
-                style={{ borderColor: 'var(--line)' }}
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.12, type: 'spring', stiffness: 420, damping: 22 }}
+                className="mt-3 flex items-center gap-2 rounded-lg px-2.5 py-2 text-[12.5px] font-bold"
+                style={{
+                  background: 'color-mix(in srgb, var(--emerald) 16%, transparent)',
+                  color: 'var(--emerald)',
+                }}
               >
+                <BadgeCheck size={15} /> £93,531.25 · matches the finding to the penny
+              </motion.div>
+            </div>
+          )}
+          {i === 3 && (
+            <div className="text-[12.5px] leading-relaxed">
+              <div
+                className="flex items-center gap-1.5 text-[11px] font-bold"
+                style={{ color: 'var(--fuchsia)' }}
+              >
+                <Sparkles size={12} /> AI Analyst
+              </div>
+              <p className="mt-1">
+                10 of your best customers went quiet, worth{' '}
                 <span
-                  className="h-2 w-2 rounded-full"
-                  style={{ background: f.c, boxShadow: `0 0 8px ${f.c}` }}
-                />
-                <span className="min-w-0 flex-1 truncate font-semibold">{f.t}</span>
-                <span className="mono" style={{ color: f.c }}>
-                  {f.v}
+                  className="rounded px-0.5 font-semibold"
+                  style={{
+                    textDecoration: 'underline solid var(--emerald)',
+                    textUnderlineOffset: 3,
+                    background: 'color-mix(in srgb, var(--emerald) 12%, transparent)',
+                  }}
+                >
+                  £93,531
+                </span>{' '}
+                a year. Only{' '}
+                <span
+                  className="rounded px-0.5 font-semibold"
+                  style={{
+                    textDecoration: 'underline solid var(--emerald)',
+                    textUnderlineOffset: 3,
+                    background: 'color-mix(in srgb, var(--emerald) 12%, transparent)',
+                  }}
+                >
+                  42%
+                </span>{' '}
+                of new customers reorder within 90 days, down from{' '}
+                <span
+                  className="rounded px-0.5 font-semibold"
+                  style={{
+                    textDecoration: 'underline solid var(--emerald)',
+                    textUnderlineOffset: 3,
+                    background: 'color-mix(in srgb, var(--emerald) 12%, transparent)',
+                  }}
+                >
+                  51%
                 </span>
-              </motion.div>
-            ))}
-          </div>
-        )}
-        {i === 2 && (
-          <div>
-            <div className="grid grid-cols-[1fr_auto] gap-x-3 text-[11px] text-[var(--faint)]">
-              <span>customer · order date</span>
-              <span>sales</span>
-            </div>
-            {[
-              ['15749 · 18 Apr 2011', '£37,994.90'],
-              ['16180 · 31 Aug 2011', '£10,254.18'],
-              ['13027 · 18 Aug 2011', '£9,912.00'],
-              ['17504 · 17 May 2011', '£7,096.33'],
-            ].map(([a, b], k) => (
-              <motion.div
-                key={a}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: k * 0.08 }}
-                className="mono grid grid-cols-[1fr_auto] gap-x-3 border-b py-1 text-[11.5px]"
+                .
+              </p>
+              <div
+                className="mt-2 flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-[11.5px]"
                 style={{ borderColor: 'var(--line)' }}
               >
-                <span>{a}</span>
-                <span>{b}</span>
-              </motion.div>
-            ))}
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 0.45, type: 'spring', stiffness: 260, damping: 14 }}
-              className="mt-3 flex items-center gap-2 rounded-lg px-2.5 py-2 text-[12.5px] font-bold"
-              style={{
-                background: 'color-mix(in srgb, var(--emerald) 16%, transparent)',
-                color: 'var(--emerald)',
-              }}
-            >
-              <BadgeCheck size={15} /> £93,531.25 · matches the finding to the penny
-            </motion.div>
-          </div>
-        )}
-        {i === 3 && (
-          <div className="text-[12.5px] leading-relaxed">
-            <div
-              className="flex items-center gap-1.5 text-[11px] font-bold"
-              style={{ color: 'var(--fuchsia)' }}
-            >
-              <Sparkles size={12} /> AI Analyst
+                <BadgeCheck size={12} style={{ color: 'var(--emerald)' }} />
+                <b>12 of 12</b> figures match the analysis engine
+                <span className="relative ml-auto h-1.5 w-16 overflow-hidden rounded-full bg-[var(--line)]">
+                  <motion.span
+                    className="absolute inset-y-0 left-0 rounded-full"
+                    style={{ background: 'var(--emerald)' }}
+                    initial={{ width: 0 }}
+                    animate={{ width: '100%' }}
+                    transition={{ duration: 1 }}
+                  />
+                </span>
+              </div>
+              <div className="mt-1.5 flex items-center gap-1 text-[11px] text-[var(--muted)]">
+                <Wand2 size={11} style={{ color: 'var(--fuchsia)' }} /> Wrong figures are sent back to the AI
+                to fix before you see them.
+              </div>
             </div>
-            <p className="mt-1">
-              10 of your best customers went quiet, worth{' '}
-              <span
-                className="rounded px-0.5 font-semibold"
-                style={{
-                  textDecoration: 'underline solid var(--emerald)',
-                  textUnderlineOffset: 3,
-                  background: 'color-mix(in srgb, var(--emerald) 12%, transparent)',
-                }}
-              >
-                £93,531
-              </span>{' '}
-              a year. Only{' '}
-              <span
-                className="rounded px-0.5 font-semibold"
-                style={{
-                  textDecoration: 'underline solid var(--emerald)',
-                  textUnderlineOffset: 3,
-                  background: 'color-mix(in srgb, var(--emerald) 12%, transparent)',
-                }}
-              >
-                42%
-              </span>{' '}
-              of new customers reorder within 90 days, down from{' '}
-              <span
-                className="rounded px-0.5 font-semibold"
-                style={{
-                  textDecoration: 'underline solid var(--emerald)',
-                  textUnderlineOffset: 3,
-                  background: 'color-mix(in srgb, var(--emerald) 12%, transparent)',
-                }}
-              >
-                51%
-              </span>
-              .
-            </p>
-            <div
-              className="mt-2 flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-[11.5px]"
-              style={{ borderColor: 'var(--line)' }}
-            >
-              <BadgeCheck size={12} style={{ color: 'var(--emerald)' }} />
-              <b>12 of 12</b> figures match the analysis engine
-              <span className="relative ml-auto h-1.5 w-16 overflow-hidden rounded-full bg-[var(--line)]">
-                <motion.span
-                  className="absolute inset-y-0 left-0 rounded-full"
-                  style={{ background: 'var(--emerald)' }}
-                  initial={{ width: 0 }}
-                  animate={{ width: '100%' }}
-                  transition={{ duration: 1 }}
-                />
-              </span>
-            </div>
-            <div className="mt-1.5 flex items-center gap-1 text-[11px] text-[var(--muted)]">
-              <Wand2 size={11} style={{ color: 'var(--fuchsia)' }} /> Wrong figures are sent back to the AI to
-              fix before you see them.
-            </div>
-          </div>
-        )}
-      </motion.div>
-    </AnimatePresence>
+          )}
+        </motion.div>
+      </AnimatePresence>
+    </div>
   );
 }
 
@@ -431,7 +433,7 @@ export function PinnedStory() {
                   key={`${step}-${k}`}
                   initial={{ opacity: 0, y: 14, scale: 0.96 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{ delay: 0.15 + k * 0.08, type: 'spring', stiffness: 220, damping: 20 }}
+                  transition={{ delay: k * 0.04, type: 'spring', stiffness: 420, damping: 28 }}
                   className="panel px-2.5 py-2"
                   style={{
                     backdropFilter: 'blur(18px)',
