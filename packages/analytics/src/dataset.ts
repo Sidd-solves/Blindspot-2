@@ -46,7 +46,7 @@ export function generateSampleDataset(n = 1400, seed = 42): Dataset {
     const day = 1 + Math.floor(r() * 28);
     const region = regions[pick(regionW)];
     // Planted: Central collapses in the final 6 months
-    if (region === 'Central' && month >= 18 && r() < 0.5) continue;
+    if (region === 'Central' && month >= 18 && r() < 0.8) continue;
     const cat = CATALOG[cats[pick(catW)]];
     const item = cat.items[Math.floor(r() * cat.items.length)];
     const qty = 1 + Math.floor(r() * 5);

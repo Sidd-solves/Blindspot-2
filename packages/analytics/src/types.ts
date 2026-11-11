@@ -38,12 +38,20 @@ export interface Finding {
   category: 'concentration' | 'profitability' | 'trend' | 'outlier' | 'data-quality' | 'pricing' | 'returns' | 'retention' | 'product' | 'seasonality' | 'anomaly';
   title: string;
   severity: Severity;
-  /** 0..1 strength of the statistical evidence */
+  /** 0..1 strength of evidence, used for ranking: 1 for measured facts, 1 − p for tested findings, 0.75 for rule-of-thumb checks. */
   confidence: number;
+  /** How it is known: measured (counted directly), tested (significance test; see pValue), rule (a threshold check). */
+  basis: 'measured' | 'tested' | 'rule';
+  /** p-value of the test (false-discovery-rate adjusted for scans); null unless basis is "tested". */
+  pValue: number | null;
+  /** The period the money figure covers, e.g. "whole file", "per year", "last 180 days". */
+  period: string | null;
+  /** What the money figure is: lost (already gone), at-risk (could be lost), reversed (cancelled, never earned), untracked (sales not linked to a customer). */
+  exposure: 'lost' | 'at-risk' | 'reversed' | 'untracked' | null;
   metric: string;
   explanation: string;
   evidence: Record<string, unknown>;
-  /** Dollar exposure when it can be computed from the data, otherwise null */
+  /** Money involved, in the data's currency, when it can be computed; otherwise null */
   impactUsd: number | null;
   impactBasis: string | null;
   nextAction: string;

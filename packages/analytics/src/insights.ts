@@ -1,23 +1,21 @@
 import type { Dataset, Finding, FieldMap, Row } from './types';
 import { comparisonWindows, inWin, toMs, DAY, dateSpan, type Windows } from './time';
-import { mean, std, round, sum, quantile } from './stats';
+import { mean, std, round, sum, quantile, welchTest, propTest, bhAdjust, fmtP } from './stats';
 import { money, pctStr, plural } from './money';
 
 type Draft = Omit<Finding, 'score'>;
 const UNKNOWN = new Set(['Unknown customer', 'Guest checkout', '']);
 
-export function welch(a: number[], b: number[]) {
-  if (a.length < 2 || b.length < 2) return 0;
-  const se = Math.sqrt(std(a) ** 2 / a.length + std(b) ** 2 / b.length);
-  return se ? round((mean(a) - mean(b)) / se, 2) : 0;
-}
+/** Welch t statistic (see welchTest for degrees of freedom and p-values). Zero variance is handled explicitly. */
+export function welch(a: number[], b: number[]) { return round(welchTest(a, b).stat, 2); }
 /** Two-proportion z statistic (p1 - p2). */
 export function propZ(x1: number, n1: number, x2: number, n2: number) {
   if (!n1 || !n2) return 0;
   const p = (x1 + x2) / (n1 + n2), se = Math.sqrt(p * (1 - p) * (1 / n1 + 1 / n2));
   return se ? round((x1 / n1 - x2 / n2) / se, 2) : 0;
 }
-const conf = (stat: number) => round(Math.min(0.97, 0.6 + Math.max(0, Math.abs(stat) - 2) * 0.09), 2);
+/** Ranking strength for a tested finding: 1 − p, kept between 0.5 and 0.999. */
+const strength = (p: number) => round(Math.min(0.999, Math.max(0.5, 1 - p)), 3);
 
 /** Weekly totals of `measure` for rows inside a window (13 buckets for 90 days). */
 function weekly(rows: Row[], date: string, measure: string, w: [number, number]) {
@@ -69,9 +67,14 @@ export function explainChange(rows: Row[], fm: FieldMap, opts: { days?: number; 
 }
 
 // ---------------------------------------------------------------- Layer 2: scan every segment for anomalies
-export interface Anomaly { dimension: string; segment: string; baseline: number; current: number; changePct: number; overallChangePct: number; gapPts: number; t: number; impact: number }
+export interface Anomaly { dimension: string; segment: string; baseline: number; current: number; changePct: number; overallChangePct: number; gapPts: number; t: number; p: number; q: number; impact: number }
 
-export function scanAnomalies(rows: Row[], fm: FieldMap, opts: { days?: number; topN?: number } = {}): { windows: Windows; anomalies: Anomaly[]; scanned: number } | null {
+/**
+ * Compares each segment's weekly sales (current vs the same weeks a year earlier) with the whole business.
+ * Coverage: segments with at least 1% of baseline sales, the 40 largest per dimension. Because many segments are
+ * tested at once, p-values are adjusted with the Benjamini–Hochberg false-discovery-rate procedure (q < 0.05).
+ */
+export function scanAnomalies(rows: Row[], fm: FieldMap, opts: { days?: number; topN?: number } = {}): { windows: Windows; anomalies: Anomaly[]; scanned: number; coverage: string } | null {
   if (!fm.date) return null;
   const w = comparisonWindows(rows, fm.date, opts.days ?? 90);
   if (!w) return null;
@@ -81,7 +84,7 @@ export function scanAnomalies(rows: Row[], fm: FieldMap, opts: { days?: number; 
   let base = 0, cur = 0;
   for (const r of sales) { const t = toMs(r[d]); if (inWin(t, w.current)) cur += (r[m] as number) || 0; else if (inWin(t, w.baseline)) base += (r[m] as number) || 0; }
   if (!base) return null;
-  const overall = (cur - base) / base, out: Anomaly[] = [];
+  const overall = (cur - base) / base, cands: (Omit<Anomaly, 'q'> & { keep: boolean })[] = [];
   let scanned = 0;
   for (const dim of dims) {
     const tot = new Map<string, number>();
@@ -100,12 +103,15 @@ export function scanAnomalies(rows: Row[], fm: FieldMap, opts: { days?: number; 
       scanned++;
       const { b: wb, c: wc } = buckets.get(seg)!;
       const b = sum(wb), c = sum(wc);
-      const change = b ? (c - b) / b : 0, gap = change - overall, t = welch(wc, wb);
-      // A segment is anomalous when it moves 25+ points worse than the whole business, significantly, and it matters in money.
-      if (gap <= -0.25 && t <= -2 && b - c >= base * 0.005) out.push({ dimension: dim, segment: seg, baseline: round(b), current: round(c), changePct: round(change, 4), overallChangePct: round(overall, 4), gapPts: round(gap * 100, 1), t, impact: round(b - c - b * Math.max(0, -overall)) });
+      const change = b ? (c - b) / b : 0, gap = change - overall, test = welchTest(wc, wb);
+      cands.push({ dimension: dim, segment: seg, baseline: round(b), current: round(c), changePct: round(change, 4), overallChangePct: round(overall, 4), gapPts: round(gap * 100, 1), t: round(test.stat, 2), p: test.pLess, impact: round(b - c - b * Math.max(0, -overall)),
+        // Worth reporting: 25+ points worse than the business, and material in money.
+        keep: gap <= -0.25 && b - c >= base * 0.005 });
     }
   }
-  return { windows: w, anomalies: out.sort((a, b) => b.impact - a.impact).slice(0, 8), scanned };
+  const q = bhAdjust(cands.map((x) => x.p));
+  const out: Anomaly[] = cands.map((x, i) => ({ ...x, q: round(q[i], 4), p: round(x.p, 4) })).filter((x, i) => cands[i].keep && x.q < 0.05).map(({ keep, ...a }: any) => a);
+  return { windows: w, anomalies: out.sort((a, b) => b.impact - a.impact).slice(0, 8), scanned, coverage: `${scanned} segments with at least 1% of sales (largest 40 per category), adjusted for testing many at once` };
 }
 
 // ---------------------------------------------------------------- Layer 1: online-store checks
@@ -145,7 +151,7 @@ export function storeFindings(ds: Dataset, fm: FieldMap): Draft[] {
       const top = [...byProd].filter(([, [g]]) => g > 0).map(([product, [g, rv]]) => ({ product, returned: round(rv), rate: round(rv / g, 3) })).sort((a, b) => b.returned - a.returned).slice(0, 5);
       out.push({
         id: 'store-returns', category: 'returns', title: `${pctStr(rate)} of sales are returned or cancelled (${$(returned)})`,
-        severity: rate >= 0.08 ? 'high' : 'medium', confidence: 0.95, metric: 'Returned value / gross sales',
+        severity: rate >= 0.08 ? 'high' : 'medium', confidence: 1, basis: 'measured', pValue: null, period: 'whole file', exposure: 'lost', metric: 'Returned value / gross sales',
         explanation: `${$(returned)} of ${$(gross)} in sales came back. The biggest sources: ${top.slice(0, 3).map((x) => `${x.product} (${$(x.returned)})`).join(', ')}.`,
         evidence: { returnRate: round(rate, 4), returnedValue: round(returned), grossSales: round(gross), topReturned: top },
         impactUsd: round(returned), impactBasis: 'Value of returned or cancelled items in the loaded period',
@@ -156,11 +162,11 @@ export function storeFindings(ds: Dataset, fm: FieldMap): Draft[] {
 
   // Orders reversed within 2 days (removed from sales and returns while cleaning)
   if (ds.prep && gross && ds.prep.cancelledPairValue / gross >= 0.01) out.push({
-    id: 'store-cancelled-orders', category: 'returns', title: `${ds.prep.cancelledPairs.toLocaleString()} orders were cancelled within 2 days of being placed (${$(ds.prep.cancelledPairValue)})`,
-    severity: ds.prep.cancelledPairValue / gross >= 0.03 ? 'high' : 'medium', confidence: 0.95, metric: 'Order lines reversed within 2 days',
-    explanation: `${pctStr(ds.prep.cancelledPairValue / gross)} of sales value was ordered and then cancelled almost immediately, often a mistaken quantity or a failed payment. Blindspot removed these from both sales and returns so they don't distort the numbers.`,
+    id: 'store-cancelled-orders', category: 'returns', title: `${ds.prep.cancelledPairs.toLocaleString()} order lines were reversed within 2 days (${$(ds.prep.cancelledPairValue)})`,
+    severity: ds.prep.cancelledPairValue / gross >= 0.03 ? 'high' : 'medium', confidence: 1, basis: 'measured', pValue: null, period: 'whole file', exposure: 'reversed', metric: 'Order lines reversed within 2 days',
+    explanation: `${ds.prep.cancelledPairs.toLocaleString()} order lines (individual products, not whole orders) were bought and then cancelled with an exact match within 2 days, often a mistaken quantity or a failed payment. They were worth ${pctStr(ds.prep.cancelledPairValue / gross)} of sales value and were never earned, so Blindspot removed them from both sales and returns.`,
     evidence: { cancelledPairs: ds.prep.cancelledPairs, value: ds.prep.cancelledPairValue, share: round(ds.prep.cancelledPairValue / gross, 4) },
-    impactUsd: ds.prep.cancelledPairValue, impactBasis: 'Value of orders reversed within 2 days',
+    impactUsd: ds.prep.cancelledPairValue, impactBasis: 'Value of order lines reversed within 2 days (never earned, not a loss)',
     nextAction: 'Add a confirmation step for unusually large quantities and check payment failures at checkout.',
   });
 
@@ -169,10 +175,10 @@ export function storeFindings(ds: Dataset, fm: FieldMap): Draft[] {
   const unknownSales = gross - sum(known.map((o) => o.total));
   if (gross && unknownSales / gross >= 0.1) {
     out.push({
-      id: 'store-unknown-customers', category: 'data-quality', title: `You can't tell who bought ${pctStr(unknownSales / gross)} of sales`,
-      severity: unknownSales / gross >= 0.2 ? 'high' : 'medium', confidence: 1, metric: 'Sales with no customer ID',
-      explanation: `${$(unknownSales)} in sales has no customer attached, so those buyers can't be re-marketed to, and retention numbers undercount them.`,
-      evidence: { unknownSales: round(unknownSales), share: round(unknownSales / gross, 4) }, impactUsd: round(unknownSales), impactBasis: 'Sales with no customer attached',
+      id: 'store-unknown-customers', category: 'data-quality', title: `${pctStr(unknownSales / gross)} of sales have no customer ID in this file`,
+      severity: unknownSales / gross >= 0.2 ? 'high' : 'medium', confidence: 1, basis: 'measured', pValue: null, period: 'whole file', exposure: 'untracked', metric: 'Sales with no customer ID',
+      explanation: `${$(unknownSales)} in sales isn't linked to a customer in this data, so repeat-buyer and lost-customer checks can't include those buyers. Your store may still have their details: export with customer email or ID to include them. This money isn't lost; it just can't be traced to a person here.`,
+      evidence: { unknownSales: round(unknownSales), share: round(unknownSales / gross, 4) }, impactUsd: round(unknownSales), impactBasis: 'Sales not linked to a customer in this file (untracked, not lost)',
       nextAction: 'Require an account or email at checkout, or capture an email for receipts.',
     });
   }
@@ -185,13 +191,13 @@ export function storeFindings(ds: Dataset, fm: FieldMap): Draft[] {
     const mid = span.min + (end - 90 * DAY - span.min) / 2;
     const early = firsts.filter((ts) => ts[0] < mid), late = firsts.filter((ts) => ts[0] >= mid);
     const back = (g: number[][]) => g.filter((ts) => ts.length > 1 && ts[1] - ts[0] <= 90 * DAY).length;
-    const be = back(early), bl = back(late), z = propZ(bl, late.length, be, early.length);
+    const be = back(early), bl = back(late), test = propTest(bl, late.length, be, early.length), z = test.stat;
     const re = early.length ? be / early.length : 0, rl = late.length ? bl / late.length : 0;
-    if (late.length >= 50 && early.length >= 50 && rl - re <= -0.05 && z <= -2) {
+    if (late.length >= 50 && early.length >= 50 && rl - re <= -0.05 && test.pLess < 0.05) {
       out.push({
         id: 'store-retention', category: 'retention', title: `New customers are coming back less: ${pctStr(re, 0)} → ${pctStr(rl, 0)} reorder within 90 days`,
-        severity: rl - re <= -0.1 ? 'high' : 'medium', confidence: conf(z), metric: '90-day repeat rate of first-time buyers',
-        explanation: `Of customers who first bought in the earlier half, ${pctStr(re, 0)} ordered again within 90 days; in the later half only ${pctStr(rl, 0)} did (z = ${z}, ${late.length} customers).`,
+        severity: rl - re <= -0.1 ? 'high' : 'medium', confidence: strength(test.pLess), basis: 'tested', pValue: round(test.pLess, 4), period: null, exposure: null, metric: '90-day repeat rate of first-time buyers',
+        explanation: `Of customers who first bought in the earlier half, ${pctStr(re, 0)} ordered again within 90 days; in the later half only ${pctStr(rl, 0)} did (two-proportion z-test, ${fmtP(test.pLess)}, ${late.length} vs ${early.length} customers).`,
         evidence: { earlyRate: round(re, 3), lateRate: round(rl, 3), earlyCustomers: early.length, lateCustomers: late.length, z },
         impactUsd: null, impactBasis: null, nextAction: 'Add a post-purchase email flow (thank-you, care tips, a time-limited second-order offer) and review first-order experience.',
       });
@@ -214,7 +220,7 @@ export function storeFindings(ds: Dataset, fm: FieldMap): Draft[] {
     const atRisk = sum(lapsed.map(([, e]) => e.rev));
     out.push({
       id: 'store-lapsed', category: 'retention', title: `${lapsed.length} of your best customers stopped ordering (${$(atRisk)} a year)`,
-      severity: atRisk / priorTotal >= 0.05 ? 'high' : 'medium', confidence: 0.9, metric: 'Top-10% customers with no order in 90 days',
+      severity: atRisk / priorTotal >= 0.05 ? 'high' : 'medium', confidence: 0.75, basis: 'rule', pValue: null, period: 'per year', exposure: 'at-risk', metric: 'Top-10% customers with no order in 90 days',
       explanation: `These customers ordered 3+ times in the prior year (${pctStr(atRisk / priorTotal)} of revenue) but haven't ordered in the last 90 days.`,
       evidence: { lapsedCustomers: lapsed.length, bestCustomers: best.length, annualRevenueAtRisk: round(atRisk), shareOfRevenue: round(atRisk / priorTotal, 4), examples: lapsed.slice(0, 5).map(([c, e]) => ({ customer: c, priorYearRevenue: round(e.rev), orders: e.n })) },
       impactUsd: round(atRisk), impactBasis: 'Their revenue in the year before they went quiet (annual exposure)',
@@ -237,7 +243,7 @@ export function storeFindings(ds: Dataset, fm: FieldMap): Draft[] {
     if (stopped.length >= 3 && lost >= baseTot * 0.02) {
       out.push({
         id: 'store-stopped-products', category: 'product', title: `${stopped.length} products that sold this time last year have zero sales now (${$(lost)})`,
-        severity: lost >= baseTot * 0.05 ? 'high' : 'medium', confidence: 0.85, metric: 'Products with sales a year ago, none now (same 90 days)',
+        severity: lost >= baseTot * 0.05 ? 'high' : 'medium', confidence: 0.75, basis: 'rule', pValue: null, period: 'same 90 days last year', exposure: 'at-risk', metric: 'Products with sales a year ago, none now (same 90 days)',
         explanation: `Comparing the same 90 days year over year, these products earned ${pctStr(lost / baseTot)} of sales last year and nothing now. Top: ${stopped.slice(0, 3).map(([p, v]) => `${p} (${$(v)})`).join(', ')}.`,
         evidence: { stoppedProducts: stopped.length, lostRevenue: round(lost), shareOfBaseline: round(lost / baseTot, 4), top: stopped.slice(0, 8).map(([product, v]) => ({ product, lastYear: round(v) })) },
         impactUsd: round(lost), impactBasis: 'What these products earned in the same 90 days last year',
@@ -249,12 +255,12 @@ export function storeFindings(ds: Dataset, fm: FieldMap): Draft[] {
   // Order value trend
   if (w) {
     const ob = orders.filter((o) => inWin(o.t, w.baseline)).map((o) => o.total), oc = orders.filter((o) => inWin(o.t, w.current)).map((o) => o.total);
-    const t = welch(oc, ob), ab = mean(ob), ac = mean(oc);
-    if (ob.length >= 30 && oc.length >= 30 && ab && (ac - ab) / ab <= -0.05 && t <= -2) {
+    const test = welchTest(oc, ob), t = round(test.stat, 2), ab = mean(ob), ac = mean(oc);
+    if (ob.length >= 30 && oc.length >= 30 && ab && (ac - ab) / ab <= -0.05 && test.pLess < 0.05) {
       out.push({
         id: 'store-aov', category: 'trend', title: `Average order value fell ${pctStr(Math.abs((ac - ab) / ab))} (${$(ab)} → ${$(ac)})`,
-        severity: (ac - ab) / ab <= -0.15 ? 'high' : 'medium', confidence: conf(t), metric: `Average order value, ${w.label}`,
-        explanation: `${oc.length} recent orders averaged ${$(ac)} versus ${$(ab)} (${ob.length} orders); Welch t = ${t}.`,
+        severity: (ac - ab) / ab <= -0.15 ? 'high' : 'medium', confidence: strength(test.pLess), basis: 'tested', pValue: round(test.pLess, 4), period: w.label.split(' vs ')[0], exposure: 'lost', metric: `Average order value, ${w.label}`,
+        explanation: `${oc.length} recent orders averaged ${$(ac)} versus ${$(ab)} (${ob.length} orders); Welch t-test, ${fmtP(test.pLess)}.`,
         evidence: { before: round(ab), after: round(ac), ordersBefore: ob.length, ordersAfter: oc.length, t, window: w.label },
         impactUsd: round((ab - ac) * oc.length), impactBasis: `Revenue lost to smaller baskets over the ${w.label.split(' vs ')[0]}`,
         nextAction: 'Test bundles, a free-shipping threshold just above the current average, and add-on suggestions at checkout.',
@@ -270,7 +276,7 @@ export function storeFindings(ds: Dataset, fm: FieldMap): Draft[] {
     const share = sum(top3.map(([, v]) => v)) / yr;
     if (share >= 0.35) out.push({
       id: 'store-seasonality', category: 'seasonality', title: `${pctStr(share, 0)} of a year's sales land in just 3 months (${top3.map(([k]) => new Date(k + '-01').toLocaleString('en-US', { month: 'short', timeZone: 'UTC' })).join(', ')})`,
-      severity: share >= 0.45 ? 'high' : 'medium', confidence: 0.95, metric: 'Top-3 months share of the last 12 months',
+      severity: share >= 0.45 ? 'high' : 'medium', confidence: 1, basis: 'measured', pValue: null, period: 'last 12 months', exposure: null, metric: 'Top-3 months share of the last 12 months',
       explanation: `A quarter of the year carries ${pctStr(share, 0)} of revenue (an even year would be 25%), so cash, stock and staffing must be planned around the peak.`,
       evidence: { top3Share: round(share, 3), months: vals.map(([k, v]) => ({ month: k, revenue: round(v) })) }, impactUsd: null, impactBasis: null,
       nextAction: 'Build stock and cash reserves before the peak, and run off-season promotions to smooth revenue.',
@@ -280,7 +286,7 @@ export function storeFindings(ds: Dataset, fm: FieldMap): Draft[] {
   // Duplicates found while cleaning
   if (ds.prep && ds.prep.duplicateRows / ds.prep.inputRows >= 0.01) out.push({
     id: 'store-duplicates', category: 'data-quality', title: `${ds.prep.duplicateRows.toLocaleString()} duplicate lines in your sales records`,
-    severity: 'medium', confidence: 1, metric: 'Exact duplicate rows removed during cleaning',
+    severity: 'medium', confidence: 1, basis: 'measured', pValue: null, period: 'whole file', exposure: null, metric: 'Exact duplicate rows removed during cleaning',
     explanation: `${pctStr(ds.prep.duplicateRows / ds.prep.inputRows)} of rows were exact copies. Left in, they inflate revenue in any report that doesn't remove them (Blindspot removed them before analysing).`,
     evidence: { ...ds.prep }, impactUsd: null, impactBasis: null, nextAction: 'Find where duplicates enter (double exports, sync retries) and fix the source.',
   });
