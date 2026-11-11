@@ -225,22 +225,6 @@ export default function Home() {
           className="absolute bottom-6 left-1/2 flex -translate-x-1/2 flex-col items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-[0.2em] text-[var(--muted)]"
           aria-label="Scroll down"
         >
-          <motion.span
-            className="mb-1 hidden items-center gap-1.5 rounded-full border px-2.5 py-1 normal-case tracking-normal md:flex"
-            style={{
-              borderColor: 'var(--line)',
-              background: 'rgba(8,10,22,.45)',
-              backdropFilter: 'blur(8px)',
-            }}
-            animate={{ opacity: [0.6, 1, 0.6] }}
-            transition={{ duration: 2.4, repeat: Infinity }}
-          >
-            <span
-              className="h-1.5 w-1.5 rounded-full"
-              style={{ background: 'var(--amber)', boxShadow: '0 0 8px var(--amber)' }}
-            />
-            Move your cursor to see what's hidden · click to send a ripple
-          </motion.span>
           Scroll
           <span className="relative h-9 w-px overflow-hidden bg-[var(--line)]">
             <motion.span

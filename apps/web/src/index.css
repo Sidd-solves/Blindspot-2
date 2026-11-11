@@ -520,3 +520,8 @@ input[type='range']::-moz-range-thumb {
 .scene-on .site-dark {
   background: transparent;
 }
+
+/* Gradient words carry their own colour; a text shadow under clipped gradient text shows as a dark box. */
+.text-glow .grad-text {
+  text-shadow: none;
+}

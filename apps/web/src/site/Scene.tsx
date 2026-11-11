@@ -14,8 +14,12 @@ precision highp float;
 precision mediump float;
 #endif
 uniform vec2 r; uniform float t; uniform float s; uniform vec2 m; uniform float sc;
-// ln: x-ray lens (x, y, radius) · ck: last click (x, y, seconds since)
-uniform vec3 ln; uniform vec3 ck;
+// ck: last click (x, y, seconds since)
+uniform vec3 ck;
+// dg: how far the scan has turned the landscape into the data world (0 to 1)
+uniform float dg;
+// wp: how far the iris has opened into the warp tunnel (0 to 1)
+uniform float wp;
 // Sine-free hash: stays stable at low precision (sin-based hashes streak on some phone GPUs).
 float h(vec2 p){vec3 q=fract(vec3(p.xyx)*.1031);q+=dot(q,q.yzx+33.33);return fract((q.x+q.y)*q.z);}
 float n(vec2 p){vec2 i=floor(p),f=fract(p);vec2 u=f*f*(3.-2.*f);
@@ -63,23 +67,65 @@ void main(){
     rc+=aur*.06*(3.-fj)*exp(-abs(p.y-hy)*25.);
     col=mix(col,rc,a);}
   col=mix(col,hor,.08);
-  // x-ray lens: around the cursor the landscape shows its hidden data: contour lines, a grid, scan lines
-  float ld=length(p0-ln.xy);
-  float lens=ln.z>.001?smoothstep(ln.z,ln.z*.5,ld):0.;
-  if(lens>0.){
-    float field=fbm(p*2.4+vec2(sc*.35,0.));
-    float contour=smoothstep(.07,0.,abs(fract(field*13.)-.5));
-    vec2 gg=abs(fract(p*22.)-.5);
-    float grid=smoothstep(.46,.5,max(gg.x,gg.y));
-    float scan=.5+.5*sin(p.y*520.-t*6.);
-    vec3 data=col*.28+aur*(contour*1.25+grid*.38+edge*2.2)+glw*.45*exp(-d*6.)+aur*.1*scan;
-    col=mix(col,data,lens);
+  vec2 q=gl_FragCoord.xy/r;
+  // ---- the data world: the same scene rebuilt from the shop's numbers ----
+  if(dg>.001){
+    float hz=-.19;
+    vec3 dc=vec3(.008,.01,.03)+aur*.12*smoothstep(-.1,.7,p.y);
+    dc+=vec3(step(.996,h(g))*(.6+.4*tw))*smoothstep(hz,.3,p.y);
+    // a striped "data sun" sitting on the horizon
+    vec2 ds=vec2(.0,hz+.1);
+    float dd=length(p-ds);
+    float cut=max(step(0.,p.y-ds.y),step(.38,fract((p.y-ds.y)*24.+t*.35)));
+    dc+=mix(glw,aur,clamp((ds.y+.11-p.y)*4.5,0.,1.))*smoothstep(.11,.105,dd)*cut*.75;
+    dc+=glw*exp(-dd*4.)*.3;
+    // a skyline made of bar charts, gently breathing
+    float bi=floor(p.x*28.), bf=fract(p.x*28.);
+    float bh=.02+.12*h(vec2(bi,7.))*(.72+.28*sin(t*.7+bi*1.7));
+    float inBar=step(hz,p.y)*step(p.y,hz+bh)*step(.14,bf)*step(bf,.86);
+    vec3 bc=mix(aur,glw,h(vec2(bi,2.)));
+    dc=mix(dc,vec3(.015,.02,.045)+bc*.1,inBar);
+    dc+=bc*inBar*(exp(-abs(p.y-(hz+bh))*140.)*1.6+.08+.25*smoothstep(.14,.2,bf)*(1.-smoothstep(.8,.86,bf))*exp(-(hz+bh-p.y)*14.));
+    // a neon floor grid racing toward the viewer
+    if(p.y<hz){
+      float z=.32/(hz-p.y+.002);
+      vec2 gp=vec2(p.x*z,z+t*.9+sc*3.5);
+      vec2 gl2=abs(fract(gp)-.5);
+      float line=smoothstep(.45,.5,max(gl2.x,gl2.y));
+      float near=smoothstep(0.,.3,hz-p.y);
+      dc=vec3(.006,.008,.02)+aur*line*(.18+1.1*near)+glw*.12*exp(-(hz-p.y)*14.);
+    }
+    // the scan: sweeps down from the top as dg rises, with a bright edge
+    float yt=1.-q.y+.025*sin(q.x*36.+t*2.);
+    float front=dg*1.32-.16;
+    float k=smoothstep(front+.012,front-.012,yt);
+    col=mix(col,dc,k);
+    col+=aur*exp(-abs(yt-front)*95.)*step(dg,.995)*1.3;
   }
-  col+=aur*exp(-abs(ld-ln.z*.78)*110.)*.55*step(.001,ln.z);
+  // ---- warp: a tunnel of neon rings rushing toward you, opened by an iris from the centre ----
+  if(wp>.001){
+    vec2 c=p0-vec2(m.x*.09,m.y*.07);
+    float rr=length(c)+.0001, an=atan(c.y,c.x);
+    float z=.22/rr+t*.55+sc*1.6;
+    float ring=smoothstep(.86,1.,fract(z*2.2));
+    float spoke=smoothstep(.9,1.,abs(fract(an/6.2832*22.)-.5)*2.);
+    vec3 tc=mix(aur,glw,.5+.5*sin(z*.8));
+    vec3 wc=vec3(.004,.005,.018)+tc*(ring*1.6+spoke*.75)*smoothstep(.02,.5,rr)*(.45+.55*smoothstep(.0,.3,rr));
+    // light-speed streaks
+    float sid=floor(an/6.2832*180.);
+    float lane=step(.93,h(vec2(sid,5.)));
+    float sl=fract(z*.35+h(vec2(sid,4.)));
+    wc+=vec3(.9,.95,1.)*lane*smoothstep(0.,.06,sl)*smoothstep(.3,.06,sl)*smoothstep(.04,.45,rr)*.9;
+    // the light at the end of the tunnel
+    wc+=glw*exp(-rr*7.5)*1.1+aur*exp(-rr*2.5)*.15;
+    float front=wp*1.3;
+    float kk=smoothstep(front+.012,front-.012,rr);
+    col=mix(col,wc,kk);
+    col+=tc*exp(-abs(rr-front)*70.)*step(wp,.995)*1.5;
+  }
   // shockwave light
   col+=glw*.35*exp(-abs(cd-front)*28.)*exp(-age*1.6)*step(age,3.);
   // vignette, film grain
-  vec2 q=gl_FragCoord.xy/r;
   col*=.55+.45*pow(16.*q.x*q.y*(1.-q.x)*(1.-q.y),.18);
   col+=(h(gl_FragCoord.xy+fract(t*.37)*97.)-.5)*.025;
   gl_FragColor=vec4(col,1.);
@@ -88,10 +134,19 @@ void main(){
 const VERT = 'attribute vec2 a;void main(){gl_Position=vec4(a,0.,1.);}';
 
 /** `start` picks the scene a page opens on (0 dusk, 1 ocean, 2 forest, 3 sunset, 4 night); scrolling travels on to night. */
-export function Scene({ start = 0 }: { start?: number }) {
+export function Scene({
+  start = 0,
+  world = 'none',
+}: {
+  start?: number;
+  /** The second world this page scrolls into: the data world (Home) or the warp tunnel (Features). */
+  world?: 'none' | 'data' | 'warp';
+}) {
   const ref = useRef<HTMLCanvasElement>(null);
   const from = useRef(start);
   from.current = start;
+  const wld = useRef(world);
+  wld.current = world;
   useEffect(() => {
     // While the scene is up, the site wrapper's solid background steps aside so the scene shows behind the content.
     document.documentElement.classList.add('scene-on');
@@ -124,8 +179,9 @@ export function Scene({ start = 0 }: { start?: number }) {
       us = U('s'),
       um = U('m'),
       usc = U('sc'),
-      uln = U('ln'),
-      uck = U('ck');
+      uck = U('ck'),
+      udg = U('dg'),
+      uwp = U('wp');
 
     const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
     let w = 0,
@@ -149,40 +205,28 @@ export function Scene({ start = 0 }: { start?: number }) {
       my = 0,
       tx = 0,
       ty = 0;
-    // Lens and shockwave live in the shader's own units: centred, 1 = screen height.
+    // The click shockwave lives in the shader's own units: centred, 1 = screen height.
     const toP = (x: number, y: number) => [
       (x - innerWidth / 2) / innerHeight,
       (innerHeight / 2 - y) / innerHeight,
     ];
-    let lx = 0,
-      ly = 0,
-      ltx = 0,
-      lty = 0,
-      lr = 0,
-      speed = 0,
-      seen = 0,
-      ckx = 0,
+    let ckx = 0,
       cky = 0,
       ckAt = -1e9;
     const move = (e: PointerEvent) => {
       tx = (e.clientX / innerWidth) * 2 - 1;
       ty = -((e.clientY / innerHeight) * 2 - 1);
-      const [a, b] = toP(e.clientX, e.clientY);
-      speed = Math.min(1, speed + Math.hypot(a - ltx, b - lty) * 3);
-      ltx = a;
-      lty = b;
-      seen = performance.now();
     };
     const down = (e: PointerEvent) => {
       [ckx, cky] = toP(e.clientX, e.clientY);
       ckAt = performance.now();
       move(e);
     };
-    const out = () => (seen = 0);
     addEventListener('pointermove', move, { passive: true });
     addEventListener('pointerdown', down, { passive: true });
-    document.documentElement.addEventListener('pointerleave', out);
     let scene = from.current,
+      dgv = 0,
+      wpv = 0,
       raf = 0;
     const t0 = performance.now();
     const frame = () => {
@@ -203,15 +247,15 @@ export function Scene({ start = 0 }: { start?: number }) {
       gl.uniform1f(us, scene);
       gl.uniform2f(um, still ? 0 : mx, still ? 0 : my);
       gl.uniform1f(usc, scrollY / innerHeight);
-      // The lens trails the cursor, grows with speed, and fades out when the mouse stops for a while or leaves.
-      const now = performance.now();
-      const active = seen && now - seen < 2500 ? 1 : 0;
-      lx += (ltx - lx) * 0.16;
-      ly += (lty - ly) * 0.16;
-      speed *= 0.94;
-      lr += ((active ? 0.13 + speed * 0.1 : 0) - lr) * 0.08;
-      gl.uniform3f(uln, lx, ly, lr);
-      gl.uniform3f(uck, ckx, cky, still ? 99 : (now - ckAt) / 1000);
+      // Just past the hero the scan turns the landscape into the data world; near the end it turns back.
+      const ss = (a: number, b: number, x: number) => Math.min(1, Math.max(0, (x - a) / (b - a)));
+      const dgT = wld.current === 'data' ? ss(0.05, 0.13, prog01) * (1 - ss(0.6, 0.68, prog01)) : 0;
+      const wpT = wld.current === 'warp' ? ss(0.06, 0.16, prog01) * (1 - ss(0.8, 0.9, prog01)) : 0;
+      dgv += (dgT - dgv) * 0.05;
+      wpv += (wpT - wpv) * 0.05;
+      gl.uniform1f(udg, dgv);
+      gl.uniform1f(uwp, wpv);
+      gl.uniform3f(uck, ckx, cky, still ? 99 : (performance.now() - ckAt) / 1000);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
       raf = document.hidden ? 0 : requestAnimationFrame(frame);
     };
@@ -225,7 +269,6 @@ export function Scene({ start = 0 }: { start?: number }) {
       removeEventListener('resize', size);
       removeEventListener('pointermove', move);
       removeEventListener('pointerdown', down);
-      document.documentElement.removeEventListener('pointerleave', out);
       document.removeEventListener('visibilitychange', vis);
     };
   }, []);

@@ -8,7 +8,7 @@ import {
   useTransform,
   type MotionValue,
 } from 'framer-motion';
-import { useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { CountUp } from '../components/ui';
 import { Marquee } from './Effects';
 import {
@@ -72,7 +72,10 @@ export function KineticTitle({ lines, className = '' }: { lines: ReactNode[][]; 
           {words.map((w, wi) => {
             const i = k++;
             return (
-              <span key={wi} className="inline-block overflow-hidden pb-[0.08em] align-bottom">
+              <span
+                key={wi}
+                className="-mx-[0.2em] -mb-[0.28em] -mt-[0.1em] inline-block overflow-hidden px-[0.2em] pb-[0.28em] pt-[0.1em] align-bottom"
+              >
                 <motion.span
                   className="inline-block"
                   initial={{ y: '110%', rotate: 4 }}
@@ -671,16 +674,24 @@ function CardVisual({ v, c }: { v: string; c: string }) {
   );
 }
 
-const GIANT = 'WHAT THE DASHBOARD MISSED · WHAT THE DASHBOARD MISSED';
+const GIANT = 'WHAT THE DASHBOARD MISSED';
 
 export function HorizontalGallery() {
   const ref = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end end'] });
   const x = useTransform(scrollYProgress, [0, 1], ['2%', '-62%']);
-  // Giant outlined words glide the other way, behind the cards.
-  const bx = useTransform(scrollYProgress, [0, 1], ['-28%', '6%']);
+  // Giant words glide the same way as the cards and finish crossing exactly when the cards do.
+  const giant = useRef<HTMLDivElement>(null);
+  const [gw, setGw] = useState({ text: 2000, view: 1440 });
+  useEffect(() => {
+    const m = () => giant.current && setGw({ text: giant.current.scrollWidth, view: innerWidth });
+    m();
+    addEventListener('resize', m);
+    return () => removeEventListener('resize', m);
+  }, []);
+  const bx = useTransform(scrollYProgress, [0, 0.92], [gw.view * 0.06, -(gw.text - gw.view * 0.94)]);
   const bar = useTransform(scrollYProgress, [0, 1], ['4%', '100%']);
-  const fill = useTransform(scrollYProgress, [0, 0.9], ['inset(0 58% 0 0)', 'inset(0 0% 0 0)']);
+  const fill = useTransform(scrollYProgress, [0, 0.9], ['inset(0 72% 0 0)', 'inset(0 0% 0 0)']);
   const [n, setN] = useState(1);
   useMotionValueEvent(scrollYProgress, 'change', (v) =>
     setN(Math.min(CARDS.length, 1 + Math.floor(v * CARDS.length))),
@@ -690,9 +701,10 @@ export function HorizontalGallery() {
     <section ref={ref} className="relative -mt-[18vh] h-[260vh]">
       <div className="sticky top-0 flex h-screen flex-col justify-center overflow-hidden">
         <motion.div
+          ref={giant}
           aria-hidden
           style={{ x: bx }}
-          className="pointer-events-none absolute bottom-[3%] whitespace-nowrap text-[17vw] font-extrabold leading-none tracking-tighter"
+          className="pointer-events-none absolute bottom-[4%] left-0 whitespace-nowrap text-[11vw] font-extrabold leading-none tracking-tighter"
         >
           {/* ghost outline */}
           <span
