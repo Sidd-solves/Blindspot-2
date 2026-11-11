@@ -36,7 +36,7 @@ function Pipeline() {
 
 const STEPS = [
   { c: 'var(--emerald)', icon: PlugZap, t: 'Connect your sales', d: 'Link Shopify (read-only), drop in Shopify\'s order export, or upload any CSV, Excel or PDF sales report. No setup, no account.', ex: 'A store with 50,000 orders is ready in seconds.' },
-  { c: 'var(--cyan)', icon: Search, t: 'Blindspot hunts for problems', d: 'It cleans the data, runs every check, compares your main products, customers and countries with the rest of the business, and tests business ideas, all with real calculations.', ex: '1 million real sales analysed in about 6 seconds.' },
+  { c: 'var(--cyan)', icon: Search, t: 'Blindspot hunts for problems', d: 'It cleans the data, runs every check, compares your main products, customers and countries with the rest of the business, and tests business ideas, all with real calculations.', ex: '1 million real sales: analysis in about 5 seconds.' },
   { c: 'var(--violet)', icon: Wrench, t: 'You get a plan', d: 'Each problem comes with what it costs, how it was proven, what fixing it could be worth, and a roadmap ordered from easy to hard.', ex: 'Plus a one-page report to send a partner or investor.' },
 ];
 

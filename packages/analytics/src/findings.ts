@@ -59,7 +59,10 @@ function analyzeUncached(ds: Dataset): Finding[] {
       const n = distinct(c);
       rec({ id: `dependence-${c}`, topic: 'customers', label: `${c} dependence`, eligible: true, ran: ran.has(c), reason: ran.has(c) ? null : `only ${n} distinct ${c.toLowerCase()} value${n === 1 ? '' : 's'}, too few to measure dependence` });
     }
-    const geo = cols.find((k) => GEO.test(k));
+    // "All" is the placeholder Country for files that have none; it is not a market.
+    const realGeo = (k: string) => GEO.test(k) && sales.some((r) => { const v = String(r[k] ?? ''); return v !== '' && v !== 'All' && !UNKNOWN_BUYER.has(v); });
+    const geo = cols.find(realGeo);
+    if (!geo) rec({ id: 'market-reach', topic: 'markets', label: 'Market reach', eligible: false, ran: false, reason: 'Needs a country or region column.' });
     if (geo) { const n = distinct(geo); rec({ id: 'market-reach', topic: 'markets', label: 'Market reach', eligible: true, ran: ran.has(geo) && n > 1, reason: ran.has(geo) && n > 1 ? null : n === 0 ? `The ${geo} column is empty or only placeholders.` : n === 1 ? `Every sale is in one ${geo.toLowerCase()}.` : `Too few ${plural(geo)} to compare.` }); }
   }
   for (const dim of fm.highCardDims.filter((d) => !ID_LIKE.test(d))) {

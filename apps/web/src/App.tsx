@@ -64,7 +64,7 @@ function ThemeToggle() {
 function FilterBar() {
   const { dataset, setFilter, clearFilters, loading } = useStore();
   if (!dataset) return null;
-  const dims = dataset.columns.filter((c) => c.type === 'category' && c.values && c.distinct <= 50 && c.name !== 'IsReturn').slice(0, 3);
+  const dims = dataset.columns.filter((c) => c.type === 'category' && c.values && c.distinct <= 50 && c.distinct > 1 && c.name !== 'IsReturn').slice(0, 3);
   const colors = ['var(--cyan)', 'var(--fuchsia)', 'var(--emerald)'];
   const active = Object.keys(dataset.filters).length;
   return (

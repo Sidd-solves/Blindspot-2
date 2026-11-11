@@ -149,12 +149,20 @@ function drillRows(rows: any[], d: Drill | null, scope: 'exact' | 'history') {
   });
 }
 
+const placeholderMemo = new WeakMap<object, boolean>();
+const placeholderCountry = (rows: any[]) => {
+  let v = placeholderMemo.get(rows);
+  if (v === undefined) { v = rows.length > 0 && rows.every((r) => r.Country === 'All'); placeholderMemo.set(rows, v); }
+  return v;
+};
+
 /** The exact rows being analysed (after cleaning and the visitor's filters), so anyone can check the numbers. */
 app.get('/api/rows', (req, res) => {
   const q = z.object({ offset: z.coerce.number().int().min(0).default(0), limit: z.coerce.number().int().min(1).max(200).default(50), q: z.string().max(100).default(''), drill: z.string().max(400_000).optional(), scope: z.enum(['exact', 'history']).default('exact') }).parse(req.query);
   const v = sessions.get(sid(req)).view(), needle = q.q.trim().toLowerCase(), drill = parseDrill(q.drill);
   const all = drillRows(v.rows, drill, q.scope);
-  const columns = all.length ? Object.keys(all[0]) : [];
+  // A file without a country column gets the placeholder Country "All" internally; don't show it as if it were data.
+  const columns = all.length ? Object.keys(all[0]).filter((c) => !(c === 'Country' && placeholderCountry(v.rows))) : [];
   const matched = needle ? all.filter((r) => columns.some((c) => String(r[c] ?? '').toLowerCase().includes(needle))) : all;
   const fm = detectFields(v), tx = !!all[0] && 'IsReturn' in all[0], hasOrders = !!all[0] && 'Order' in all[0];
   /** Money is summed in integer minor units (pence/cents) so a reconciliation can be exact, not "within 0.1%". */
@@ -193,7 +201,7 @@ app.get('/api/rows', (req, res) => {
 app.get('/api/rows.csv', (req, res) => {
   const v0 = sessions.get(sid(req)).view(), f = z.object({ drill: z.string().max(400_000).optional(), scope: z.enum(['exact', 'history']).default('exact'), q: z.string().max(100).default('') }).parse(req.query);
   const scoped = drillRows(v0.rows, parseDrill(f.drill), f.scope), needle = f.q.trim().toLowerCase(), keys = scoped.length ? Object.keys(scoped[0]) : [];
-  const v = { ...v0, rows: needle ? scoped.filter((r) => keys.some((c) => String(r[c] ?? '').toLowerCase().includes(needle))) : scoped }, cols = v.rows.length ? Object.keys(v.rows[0]) : [];
+  const v = { ...v0, rows: needle ? scoped.filter((r) => keys.some((c) => String(r[c] ?? '').toLowerCase().includes(needle))) : scoped }, cols = v.rows.length ? Object.keys(v.rows[0]).filter((c) => !(c === 'Country' && placeholderCountry(v0.rows))) : [];
   const esc = (x: unknown) => { const t = x == null ? '' : String(x); return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t; };
   res.set({ 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': `attachment; filename="${v.name.replace(/[^\w -]/g, '').trim() || 'data'}.csv"` });
   res.write(cols.join(',') + '\n');
@@ -333,5 +341,21 @@ async function warmUp() {
 void warmUp().then(() => server.listen(PORT, HOST, () => {
   log(`Blindspot API on http://${HOST}:${PORT} | tools=${listTools().length} | ai=${llm.configured ? llm.model : 'deterministic'} | bridge ws://${HOST}:${PORT}/bridge${env.BRIDGE_TOKEN ? ' (token required)' : ' (no token, dev only)'}`);
   if (PROD && !env.BRIDGE_TOKEN) log('WARNING: BRIDGE_TOKEN not set in production');
+  keepAwake();
 }));
+
+/**
+ * Render's free plan puts a server to sleep after 15 minutes without inbound requests, and the next visitor waits on a
+ * "Welcome to Render" screen. Render tells the server its own public URL (RENDER_EXTERNAL_URL); requesting it every
+ * 10 minutes goes out through Render's proxy and back in, so the service never sits idle long enough to sleep.
+ */
+function keepAwake() {
+  const base = process.env.KEEP_AWAKE_URL ?? process.env.RENDER_EXTERNAL_URL;
+  if (!base) return;
+  const url = `${base.replace(/\/$/, '')}/api/health?keepawake=1`;
+  const ping = () => fetch(url, { signal: AbortSignal.timeout(30_000) }).then((r) => { if (!r.ok) log(`keep-awake: HTTP ${r.status}`); }).catch((e) => log(`keep-awake failed: ${e?.message}`));
+  setInterval(ping, 10 * 60_000).unref();
+  setTimeout(ping, 60_000).unref();
+  log(`keep-awake: pinging ${url} every 10 minutes`);
+}
 export { app, server, sessions, bridge };

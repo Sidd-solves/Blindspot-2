@@ -36,7 +36,7 @@ export default function Results() {
             <div className="mt-2 text-[11.5px] text-[var(--faint)]">Source: UCI Machine Learning Repository, "Online Retail II" (Chen, 2012), CC BY 4.0. Names removed by the publisher. This is historical analysis of public data: it shows what Blindspot finds, not results from a store that acted on it.</div>
           </BeamCard></Reveal>
           <Reveal><div className="grid h-full grid-cols-2 gap-2">
-            {[{ l: 'Rows in the file', v: 1067371, c: 'var(--cyan)' }, { l: 'Countries', v: 43, c: 'var(--blue)' }, { l: 'Problems found', v: findings.length, c: 'var(--rose)' }, { l: 'Seconds to analyse', v: 6, c: 'var(--emerald)' }].map((s) => (
+            {[{ l: 'Rows in the file', v: 1067371, c: 'var(--cyan)' }, { l: 'Countries', v: 43, c: 'var(--blue)' }, { l: 'Problems found', v: findings.length, c: 'var(--rose)' }, { l: 'Seconds to analyse', v: 5, c: 'var(--emerald)' }].map((s) => (
               <div key={s.l} className="tint rounded-xl p-3" style={{ '--c': s.c } as CSSProperties}><div className="label">{s.l}</div><CountUp value={s.v} className="text-[22px] font-semibold" duration={1.6} /></div>
             ))}
           </div></Reveal>
