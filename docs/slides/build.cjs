@@ -4,7 +4,7 @@ pres.layout = 'LAYOUT_16x9';
 pres.title = 'Blindspot: the AI analyst for small online stores';
 const notes = [
   "Hi, this is Blindspot: an AI analyst for small online stores. It shows you what your sales data is hiding. The live demo is at blindspot-8lr1.onrender.com.",
-  "Here's why I built it. Every small shop can see how much it sold, but almost none can see why. Which customers stopped coming back? Which product is quietly dying? They don't need more data. They need someone to read it.",
+  "Here's what inspired it. I kept seeing the same story: sales looked fine while the best customers quietly walked away. The data knew. Nobody asked it. Every chart said growing; none said going. Big companies have data teams. Small shops have a hunch. So I built the analyst they can't afford to hire.",
   "The problem: small shops fly blind. Totals hide problems, a data analyst costs $70K+ a year, and dashboards show what happened but not why.",
   "And it matters. About 1 in 5 new businesses close in their first year, and about half by year five. Winning a new customer costs 5 to 25 times more than keeping one, and keeping just 5% more customers can raise profit by 25 to 95%. The warning signs are already in the sales data. Nobody is reading them.",
   "Here's proof totals lie. In a real UK online shop, sales were up 5%, but its best-selling product was down 51%, 42 of its best customers quietly stopped buying (about \u00a3300K a year), and fewer new customers came back. Blindspot found all of this.",

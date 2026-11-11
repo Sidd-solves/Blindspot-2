@@ -32,7 +32,7 @@
 
 ### 0:15 – 0:35 · Inspiration and the real problem
 🎬 Slide 2 (Inspiration), then Slide 4 (The real problem).
-🎙️ "Every small shop can see how much it sold. Almost none can see why. And that blind spot is expensive. One in five new businesses closes in its first year, and winning a new customer costs five to twenty-five times more than keeping one. The warning signs are already in your sales. Nobody is reading them."
+🎙️ "I kept seeing the same story: sales looked fine while the best customers quietly walked away. The data knew. Nobody asked it. And that blind spot is expensive. One in five new businesses closes in its first year, and winning a new customer costs five to twenty-five times more than keeping one. The warning signs are already in your sales. Nobody is reading them."
 
 ### 0:35 – 0:45 · Totals lie
 🎬 Slide 5 (Totals lie).

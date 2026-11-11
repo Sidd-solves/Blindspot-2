@@ -3,8 +3,10 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 mkdirSync(process.env.PNG ?? 'png', { recursive: true });
 const chrome = spawn('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', ['--headless=new', '--remote-debugging-port=9334', '--user-data-dir=/tmp/deck-profile', '--allow-file-access-from-files', '--hide-scrollbars', 'about:blank'], { stdio: 'ignore' });
-await sleep(2500);
-const t = (await (await fetch('http://127.0.0.1:9334/json')).json()).find((x) => x.type === 'page');
+// Wait for Chrome's debugging port (it can take a while on a cold start).
+let list = null;
+for (let i = 0; i < 40 && !list; i++) { await sleep(500); try { list = await (await fetch('http://127.0.0.1:9334/json')).json(); } catch { /* not up yet */ } }
+const t = list.find((x) => x.type === 'page');
 const ws = new WebSocket(t.webSocketDebuggerUrl); await new Promise((r) => ws.addEventListener('open', r, { once: true }));
 let id = 0; const pend = new Map();
 ws.addEventListener('message', (e) => { const m = JSON.parse(e.data); if (m.id && pend.has(m.id)) { pend.get(m.id)(m); pend.delete(m.id); } });
