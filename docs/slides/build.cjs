@@ -17,9 +17,10 @@ const notes = [
   "Challenges: messy real data, including an 80,995-unit mistaken order; holidays that faked growth; PDFs that don't store tables; and a tiny free server. The AI even caught bugs in my own math.",
   "What I learned: AI is best when it's checked, real data beats demo data, showing your work builds trust, and you should test with the ugliest files you can find.",
   "I built this solo. I run a Shopify store, so I built the tool I needed. Here are the tools I used: React, TypeScript, Node, Claude, the Shopify API and more.",
+  "What's next: more live connectors for WooCommerce, Square and Stripe, weekly alerts that email you new problems, then comparing your store with similar shops and sales forecasts.",
   "It's ready today: connect Shopify live, upload any file in any language, and see every amount in 30 currencies. Try it live: scan the code or go to blindspot-8lr1.onrender.com. Thank you!",
 ];
-for (let i = 1; i <= 15; i++) {
+for (let i = 1; i <= notes.length; i++) {
   const s = pres.addSlide();
   s.background = { color: '05060F' };
   s.addImage({ path: `jpg/slide-${String(i).padStart(2, '0')}.jpg`, x: 0, y: 0, w: 10, h: 5.625, altText: `Blindspot slide ${i}` });

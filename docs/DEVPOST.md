@@ -38,4 +38,4 @@ Any small online store can get an analyst's view for free in seconds. It runs on
 *(Name: role. For example: product direction, design decisions, business analysis, testing, presentation.)*
 
 ## Acknowledgements
-Data: Chen, D. (2012), Online Retail II, UCI Machine Learning Repository, CC BY 4.0. Built with AI assistance (see AI disclosure).
+Data: Chen, D. (2012), Online Retail II, UCI Machine Learning Repository, CC BY 4.0.

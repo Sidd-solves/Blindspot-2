@@ -20,12 +20,12 @@ An AI analyst for small online stores. Drop in your sales export and it finds wh
 
 **Proof it works.** We tested it on two years of real sales from a UK online shop (UCI Machine Learning Repository, over a million lines). It found a best-seller down 51% while the shop grew, and 42 top customers who had quietly stopped ordering. We re-checked seven headline numbers with separate code: all seven match.
 
-**Built with** React, TypeScript, Node.js, Claude (Anthropic API), the Model Context Protocol and the Shopify Admin API. It's deployed live on Render.
+**Built with** React, TypeScript, Node.js, Claude (Anthropic API), Claude Code, the Model Context Protocol and the Shopify Admin API. It's deployed live on Render.
 
 ---
 
 ## Built with (Devpost tags; type each one and press Enter)
-react, typescript, node.js, express, claude, anthropic, model-context-protocol, shopify, vite, tailwindcss, framer-motion, recharts, zod, render
+react, typescript, node.js, express, claude, claude-code, anthropic, model-context-protocol, shopify, vite, tailwindcss, framer-motion, recharts, zod, render
 
 ## "Try it out" links
 - Live app: https://blindspot-8lr1.onrender.com
@@ -42,6 +42,3 @@ Solo.
 - **Challenges:** Real data is messy. Holiday rushes looked like growth until we compared with the same months last year. One mistaken giant order inflated sales and returns until we detected orders reversed within two days. The AI itself caught that returns were counted differently in two places.
 - **What I learned:** An AI is most useful when it's checked. Letting it propose ideas and making code verify them gave answers I could trust.
 - **What's next:** More live connectors (WooCommerce, Square, Stripe), weekly email alerts, and comparing your store with similar stores.
-
-## AI-use disclosure
-I built Blindspot with Claude Code as a coding partner. I made the product decisions (small-business focus, data sources, design, which problems matter); the AI helped write and debug the code.
