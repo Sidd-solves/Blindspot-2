@@ -33,7 +33,7 @@ export default function Results() {
           <Reveal><BeamCard on c="var(--violet)" className="h-full p-5">
             <div className="flex items-center gap-2"><Globe2 size={16} style={{ color: 'var(--violet)' }} /><span className="text-[14px] font-extrabold">The shop</span></div>
             <p className="mt-2 text-[13px] leading-relaxed text-[var(--muted)]">A real UK online gift shop, two years of sales (Dec 2009 to Dec 2011), with customers in 43 countries. The data is messy the way real shops are: returns, duplicates, fees and missing customers.</p>
-            <div className="mt-2 text-[10.5px] text-[var(--faint)]">Source: UCI Machine Learning Repository, "Online Retail II" (Chen, 2012), CC BY 4.0. Names removed by the publisher.</div>
+            <div className="mt-2 text-[11.5px] text-[var(--faint)]">Source: UCI Machine Learning Repository, "Online Retail II" (Chen, 2012), CC BY 4.0. Names removed by the publisher. This is historical analysis of public data: it shows what Blindspot finds, not results from a store that acted on it.</div>
           </BeamCard></Reveal>
           <Reveal><div className="grid h-full grid-cols-2 gap-2">
             {[{ l: 'Sales lines', v: 1067371, c: 'var(--cyan)' }, { l: 'Countries', v: 43, c: 'var(--blue)' }, { l: 'Problems found', v: findings.length, c: 'var(--rose)' }, { l: 'Seconds to analyse', v: 6, c: 'var(--emerald)' }].map((s) => (
@@ -52,7 +52,7 @@ export default function Results() {
               <div className="mt-2 text-[13.5px] font-extrabold leading-snug">{f.title}</div>
               <div className="mt-1 text-[12px] text-[var(--muted)]"><span className="font-bold" style={{ color: 'var(--emerald)' }}>Fix: </span>{f.nextAction}</div>
               <motion.div className="mt-3 h-[2px] origin-left rounded-full" style={{ background: SEV[f.severity].c, boxShadow: `0 0 10px ${SEV[f.severity].c}` }} initial={{ scaleX: 0 }} whileInView={{ scaleX: f.confidence }} viewport={{ once: true }} transition={{ duration: 0.9, delay: i * 0.05 }} />
-              <div className="mt-1 text-[10px] text-[var(--faint)]">{evidenceText(f)}</div>
+              <div className="mt-1 text-[11px] text-[var(--faint)]">{evidenceText(f)}</div>
             </BeamCard></Reveal>
           ))}
         </div>
@@ -63,7 +63,7 @@ export default function Results() {
           <div className="flex items-center gap-2"><BadgeCheck size={16} style={{ color: 'var(--emerald)' }} /><span className="text-[14px] font-extrabold">Fact-checked</span></div>
           <p className="mt-1 text-[12px] text-[var(--muted)]">Every headline number was recalculated by separate code. All match exactly, on the full million rows.</p>
           <div className="mt-3 overflow-hidden rounded-lg border" style={{ borderColor: 'var(--line)' }}>
-            <div className="grid grid-cols-[1.4fr_1fr_1fr_auto] gap-2 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-[var(--faint)]" style={{ background: 'var(--line)' }}><span>Number</span><span>Blindspot</span><span>Re-check</span><span /></div>
+            <div className="grid grid-cols-[1.4fr_1fr_1fr_auto] gap-2 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-[var(--faint)]" style={{ background: 'var(--line)' }}><span>Number</span><span>Blindspot</span><span>Re-check</span><span /></div>
             {FACTS.map(([n, a, b], i) => (
               <motion.div key={n} initial={{ opacity: 0, x: -6 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.06 }} className="grid grid-cols-[1.4fr_1fr_1fr_auto] items-center gap-2 border-t px-3 py-1.5 text-[11.5px]" style={{ borderColor: 'var(--line)' }}>
                 <span className="font-semibold">{n}</span><span className="mono">{a}</span><span className="mono">{b}</span><Check size={13} style={{ color: 'var(--emerald)' }} />
@@ -72,7 +72,7 @@ export default function Results() {
           </div>
         </BeamCard></Reveal>
         <Reveal><BeamCard c="var(--fuchsia)" className="h-full p-5">
-          <div className="flex items-center gap-2"><Database size={16} style={{ color: 'var(--fuchsia)' }} /><span className="text-[14px] font-extrabold">Ideas it proved true or false</span></div>
+          <div className="flex items-center gap-2"><Database size={16} style={{ color: 'var(--fuchsia)' }} /><span className="text-[14px] font-extrabold">Ideas it tested against the data</span></div>
           <div className="mt-3 space-y-1.5">{ideas.map((h, i) => (
             <motion.div key={h.id} initial={{ opacity: 0, y: 6 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.06 }} className="rounded-lg px-3 py-2" style={{ background: 'var(--line)', borderLeft: `3px solid ${VERDICT[h.verdict]?.c}` }}>
               <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider" style={{ color: VERDICT[h.verdict]?.c }}>{h.verdict === 'supported' ? <Check size={11} /> : <X size={11} />}{VERDICT[h.verdict]?.label}</div>

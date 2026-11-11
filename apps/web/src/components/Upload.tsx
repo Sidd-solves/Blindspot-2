@@ -35,7 +35,7 @@ export function UploadZone({ c = 'var(--blue)', title, hint, icon, compact, onDo
             <motion.div key={`${f.name}${f.size}${f.lastModified}`} layout initial={{ opacity: 0, y: -6, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, x: 20, height: 0, marginTop: 0 }} transition={{ type: 'spring', stiffness: 320, damping: 28 }}
               className="flex items-center gap-2.5 rounded-xl border px-2.5 py-2" style={{ borderColor: `color-mix(in srgb, ${ic} 30%, var(--line))`, background: `color-mix(in srgb, ${ic} 6%, transparent)` }}>
               <span className="grid h-8 w-8 flex-none place-items-center rounded-lg" style={{ background: `color-mix(in srgb, ${ic} 16%, transparent)`, color: ic }}><Icon size={15} /></span>
-              <div className="min-w-0 flex-1"><div className="truncate text-[12.5px] font-bold" title={f.name}>{f.name}</div><div className="text-[10.5px] text-[var(--faint)]">{size(f.size)} · ready to read</div></div>
+              <div className="min-w-0 flex-1"><div className="truncate text-[12.5px] font-bold" title={f.name}>{f.name}</div><div className="text-[11.5px] text-[var(--faint)]">{size(f.size)} · ready to read</div></div>
               <motion.button whileTap={{ scale: 0.85 }} whileHover={{ scale: 1.1 }} onClick={() => unstage(i)} disabled={busy} className="grid h-7 w-7 flex-none place-items-center rounded-lg text-[var(--muted)] hover:bg-[var(--line)] hover:text-[var(--rose)]" aria-label={`Remove ${f.name}`}><X size={14} /></motion.button>
             </motion.div>
           );
@@ -51,7 +51,7 @@ export function UploadZone({ c = 'var(--blue)', title, hint, icon, compact, onDo
         ) : (<>
           <motion.div animate={{ y: drag ? -5 : [0, -3, 0] }} transition={{ duration: 2, repeat: drag ? 0 : Infinity }} style={{ color: c }}>{icon ?? <UploadCloud size={22} />}</motion.div>
           <div className="mt-1 text-[12.5px] font-bold">{title}</div>
-          <div className="text-[10.5px] text-[var(--faint)]">{hint} · drop or click to choose</div>
+          <div className="text-[11.5px] text-[var(--faint)]">{hint} · drop or click to choose</div>
         </>)}
       </label>
 

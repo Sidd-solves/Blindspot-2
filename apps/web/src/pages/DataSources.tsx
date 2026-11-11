@@ -51,12 +51,12 @@ function ShopifyConnect() {
         <div className="flex flex-wrap items-center gap-2">
           <Dropdown width={150} c={SHOPIFY} value={range} options={Object.keys(RANGES)} onChange={setRange} placeholder="Last 12 months" />
           <motion.button whileTap={{ scale: 0.96 }} className="btn btn-primary" disabled={!ready || st.busy}><PlugZap size={13} />{st.busy ? 'Connecting' : 'Connect store'}</motion.button>
-          <span className="flex items-center gap-1 text-[10.5px] text-[var(--faint)]"><Lock size={10} />Read-only. Keys are used once and never saved.</span>
+          <span className="flex items-center gap-1 text-[11.5px] text-[var(--faint)]"><Lock size={10} />Read-only. Keys are used once and never saved.</span>
         </div>
         <div className="min-h-[18px] text-[11.5px]">
           {st.busy && <Loading steps={['Authenticating with Shopify…', 'Pulling orders…', 'Matching product costs…', 'Finding risks…']} />}
           {st.err && <span className="text-[var(--rose)]">{st.err}</span>}
-          {st.ok && <span className="flex flex-wrap items-center gap-2 text-[var(--emerald)]"><Check size={12} />{st.ok}<button type="button" className="btn !h-6 text-[10.5px]" onClick={() => go('overview')}>See insights</button></span>}
+          {st.ok && <span className="flex flex-wrap items-center gap-2 text-[var(--emerald)]"><Check size={12} />{st.ok}<button type="button" className="btn !h-6 text-[11.5px]" onClick={() => go('overview')}>See insights</button></span>}
         </div>
       </form>
       <button onClick={() => setHelp(!help)} className="row-hover flex w-full items-center justify-between border-t px-3.5 py-2.5 text-[12px] font-bold" style={{ borderColor: 'var(--line)' }}>
@@ -75,7 +75,7 @@ function ShopifyConnect() {
                 'Only for stores that already have a custom app made in the Shopify admin (Shopify no longer lets you create new ones there).',
                 'Open Apps → Develop apps → your app → API credentials.',
                 'Make sure it has read_orders, read_products and read_inventory, then copy the Admin API access token.',
-              ]).map((s, i) => <motion.li key={s} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }} className="flex gap-2"><span className="mono grid h-4 w-4 flex-none place-items-center rounded text-[9.5px] font-bold text-white" style={{ background: SHOPIFY }}>{i + 1}</span>{s}</motion.li>)}
+              ]).map((s, i) => <motion.li key={s} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }} className="flex gap-2"><span className="mono grid h-4 w-4 flex-none place-items-center rounded text-[11px] font-bold text-white" style={{ background: SHOPIFY }}>{i + 1}</span>{s}</motion.li>)}
               <li><a className="inline-flex items-center gap-1 font-bold" style={{ color: SHOPIFY }} href="https://shopify.dev/docs/apps/build/authentication-authorization/client-credentials-grant" target="_blank" rel="noreferrer">Shopify's guide<ExternalLink size={11} /></a></li>
             </ol>
           </motion.div>
@@ -96,7 +96,7 @@ export default function DataSources() {
           <CardHead icon={<FileSpreadsheet size={13} />} title="No setup: upload a Shopify export" c={SHOPIFY} />
           <ol className="space-y-1 px-3.5 pb-2 text-[11px] text-[var(--muted)]">
             {['In your Shopify admin, open Orders.', 'Click Export (top right).', 'Choose "All orders" and "CSV for Excel, Numbers, or other spreadsheet programs".', 'Click Export orders. Shopify emails you the file (or downloads it).', 'Drop that file below.'].map((s, i) => (
-              <li key={s} className="flex gap-2"><span className="mono grid h-4 w-4 flex-none place-items-center rounded text-[9.5px] font-bold text-white" style={{ background: SHOPIFY }}>{i + 1}</span>{s}</li>
+              <li key={s} className="flex gap-2"><span className="mono grid h-4 w-4 flex-none place-items-center rounded text-[11px] font-bold text-white" style={{ background: SHOPIFY }}>{i + 1}</span>{s}</li>
             ))}
           </ol>
           <div className="px-3.5 pb-3 text-[11px] text-[var(--muted)]">Then drop it in <b className="text-[var(--text)]">Upload your files</b> below. <a href="#/guide/shopify-export" className="font-bold" style={{ color: SHOPIFY }}>Full guide</a></div>
@@ -133,14 +133,14 @@ export default function DataSources() {
             ['Duplicate lines removed', dataset.prep.duplicateRows], ['Return / cancel lines', dataset.prep.returnLines],
             ['Fee & postage lines set aside', dataset.prep.feeLines], ['Zero-price lines removed', dataset.prep.zeroPriceRows],
             ['Sales with no customer', dataset.prep.missingCustomerRows], ['Lines analysed', dataset.prep.keptRows],
-          ].map(([k, v], i) => <motion.div key={k as string} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.04 }} className="rounded-md px-2 py-1.5" style={{ background: 'var(--line)' }}><div className="text-[9.5px] font-bold uppercase tracking-wider text-[var(--faint)]">{k}</div><div className="mono text-[13px] font-semibold">{Number(v).toLocaleString()}</div></motion.div>)}
+          ].map(([k, v], i) => <motion.div key={k as string} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.04 }} className="rounded-md px-2 py-1.5" style={{ background: 'var(--line)' }}><div className="text-[11px] font-bold uppercase tracking-wider text-[var(--faint)]">{k}</div><div className="mono text-[13px] font-semibold">{Number(v).toLocaleString()}</div></motion.div>)}
         </div>
       </Card>}
 
       <Card c="var(--violet)" hover={false} className="p-3.5 lg:col-span-12">
         <div className="flex flex-wrap items-center gap-3">
           <span className="grid h-8 w-8 place-items-center rounded-lg tint" style={{ '--c': 'var(--violet)', color: 'var(--violet)' } as CSSProperties}><Sparkles size={15} /></span>
-          <div className="min-w-0 flex-1"><div className="text-[12.5px] font-extrabold">Currently analysing: {dataset?.name}</div><div className="text-[11px] text-[var(--muted)]">{dataset?.label} · {dataset?.rows.toLocaleString()} rows</div>{dataset?.citation && <div className="mt-0.5 text-[10px] text-[var(--faint)]">Source: {dataset.citation}</div>}</div>
+          <div className="min-w-0 flex-1"><div className="text-[12.5px] font-extrabold">Currently analysing: {dataset?.name}</div><div className="text-[11px] text-[var(--muted)]">{dataset?.label} · {dataset?.rows.toLocaleString()} rows</div>{dataset?.citation && <div className="mt-0.5 text-[11px] text-[var(--faint)]">Source: {dataset.citation}</div>}</div>
           {upload.report && dataset?.source === 'csv' && <button className="btn" onClick={() => setReviewOpen(true)}><ListChecks size={13} style={{ color: 'var(--emerald)' }} />How we read your file</button>}
           {dataset?.source !== 'sample' && <button className="btn" onClick={async () => { await post('/api/dataset/sample', {}); refresh(); }}><RotateCcw size={13} />Switch to fake demo shop</button>}
           <button className="btn btn-primary" onClick={() => go('overview')}>See insights</button>

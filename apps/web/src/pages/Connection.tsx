@@ -69,7 +69,7 @@ export default function Connection() {
               <div className="flex items-center justify-between"><span className="grid h-7 w-7 place-items-center rounded-lg" style={{ color: t.c, background: `color-mix(in srgb, ${t.c} 15%, transparent)` }}><t.icon size={14} /></span>{s && <span className="pulse-dot" style={{ '--c': good ? 'var(--emerald)' : 'var(--amber)' } as CSSProperties} />}</div>
               <div className="mt-2 text-[12.5px] font-extrabold">{t.label}</div>
               <AnimatePresence mode="wait"><motion.div key={s?.status} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="text-[11px]" style={{ color: good ? 'var(--emerald)' : 'var(--amber)' }}>{checking ? 'Testing…' : s?.status.replace('_', ' ') ?? '…'}</motion.div></AnimatePresence>
-              <div className="mt-0.5 truncate text-[10.5px] text-[var(--faint)]" title={s?.detail}>{s?.detail}</div>
+              <div className="mt-0.5 truncate text-[11.5px] text-[var(--faint)]" title={s?.detail}>{s?.detail}</div>
               {i === 3 && <div className="mt-1" />}
             </Card>
           );
@@ -84,7 +84,7 @@ export default function Connection() {
           <CardHead icon={<Radio size={13} />} title="Bridge events" c="var(--cyan)" right={<Chip c={extension ? 'var(--emerald)' : 'var(--faint)'} pulse={extension}>{extension ? 'Streaming' : 'Idle'}</Chip>} />
           <div className="max-h-[160px] space-y-0.5 overflow-y-auto px-2 pb-2">
             {events.length === 0 && <div className="px-2 pb-2 text-[11px] text-[var(--faint)]">Filter and parameter changes in Tableau appear here in real time.</div>}
-            {events.map((e, i) => <motion.div key={e.at + i} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-2 px-1.5 py-1 text-[11px]"><span className="h-1.5 w-1.5 rounded-full" style={{ background: 'var(--cyan)' }} /><span className="mono font-semibold">{e.name}</span><span className="truncate text-[var(--muted)]">{JSON.stringify(e.payload).slice(0, 40)}</span><span className="mono ml-auto text-[10px] text-[var(--faint)]">{ago(e.at, now)}</span></motion.div>)}
+            {events.map((e, i) => <motion.div key={e.at + i} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-2 px-1.5 py-1 text-[11px]"><span className="h-1.5 w-1.5 rounded-full" style={{ background: 'var(--cyan)' }} /><span className="mono font-semibold">{e.name}</span><span className="truncate text-[var(--muted)]">{JSON.stringify(e.payload).slice(0, 40)}</span><span className="mono ml-auto text-[11px] text-[var(--faint)]">{ago(e.at, now)}</span></motion.div>)}
           </div>
         </Card>
       </div>
@@ -99,9 +99,9 @@ export default function Connection() {
             { t: 'Analyse live', d: 'Worksheets, filters and parameters now flow to every page here.', c: 'var(--emerald)' },
           ].map((s, i) => (
             <motion.div key={s.t} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 * i }} className="tint rounded-lg p-2.5" style={{ '--c': s.c } as CSSProperties}>
-              <div className="flex items-center gap-1.5"><span className="mono grid h-5 w-5 place-items-center rounded-md text-[10.5px] font-bold text-white" style={{ background: s.c }}>{i + 1}</span><span className="text-[12px] font-extrabold">{s.t}</span>{i === 3 && extension && <CheckCircle2 size={13} style={{ color: 'var(--emerald)' }} />}</div>
+              <div className="flex items-center gap-1.5"><span className="mono grid h-5 w-5 place-items-center rounded-md text-[11.5px] font-bold text-white" style={{ background: s.c }}>{i + 1}</span><span className="text-[12px] font-extrabold">{s.t}</span>{i === 3 && extension && <CheckCircle2 size={13} style={{ color: 'var(--emerald)' }} />}</div>
               <div className="mt-1 text-[11px] text-[var(--muted)]">{s.d}</div>
-              {s.dl && <a className="btn mt-1.5 !h-6 text-[10.5px]" href="http://127.0.0.1:8765/blindspot.trex" download><Download size={11} />blindspot.trex</a>}
+              {s.dl && <a className="btn mt-1.5 !h-6 text-[11.5px]" href="http://127.0.0.1:8765/blindspot.trex" download><Download size={11} />blindspot.trex</a>}
             </motion.div>
           ))}
         </div>

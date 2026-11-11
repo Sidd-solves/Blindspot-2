@@ -49,11 +49,11 @@ function SamplePreview() {
   const f = PREVIEW_FINDINGS[k];
   return (
     <div className="relative overflow-hidden rounded-xl border p-3" style={{ borderColor: 'var(--line)', background: 'linear-gradient(160deg, color-mix(in srgb, var(--violet) 10%, transparent), transparent 60%)' }}>
-      <div className="mb-2 flex items-center gap-1.5">{['var(--rose)', 'var(--amber)', 'var(--emerald)'].map((c) => <span key={c} className="h-2 w-2 rounded-full" style={{ background: c, opacity: 0.7 }} />)}<span className="ml-1 text-[10px] font-bold text-[var(--faint)]">UK gift shop · Overview</span></div>
+      <div className="mb-2 flex items-center gap-1.5">{['var(--rose)', 'var(--amber)', 'var(--emerald)'].map((c) => <span key={c} className="h-2 w-2 rounded-full" style={{ background: c, opacity: 0.7 }} />)}<span className="ml-1 text-[11px] font-bold text-[var(--faint)]">UK gift shop · Overview</span></div>
       <div className="grid grid-cols-3 gap-1.5">
         {[{ l: 'Sales lines', v: 261658, c: 'var(--violet)' }, { l: 'Orders', v: 9964, c: 'var(--cyan)' }, { l: 'Customers', v: 1465, c: 'var(--emerald)' }].map((s) => (
           <div key={s.l} className="rounded-lg px-2 py-1.5" style={{ background: 'var(--line)' }}>
-            <div className="text-[9px] font-bold uppercase tracking-wider text-[var(--faint)]">{s.l}</div>
+            <div className="text-[11px] font-bold uppercase tracking-wider text-[var(--faint)]">{s.l}</div>
             <CountUp value={s.v} className="mono block text-[13px] font-semibold" />
             <div className="mt-1 h-[2px] rounded" style={{ background: s.c, boxShadow: `0 0 8px ${s.c}` }} />
           </div>
@@ -94,7 +94,7 @@ export default function Start() {
           <div className="label">Use your own data</div>
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, type: 'spring', stiffness: 220, damping: 26 }}>
             <BeamCard c="var(--emerald)" className="p-4">
-              <div className="flex flex-wrap items-center gap-1.5"><Upload size={16} style={{ color: 'var(--emerald)' }} /><span className="text-[15px] font-extrabold">Upload an export</span><span className="chip !py-0.5 !text-[10px]" style={{ '--c': 'var(--emerald)' } as CSSProperties}>Any store · no setup</span></div>
+              <div className="flex flex-wrap items-center gap-1.5"><Upload size={16} style={{ color: 'var(--emerald)' }} /><span className="text-[15px] font-extrabold">Upload an export</span><span className="chip !py-0.5 !text-[11px]" style={{ '--c': 'var(--emerald)' } as CSSProperties}>Any store · no setup</span></div>
               <div className="mt-3"><UploadZone c="var(--emerald)" title="Drop your export here" hint="CSV, Excel or PDF · from Shopify, Tableau, Etsy, WooCommerce, Square, Amazon and more" onDone={toApp} /></div>
               <div className="label mb-2 mt-2">How to export from</div>
               <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4">
@@ -116,7 +116,7 @@ export default function Start() {
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
                 {[{ id: 'shopify-connect', t: 'Shopify', d: 'Pulls your latest orders. Read-only.', icon: ShoppingBag, c: 'var(--emerald)', tag: 'Live' }, { id: 'tableau', t: 'Tableau', d: 'Reads a live dashboard through our extension.', icon: BarChart3, c: 'var(--cyan)', tag: 'Beta' }].map((x) => (
                   <div key={x.id} className="rounded-xl border p-3" style={{ borderColor: `color-mix(in srgb, ${x.c} 26%, var(--line))` }}>
-                    <div className="flex items-center gap-2"><span className="grid h-7 w-7 place-items-center rounded-lg" style={{ background: `color-mix(in srgb, ${x.c} 18%, transparent)`, color: x.c }}><x.icon size={14} /></span><span className="text-[13px] font-extrabold">{x.t}</span><span className="chip !py-0 !text-[9.5px]" style={{ '--c': x.c } as CSSProperties}>{x.tag}</span></div>
+                    <div className="flex items-center gap-2"><span className="grid h-7 w-7 place-items-center rounded-lg" style={{ background: `color-mix(in srgb, ${x.c} 18%, transparent)`, color: x.c }}><x.icon size={14} /></span><span className="text-[13px] font-extrabold">{x.t}</span><span className="chip !py-0 !text-[11px]" style={{ '--c': x.c } as CSSProperties}>{x.tag}</span></div>
                     <div className="mt-1 text-[11.5px] text-[var(--muted)]">{x.d}</div>
                     <div className="mt-2 flex items-center gap-2">
                       <motion.button whileTap={{ scale: 0.95 }} className="btn btn-primary !h-7 text-[11px]" onClick={() => openApp('data')}>Connect</motion.button>
@@ -137,7 +137,7 @@ export default function Start() {
         <motion.div initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.25, type: 'spring', stiffness: 200, damping: 26 }} className="lg:sticky lg:top-24 lg:self-start">
           <div className="label mb-3">Or just look around</div>
           <BeamCard on c="var(--violet)" className="p-4">
-            <div className="flex items-center gap-2"><Eye size={16} style={{ color: 'var(--violet)' }} /><span className="text-[15px] font-extrabold">Try our sample store</span><span className="chip !py-0.5 !text-[10px]" style={{ '--c': 'var(--violet)' } as CSSProperties}>Real data</span></div>
+            <div className="flex items-center gap-2"><Eye size={16} style={{ color: 'var(--violet)' }} /><span className="text-[15px] font-extrabold">Try our sample store</span><span className="chip !py-0.5 !text-[11px]" style={{ '--c': 'var(--violet)' } as CSSProperties}>Real data</span></div>
             <div className="mt-1 text-[12px] text-[var(--muted)]">A real UK online gift shop: two years of sales, returns and customers.</div>
             <div className="mt-3"><SamplePreview /></div>
             <div className="mt-3 grid gap-2">
@@ -148,7 +148,7 @@ export default function Start() {
                 {busy === 'source' ? <Loading steps={['Loading rows…']} /> : <><Table2 size={13} style={{ color: 'var(--sky)' }} />See the source data</>}
               </motion.button>
             </div>
-            <div className="mt-3 flex items-center justify-between gap-2 border-t pt-2.5 text-[10.5px] text-[var(--faint)]" style={{ borderColor: 'var(--line)' }}>
+            <div className="mt-3 flex items-center justify-between gap-2 border-t pt-2.5 text-[11.5px] text-[var(--faint)]" style={{ borderColor: 'var(--line)' }}>
               <span>Want to test an upload? Grab a real file.</span>
               <a href="/samples/real-shop-sales-sample.csv" download className="flex flex-none items-center gap-1 font-bold" style={{ color: 'var(--violet)' }}><Download size={11} />Sample CSV</a>
             </div>

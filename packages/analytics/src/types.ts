@@ -48,6 +48,8 @@ export interface Finding {
   period: string | null;
   /** What the money figure is: lost (already gone), at-risk (could be lost), reversed (cancelled, never earned), untracked (sales not linked to a customer). */
   exposure: 'lost' | 'at-risk' | 'reversed' | 'untracked' | null;
+  /** The exact rows behind the finding, for drill-through: rows where `field` is one of `values`. */
+  drill?: { field: string; values: string[]; label: string } | null;
   metric: string;
   explanation: string;
   evidence: Record<string, unknown>;

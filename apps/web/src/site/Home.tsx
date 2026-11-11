@@ -22,7 +22,7 @@ export function LivePreview() {
   return (
     <BeamCard on c="var(--cyan)" className="relative overflow-hidden p-4">
       <div className="scanline" />
-      <div className="flex items-center gap-1.5 pb-3"><span className="h-2 w-2 rounded-full bg-[#fb7185]" /><span className="h-2 w-2 rounded-full bg-[#fbbf24]" /><span className="h-2 w-2 rounded-full bg-[#34d399]" /><span className="mono ml-2 truncate text-[10px] text-[var(--faint)]">blindspot · analysing {dataset?.rows.toLocaleString() ?? '…'} sales</span></div>
+      <div className="flex items-center gap-1.5 pb-3"><span className="h-2 w-2 rounded-full bg-[#fb7185]" /><span className="h-2 w-2 rounded-full bg-[#fbbf24]" /><span className="h-2 w-2 rounded-full bg-[#34d399]" /><span className="mono ml-2 truncate text-[11px] text-[var(--faint)]">blindspot · analysing {dataset?.rows.toLocaleString() ?? '…'} sales</span></div>
       <div className="flex items-center justify-between">
         <div className="min-w-0"><div className="label flex items-center gap-1"><span className="pulse-dot" style={{ '--c': 'var(--emerald)', width: 6, height: 6 } as CSSProperties} />{dataset?.source === 'case-study' ? 'Live · real UK online shop' : 'Live analysis'}</div><div className="truncate text-[13px] font-extrabold">{dataset?.name ?? 'Loading…'}</div></div>
         <Ring value={health / 100} size={60} stroke={6} c={health >= 60 ? 'var(--cyan)' : health >= 40 ? 'var(--amber)' : 'var(--rose)'}><div className="text-center"><div className="mono text-[14px] font-semibold leading-none">{health}</div><div className="text-[7.5px] font-bold uppercase text-[var(--faint)]">health</div></div></Ring>
@@ -31,8 +31,8 @@ export function LivePreview() {
         {findings.slice(0, 5).map((f, i) => (
           <motion.div key={f.id} initial={{ opacity: 0, x: 18, filter: 'blur(4px)' }} animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }} transition={{ delay: 0.6 + i * 0.22 }} className="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5" style={{ background: 'color-mix(in srgb, var(--panel-solid) 70%, transparent)', border: '1px solid var(--line)' }}>
             <span className="h-6 w-1 flex-none rounded-full" style={{ background: SEV[f.severity].c, boxShadow: `0 0 10px ${SEV[f.severity].c}` }} />
-            <div className="min-w-0 flex-1"><div className="truncate text-[11.5px] font-bold">{f.title}</div><div className="text-[9.5px] font-bold uppercase tracking-wider" style={{ color: CAT[f.category]?.c }}>{CAT[f.category]?.label}</div></div>
-            {f.impactUsd ? <span className="mono flex-none text-[10.5px] font-semibold" style={{ color: SEV[f.severity].c }}>{usd(f.impactUsd, true)}</span> : null}
+            <div className="min-w-0 flex-1"><div className="truncate text-[11.5px] font-bold">{f.title}</div><div className="text-[11px] font-bold uppercase tracking-wider" style={{ color: CAT[f.category]?.c }}>{CAT[f.category]?.label}</div></div>
+            {f.impactUsd ? <span className="mono flex-none text-[11.5px] font-semibold" style={{ color: SEV[f.severity].c }}>{usd(f.impactUsd, true)}</span> : null}
           </motion.div>
         ))}
         {!findings.length && [0, 1, 2, 3, 4].map((i) => <div key={i} className="skeleton h-10" />)}
@@ -95,7 +95,7 @@ export default function Home() {
           <Reveal className="md:row-span-2"><BeamCard c="var(--rose)" className="flex h-full flex-col justify-between p-5">
             <div><div className="text-[18px] font-extrabold">Dashboards show what happened.</div><p className="mt-2 text-[13px] leading-relaxed text-[var(--muted)]">A chart of sales going up feels good. It won't tell you your best customer stopped ordering last month.</p></div>
             <div className="mt-6 flex h-24 items-end gap-1.5">{[38, 46, 41, 55, 62, 58, 70, 76, 81, 88].map((h, i) => <motion.div key={i} className="flex-1 rounded-t" style={{ background: i === 7 ? 'var(--rose)' : 'color-mix(in srgb, var(--violet) 55%, transparent)', boxShadow: i === 7 ? '0 0 16px var(--rose)' : 'none' }} initial={{ height: 0 }} whileInView={{ height: `${h}%` }} viewport={{ once: true }} transition={{ delay: i * 0.06, type: 'spring' }} />)}</div>
-            <div className="mt-2 text-[10.5px] text-[var(--faint)]">Total keeps rising… while one key account quietly disappears.</div>
+            <div className="mt-2 text-[11.5px] text-[var(--faint)]">Total keeps rising… while one key account quietly disappears.</div>
           </BeamCard></Reveal>
           <Reveal className="md:col-span-2"><BeamCard c="var(--amber)" className="h-full p-5"><div className="text-[16px] font-extrabold">Analysts are for big companies.</div><p className="mt-1.5 text-[13px] text-[var(--muted)]">Large retailers pay data teams to hunt for these problems every week. A small shop gets a spreadsheet and a hunch.</p></BeamCard></Reveal>
           <Reveal className="md:col-span-2"><BeamCard c="var(--violet)" className="h-full p-5"><div className="text-[16px] font-extrabold">The costly problems are quiet.</div><p className="mt-1.5 text-[13px] text-[var(--muted)]">Returns, lost customers and products that stopped selling don't announce themselves. They just slowly drain money.</p></BeamCard></Reveal>
@@ -118,7 +118,7 @@ export default function Home() {
         <Reveal><BeamCard on c="var(--emerald)" className="p-5 md:p-6">
           <div className="flex flex-wrap items-center justify-between gap-3"><div><div className="label" style={{ color: 'var(--emerald)' }}>Real results</div><div className="mt-1 text-[20px] font-extrabold tracking-tight md:text-[24px]">Tested on a real online shop's sales.</div></div><span className="chip" style={{ '--c': 'var(--emerald)' } as CSSProperties}><BadgeCheck size={11} />Every number independently re-checked</span></div>
           <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
-            {[{ l: 'Sales lines analysed', v: dataset?.rows ?? 0, c: 'var(--cyan)' }, { l: 'Problems found', v: findings.length, c: 'var(--rose)' }, { l: 'Ideas proven true or false', v: decided.length, c: 'var(--emerald)' }, { l: 'Seconds to analyse', v: 2, c: 'var(--violet)' }].map((s) => (
+            {[{ l: 'Sales lines analysed', v: dataset?.rows ?? 0, c: 'var(--cyan)' }, { l: 'Problems found', v: findings.length, c: 'var(--rose)' }, { l: 'Ideas tested by statistics', v: decided.length, c: 'var(--emerald)' }, { l: 'Seconds to analyse', v: 2, c: 'var(--violet)' }].map((s) => (
               <div key={s.l} className="tint rounded-xl p-3" style={{ '--c': s.c } as CSSProperties}><div className="label">{s.l}</div><CountUp value={s.v} className="text-[24px] font-semibold" duration={1.6} /></div>
             ))}
           </div>

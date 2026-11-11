@@ -101,7 +101,7 @@ export function executiveSummary(ds: Dataset, findings: Finding[]) {
     `> Data: ${ds.label}. Figures are computed from ${ds.rows.length.toLocaleString()} rows; scenarios are hypothetical.`,
     '', `**Revenue per year** ${usd(base.revenue)} | **Profit** ${base.profit === null ? 'not in your data (no cost or profit column)' : `${usd(base.profit)} per year | **Margin** ${base.revenue ? ((base.profit / base.revenue) * 100).toFixed(1) : '0'}%`}`,
     '', '## Top 3 findings',
-    ...top.map((f, i) => `${i + 1}. **${f.title}** [${f.severity}; ${f.basis === 'tested' && f.pValue !== null ? `statistically tested, p = ${f.pValue < 0.001 ? '< 0.001' : f.pValue.toFixed(3)}` : f.basis === 'measured' ? 'measured' : 'rule of thumb'}${f.period ? `; ${f.period}` : ''}]. ${f.explanation}`),
+    ...top.map((f, i) => `${i + 1}. **${f.title}** [${f.severity}; ${f.basis === 'tested' && f.pValue !== null ? `statistically tested, ${f.pValue < 0.001 ? 'p < 0.001' : `p = ${f.pValue.toFixed(3)}`}` : f.basis === 'measured' ? 'measured' : 'rule of thumb'}${f.period ? `; ${f.period}` : ''}]. ${f.explanation}`),
     '', '## Priority recommendations',
     ...recs.slice(0, 3).map((r, i) => `${i + 1}. ${r.intervention} (effort: ${r.effort}; ${r.expectedBenefitUsd !== null ? `scenario: ${usd(r.expectedBenefitUsd)} ${r.benefitKind} if ${r.benefitBasis}` : r.benefitBasis}).`),
     '', '## Financial assumptions (illustrative, per year)',

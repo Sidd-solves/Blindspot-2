@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
-import { BadgeCheck, ChevronLeft, ChevronRight, Download, ExternalLink, Search, Table2, TriangleAlert } from 'lucide-react';
+import { BadgeCheck, ChevronLeft, ChevronRight, Download, ExternalLink, Search, Table2, TriangleAlert , X } from 'lucide-react';
 import { get, SID, usd } from '../api';
 import { useStore } from '../store';
 import { Card, CardHead, Chip, CountUp, Loading, stagger, fadeUp } from '../components/ui';
@@ -19,7 +19,7 @@ function CheckTile({ label, mine, shown, money, c, i }: { label: string; mine: n
         {shown != null && <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.4 + i * 0.1, type: 'spring' }}>{ok ? <Chip c="var(--emerald)"><BadgeCheck size={11} />Match</Chip> : <Chip c="var(--rose)"><TriangleAlert size={11} />Differs</Chip>}</motion.span>}
       </div>
       <CountUp value={mine} format={fmt} className="mono mt-1 block text-[19px] font-semibold" />
-      <div className="mt-1 flex items-center justify-between text-[10.5px] text-[var(--faint)]"><span>Counted from these rows</span>{shown != null && <span>Overview shows <span className="mono text-[var(--muted)]">{fmt(shown)}</span></span>}</div>
+      <div className="mt-1 flex items-center justify-between text-[11.5px] text-[var(--faint)]"><span>Counted from these rows</span>{shown != null && <span>Overview shows <span className="mono text-[var(--muted)]">{fmt(shown)}</span></span>}</div>
     </motion.div>
   );
 }
@@ -29,11 +29,16 @@ export default function SourceData() {
   const [q, setQ] = useState(''), [term, setTerm] = useState(''), [page, setPage] = useState(0);
   const [data, setData] = useState<Rows | null>(null), [busy, setBusy] = useState(true);
   useEffect(() => { const t = setTimeout(() => { setTerm(q); setPage(0); }, 250); return () => clearTimeout(t); }, [q]);
+  // Drill-through from a finding: "?drill={field, values, label}" in the address.
+  const readDrill = () => { try { const m = location.hash.match(/[?&]drill=([^&]+)/); return m ? JSON.parse(decodeURIComponent(m[1])) as { field: string; values: string[]; label: string } : null; } catch { return null; } };
+  const [drill, setDrill] = useState(readDrill);
+  useEffect(() => { const h = () => { setDrill(readDrill()); setPage(0); }; window.addEventListener('hashchange', h); return () => window.removeEventListener('hashchange', h); }, []);
+  const dq = drill ? `&field=${encodeURIComponent(drill.field)}&in=${encodeURIComponent(JSON.stringify(drill.values))}` : '';
   useEffect(() => {
     let live = true; setBusy(true);
-    get<Rows>(`/api/rows?offset=${page * PAGE}&limit=${PAGE}&q=${encodeURIComponent(term)}`).then((d) => { if (live) { setData(d); setBusy(false); } }).catch(() => live && setBusy(false));
+    get<Rows>(`/api/rows?offset=${page * PAGE}&limit=${PAGE}&q=${encodeURIComponent(term)}${dq}`).then((d) => { if (live) { setData(d); setBusy(false); } }).catch(() => live && setBusy(false));
     return () => { live = false; };
-  }, [page, term, version]);
+  }, [page, term, version, dq]);
 
   const kpi = (l: string) => dash?.kpis.find((k) => k.label === l)?.value;
   const pages = data ? Math.max(1, Math.ceil(data.matched / PAGE)) : 1;
@@ -42,17 +47,29 @@ export default function SourceData() {
     <motion.div variants={stagger} initial="hidden" animate="show" className="space-y-3">
       <motion.div variants={stagger} className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
         {data ? <>
-          <CheckTile i={0} label={`Total ${data.measure.toLowerCase()}`} mine={data.totals.sales} shown={dash?.kpis[0]?.value} money c="var(--violet)" />
-          <CheckTile i={1} label="Orders" mine={data.totals.orders} shown={kpi('Orders')} c="var(--cyan)" />
-          <CheckTile i={2} label="Customers" mine={data.totals.customers} shown={kpi('Customers')} c="var(--fuchsia)" />
-          <CheckTile i={3} label="Rows analysed" mine={data.totals.lines} shown={dataset?.rows} c="var(--emerald)" />
+          <CheckTile i={0} label={`Total ${data.measure.toLowerCase()}`} mine={data.totals.sales} shown={drill ? undefined : dash?.kpis[0]?.value} money c="var(--violet)" />
+          <CheckTile i={1} label="Orders" mine={data.totals.orders} shown={drill ? undefined : kpi('Orders')} c="var(--cyan)" />
+          <CheckTile i={2} label="Customers" mine={data.totals.customers} shown={drill ? undefined : kpi('Customers')} c="var(--fuchsia)" />
+          <CheckTile i={3} label="Rows analysed" mine={data.totals.lines} shown={drill ? undefined : dataset?.rows} c="var(--emerald)" />
         </> : [0, 1, 2, 3].map((i) => <div key={i} className="panel h-[88px] animate-pulse" />)}
       </motion.div>
 
+      <AnimatePresence>{drill && <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} className="flex flex-wrap items-center gap-2 rounded-xl border px-3.5 py-2.5 text-[12.5px]" style={{ borderColor: 'color-mix(in srgb, var(--sky) 45%, var(--line))', background: 'color-mix(in srgb, var(--sky) 8%, transparent)' }}>
+        <Table2 size={15} style={{ color: 'var(--sky)' }} />
+        <span className="flex-1">Showing <b>{drill.label}</b>: rows where {drill.field} is {drill.values.length === 1 ? <b>{drill.values[0]}</b> : <>one of <b>{drill.values.length}</b> values</>}. Totals above are for these rows only.</span>
+        <button className="btn !h-7 text-[11.5px]" onClick={() => { location.hash = '/source'; }}><X size={12} />Show all rows</button>
+      </motion.div>}</AnimatePresence>
+      <div className="flex flex-wrap gap-1.5 text-[11.5px] text-[var(--muted)]">
+        <span className="chip" style={{ '--c': 'var(--violet)' } as any}>Sales = every sale line, before returns</span>
+        <span className="chip" style={{ '--c': 'var(--orange)' } as any}>Returns are counted separately, never as sales</span>
+        <span className="chip" style={{ '--c': 'var(--cyan)' } as any}>Orders = orders with at least one sale</span>
+        <span className="chip" style={{ '--c': 'var(--fuchsia)' } as any}>Customers = known customer IDs only</span>
+        <span className="chip" style={{ '--c': 'var(--amber)' } as any}>Reversed and duplicate lines are removed first</span>
+      </div>
       <Card c="var(--sky)" hover={false}>
         <CardHead icon={<Table2 size={13} />} title="Every row Blindspot analysed" c="var(--sky)" right={<div className="flex items-center gap-1.5">
           {dataset?.prep && <button className="btn !h-7 text-[11px]" onClick={() => go('data')}>What was cleaned</button>}
-          <a className="btn btn-primary !h-7 text-[11px]" href={`/api/rows.csv?sid=${SID}`} download><Download size={12} />Download CSV</a>
+          <a className="btn btn-primary !h-7 text-[11px]" href={`/api/rows.csv?sid=${SID}${dq}`} download><Download size={12} />Download CSV</a>
         </div>} />
         <div className="flex flex-wrap items-center gap-2 px-3.5 pb-2.5">
           <div className="relative min-w-[200px] flex-1">
@@ -62,7 +79,7 @@ export default function SourceData() {
           <span className="text-[11px] text-[var(--muted)]">{data ? <><span className="mono font-semibold text-[var(--text)]">{data.matched.toLocaleString()}</span>{term && <> of {data.total.toLocaleString()}</>} rows</> : '—'}</span>
           {busy && <Loading steps={['Fetching rows…', 'Counting totals…']} />}
         </div>
-        {dataset?.citation && <div className="mx-3.5 mb-2.5 flex flex-wrap items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[10.5px] text-[var(--muted)]" style={{ background: 'var(--line)' }}>
+        {dataset?.citation && <div className="mx-3.5 mb-2.5 flex flex-wrap items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11.5px] text-[var(--muted)]" style={{ background: 'var(--line)' }}>
           <Chip c="var(--violet)">Original source</Chip>{dataset.citation}
           <a className="inline-flex items-center gap-0.5 font-bold" style={{ color: 'var(--violet)' }} href="https://archive.ics.uci.edu/dataset/502/online+retail+ii" target="_blank" rel="noreferrer">Open<ExternalLink size={10} /></a>
         </div>}
@@ -70,7 +87,7 @@ export default function SourceData() {
         <div className="overflow-x-auto border-t" style={{ borderColor: 'var(--line)' }}>
           <table className="w-full min-w-[720px] text-[11.5px]">
             <thead className="sticky top-0" style={{ background: 'var(--panel-solid)' }}>
-              <tr>{['#', ...(data?.columns ?? [])].map((c) => <th key={c} className="whitespace-nowrap px-2.5 py-2 text-left text-[10px] font-bold uppercase tracking-wider" style={{ color: c === data?.measure ? 'var(--violet)' : 'var(--faint)' }}>{c}</th>)}</tr>
+              <tr>{['#', ...(data?.columns ?? [])].map((c) => <th key={c} className="whitespace-nowrap px-2.5 py-2 text-left text-[11px] font-bold uppercase tracking-wider" style={{ color: c === data?.measure ? 'var(--violet)' : 'var(--faint)' }}>{c}</th>)}</tr>
             </thead>
             <tbody>
               <AnimatePresence initial={false}>

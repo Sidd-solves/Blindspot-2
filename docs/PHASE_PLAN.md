@@ -8,7 +8,7 @@
 ## DataNova scoring → where we earn it
 | Criterion | Weight | How Blindspot scores |
 |---|---|---|
-| Technical implementation | 25% | 30 tools, MCP server, Shopify API, live AI analyst, 57+ tests, live deploy |
+| Technical implementation | 25% | 30 tools, MCP server, Shopify API, live AI analyst, 164 tests, live deploy |
 | Innovation & originality | 20% | "Second opinion" for small businesses; prices problems and simulates fixes |
 | Problem relevance | 15% | Small businesses can't afford analysts; problems hide in their sales data |
 | Data & analytical rigor | 15% | Significance-tested trends, Pareto/HHI, a validated churn model, no invented numbers |

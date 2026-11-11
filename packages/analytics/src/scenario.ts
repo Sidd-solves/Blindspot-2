@@ -45,6 +45,7 @@ export function simulateScenario(base: ScenarioBaseline, levers: Partial<Scenari
       'conversion revenue = revenue x (liftPts / baselineConversion); profit = x baseline margin',
       'waste saving = COGS x wasteRate x wasteReduction%',
       'opex saving = revenue x opexRate x opexReduction%',
+      'profit here means gross profit (sales minus product cost); running-cost savings are added on top',
     ],
     disclaimer: profitKnown ? 'Hypothetical what-if, per year. Rates are editable assumptions, not measured company figures.' : `Hypothetical what-if, per year. Your data has no profit or cost column, so a ${Math.round(as.assumedMargin * 100)}% gross margin is assumed; add a costs file for real margins.`,
   };

@@ -97,7 +97,7 @@ export default function App() {
             <motion.div initial={{ rotate: -20, scale: 0.6 }} animate={{ rotate: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 260 }} className="grid h-7 w-7 place-items-center rounded-lg" style={{ background: 'linear-gradient(135deg, var(--violet), var(--cyan))', boxShadow: '0 6px 18px -6px var(--violet)' }}>
               <svg width="16" height="16" viewBox="0 0 32 32"><path d="M7 21l6-7 5 4 7-9" stroke="white" strokeWidth="3.4" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
             </motion.div>
-            <div className="leading-tight"><div className="text-[14px] font-extrabold tracking-tight">Blind<span className="grad-text">spot</span></div><div className="text-[9.5px] font-bold uppercase tracking-[.14em] text-[var(--faint)]">AI analyst for small business</div></div>
+            <div className="leading-tight"><div className="text-[14px] font-extrabold tracking-tight">Blind<span className="grad-text">spot</span></div><div className="text-[11px] font-bold uppercase tracking-[.14em] text-[var(--faint)]">AI analyst for small business</div></div>
           </button>
           <nav className="flex gap-0.5 overflow-x-auto px-2 pb-2 md:flex-col md:overflow-visible">
             {NAV.map((n) => {
@@ -114,8 +114,6 @@ export default function App() {
           <div className="hidden px-3 pt-3 md:block">
             <div className="panel space-y-1.5 p-2.5 text-[11px]">
               <div className="flex items-center justify-between"><span className="text-[var(--muted)]">Data</span><Chip c={dataset?.source === 'shopify' ? 'var(--emerald)' : dataset?.source === 'case-study' ? 'var(--violet)' : dataset?.source === 'sample' ? 'var(--amber)' : 'var(--blue)'} pulse={dataset?.source === 'shopify' || extension}>{dataset?.source === 'shopify' ? 'Shopify' : dataset?.source === 'case-study' ? 'Real data' : dataset?.source === 'sample' ? 'Demo' : extension ? 'Tableau' : 'File'}</Chip></div>
-              <div className="flex items-center justify-between"><span className="text-[var(--muted)]">AI</span><Chip c={health?.ai ? 'var(--fuchsia)' : 'var(--amber)'}>{health?.ai ? health.ai.replace('claude-', '') : 'Deterministic'}</Chip></div>
-              <div className="flex items-center justify-between"><span className="text-[var(--muted)]">Tools</span><span className="mono font-semibold">{health?.tools ?? '—'}</span></div>
             </div>
           </div>
         </aside>

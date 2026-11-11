@@ -65,8 +65,8 @@ export default function Simulator() {
                   <motion.span key={v} initial={{ scale: 1.25, color: l.c }} animate={{ scale: 1, color: 'var(--text)' }} className="mono text-[12.5px] font-semibold">{l.step < 1 ? v.toFixed(1) : v}{l.unit}</motion.span>
                 </div>
                 <input type="range" min={0} max={l.max} step={l.step} value={v} onChange={(e) => { setPreset('custom'); setLv({ ...lv, [l.k]: Number(e.target.value) }); }} aria-label={l.label} />
-                <div className="mt-0.5 text-[10.5px] text-[var(--muted)]">{l.hint}</div>
-                {res && <div className="mt-0.5 text-[10.5px] text-[var(--faint)]">adds <span className="mono font-semibold" style={{ color: l.c }}>{usd(res.contributions[{ churnReductionPct: 'churn', conversionLiftPts: 'conversion', wasteReductionPct: 'waste', opexReductionPct: 'opex' }[l.k]])}</span> profit</div>}
+                <div className="mt-0.5 text-[11.5px] text-[var(--muted)]">{l.hint}</div>
+                {res && <div className="mt-0.5 text-[11.5px] text-[var(--faint)]">adds <span className="mono font-semibold" style={{ color: l.c }}>{usd(res.contributions[{ churnReductionPct: 'churn', conversionLiftPts: 'conversion', wasteReductionPct: 'waste', opexReductionPct: 'opex' }[l.k]])}</span> profit</div>}
               </div>
             );
           })}
@@ -103,7 +103,7 @@ export default function Simulator() {
                   <div key={m.l} className="tint rounded-lg p-2" style={{ '--c': m.c } as CSSProperties}>
                     <div className="label">{m.l}</div>
                     <CountUp value={m.v} format={(n) => (m.p ? pct(n) : usd(n, true))} className="text-[15px] font-semibold" duration={0.6} />
-                    <div className="mono text-[10.5px]" style={{ color: m.c }}>+{m.p ? `${(m.d * 100).toFixed(2)} pts` : usd(m.d, true)}</div>
+                    <div className="mono text-[11.5px]" style={{ color: m.c }}>+{m.p ? `${(m.d * 100).toFixed(2)} pts` : usd(m.d, true)}</div>
                   </div>
                 ))}
               </div>
@@ -134,7 +134,7 @@ export default function Simulator() {
           <Card c="var(--blue)" hover={false} className="p-3.5">
             <button onClick={() => setOpenF(!openF)} className="label flex w-full items-center justify-between"><span className="flex items-center gap-1"><Sigma size={11} style={{ color: 'var(--blue)' }} />How we calculate this</span><ChevronDown size={13} style={{ transform: openF ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} /></button>
             {!openF && <div className="mt-2 text-[11.5px] text-[var(--muted)]">Every number here comes from a simple, visible formula using your sales and the numbers you set. Nothing is guessed by AI.</div>}
-            <AnimatePresence initial={false}>{openF && <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="mt-2 space-y-1.5 overflow-hidden">{res?.formulas.map((f: string) => <div key={f} className="mono rounded-md px-2 py-1 text-[10.5px] leading-relaxed" style={{ background: 'var(--line)' }}>{f}</div>)}</motion.div>}</AnimatePresence>
+            <AnimatePresence initial={false}>{openF && <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="mt-2 space-y-1.5 overflow-hidden">{res?.formulas.map((f: string) => <div key={f} className="mono rounded-md px-2 py-1 text-[11.5px] leading-relaxed" style={{ background: 'var(--line)' }}>{f}</div>)}</motion.div>}</AnimatePresence>
           </Card>
           <Card c="var(--amber)" hover={false} className="p-3.5">
             <div className="label mb-2 flex items-center gap-1"><Info size={11} style={{ color: 'var(--amber)' }} />Compare with a fix</div>
@@ -142,13 +142,13 @@ export default function Simulator() {
               <>
                 <div className="text-[12.5px] font-bold">{topAction.intervention}</div>
                 <div className="mt-1 flex items-baseline gap-1.5"><span className="mono text-[18px] font-semibold" style={{ color: 'var(--emerald)' }}>{usd(topAction.expectedBenefitUsd)}</span><span className="text-[11px] text-[var(--muted)]">{topAction.benefitKind} · {topAction.effort} effort</span></div>
-                <div className="mt-1 text-[10.5px] text-[var(--faint)]">{topAction.benefitBasis}</div>
+                <div className="mt-1 text-[11.5px] text-[var(--faint)]">{topAction.benefitBasis}</div>
                 {fixProfit !== null && <div className="mt-2 text-[11px] text-[var(--muted)]">≈ <span className="mono font-semibold text-[var(--text)]">{usd(fixProfit)}</span> profit{topAction.benefitKind === 'revenue' ? ' at baseline margin' : ''}, or <span className="mono font-semibold text-[var(--text)]">{Math.round((fixProfit / Math.max(1, res.delta.profit)) * 100)}%</span> of this scenario's uplift.</div>}
               </>
             ) : <div className="text-[12px] text-[var(--faint)]">No quantified action for this data.</div>}
           </Card>
         </div>
-        <div className="text-[10.5px] text-[var(--faint)]">{res?.disclaimer}</div>
+        <div className="text-[11.5px] text-[var(--faint)]">{res?.disclaimer}</div>
       </div>
     </motion.div>
   );

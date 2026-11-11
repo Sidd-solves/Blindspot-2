@@ -37,7 +37,7 @@ function MiniSimulator() {
       <div className="flex items-center justify-between text-[12px]"><span className="font-bold">Keep more customers</span><span className="mono font-semibold" style={{ color: 'var(--emerald)' }}>{v}%</span></div>
       <div style={{ '--c': 'var(--emerald)', '--p': `${(v / 30) * 100}%` } as CSSProperties}><input type="range" min={0} max={30} value={v} onChange={(e) => setV(Number(e.target.value))} aria-label="Keep more customers" className="mt-1.5" /></div>
       <div className="mt-3 flex items-baseline gap-1"><span className="text-[13px] text-[var(--muted)]">Extra profit / year</span><span className="ml-auto text-[22px] font-semibold" style={{ color: 'var(--emerald)' }}>+</span><CountUp value={res?.delta.profit ?? 0} format={(n) => usd(n)} className="grad-text text-[22px] font-semibold" duration={0.5} /></div>
-      <div className="text-[10.5px] text-[var(--faint)]">Estimate from the shop's real sales. Drag the slider.</div>
+      <div className="text-[11.5px] text-[var(--faint)]">Estimate from the shop's real sales. Drag the slider.</div>
     </div>
   );
 }
@@ -62,7 +62,7 @@ export default function Features() {
         {/* Health: tall */}
         <Reveal className="md:col-span-2 md:row-span-2"><BeamCard c={band[1]} className="flex h-full flex-col p-5">
           <Head icon={Radar} c={band[1]} t="Business health score" />
-          <div className="my-5 grid place-items-center"><Ring value={health / 100} size={150} stroke={11} c={band[1]}><div className="text-center"><CountUp value={health} className="text-[40px] font-semibold leading-none" /><div className="mt-1 text-[10px] font-bold uppercase tracking-wider text-[var(--faint)]">out of 100</div></div></Ring></div>
+          <div className="my-5 grid place-items-center"><Ring value={health / 100} size={150} stroke={11} c={band[1]}><div className="text-center"><CountUp value={health} className="text-[40px] font-semibold leading-none" /><div className="mt-1 text-[11px] font-bold uppercase tracking-wider text-[var(--faint)]">out of 100</div></div></Ring></div>
           <div className="text-center"><span className="chip" style={{ '--c': band[1] } as CSSProperties}>{band[0]}</span></div>
           <p className="mt-3 text-center text-[12px] text-[var(--muted)]">One number for how your business is doing. Every problem found takes points off, more for serious ones.</p>
           <div className="mt-auto space-y-1.5 pt-4">{Object.entries(SEV).map(([k, s]) => { const n = findings.filter((f) => f.severity === k).length; return <div key={k} className="flex items-center gap-2 text-[11px]"><span className="w-14 font-bold" style={{ color: s.c }}>{s.label}</span><div className="flex-1"><Meter value={n / Math.max(1, findings.length)} c={s.c} h={4} /></div><span className="mono w-4 text-right">{n}</span></div>; })}</div>
@@ -80,9 +80,9 @@ export default function Features() {
         <Reveal className="md:col-span-2"><BeamCard c="var(--emerald)" className="h-full p-5"><Head icon={SlidersHorizontal} c="var(--emerald)" t="What is fixing it worth?" /><MiniSimulator /></BeamCard></Reveal>
 
         {/* Ideas checked */}
-        <Reveal className="md:col-span-3"><BeamCard c="var(--emerald)" className="h-full p-5"><Head icon={FlaskConical} c="var(--emerald)" t="Ideas, proven true or false" />
+        <Reveal className="md:col-span-3"><BeamCard c="var(--emerald)" className="h-full p-5"><Head icon={FlaskConical} c="var(--emerald)" t="Ideas, tested with statistics" />
           <div className="mt-3 space-y-1.5">{ideas.slice(0, 4).map((h, i) => <motion.div key={h.id} initial={{ opacity: 0, y: 6 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.07 }} className="flex items-start gap-2 rounded-lg px-2.5 py-1.5" style={{ background: 'var(--line)' }}>{h.verdict === 'supported' ? <Check size={13} className="mt-0.5 flex-none" style={{ color: VERDICT[h.verdict].c }} /> : <X size={13} className="mt-0.5 flex-none" style={{ color: VERDICT[h.verdict]?.c }} />}<span className="text-[11.5px] font-semibold">{h.claim} <span className="font-bold" style={{ color: VERDICT[h.verdict]?.c }}>· {VERDICT[h.verdict]?.label}</span></span></motion.div>)}</div>
-          <div className="mt-2 flex items-center gap-1 text-[10.5px] text-[var(--faint)]"><Sparkles size={11} style={{ color: 'var(--fuchsia)' }} />AI can suggest new ideas; statistics check them against your data.</div>
+          <div className="mt-2 flex items-center gap-1 text-[11.5px] text-[var(--faint)]"><Sparkles size={11} style={{ color: 'var(--fuchsia)' }} />AI can suggest new ideas; statistics check them against your data.</div>
         </BeamCard></Reveal>
 
         {/* Cleaning */}
@@ -92,12 +92,12 @@ export default function Features() {
 
         {/* Shopify */}
         <Reveal className="md:col-span-2"><BeamCard c="var(--emerald)" className="h-full p-5"><Head icon={ShoppingBag} c="var(--emerald)" t="Plugs into Shopify" />
-          <ol className="mt-3 space-y-1.5 text-[11.5px] text-[var(--muted)]">{['Connect your store (read-only)', 'Or drop in its order export', 'Or any CSV / Excel sales file'].map((s, i) => <li key={s} className="flex gap-2"><span className="mono grid h-4 w-4 flex-none place-items-center rounded text-[9.5px] font-bold text-white" style={{ background: 'var(--emerald)' }}>{i + 1}</span>{s}</li>)}</ol>
+          <ol className="mt-3 space-y-1.5 text-[11.5px] text-[var(--muted)]">{['Connect your store (read-only)', 'Or drop in its order export', 'Or any CSV / Excel sales file'].map((s, i) => <li key={s} className="flex gap-2"><span className="mono grid h-4 w-4 flex-none place-items-center rounded text-[11px] font-bold text-white" style={{ background: 'var(--emerald)' }}>{i + 1}</span>{s}</li>)}</ol>
         </BeamCard></Reveal>
 
         {/* Report */}
         <Reveal className="md:col-span-4"><BeamCard c="var(--sky)" className="h-full p-5"><Head icon={FileText} c="var(--sky)" t="A one-page report to share" />
-          <div className="mt-3 grid gap-2 sm:grid-cols-3">{[{ w: '0–30 days', t: 'Quick wins', c: 'var(--rose)' }, { w: '30–90 days', t: 'Bigger fixes', c: 'var(--amber)' }, { w: '90–180 days', t: 'Long-term', c: 'var(--emerald)' }].map((p, i) => <motion.div key={p.w} initial={{ opacity: 0, y: 8 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.12 }} className="rounded-lg p-2.5" style={{ background: 'var(--line)', borderTop: `2px solid ${p.c}` }}><div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: p.c }}>{p.w}</div><div className="text-[12.5px] font-extrabold">{p.t}</div></motion.div>)}</div>
+          <div className="mt-3 grid gap-2 sm:grid-cols-3">{[{ w: '0–30 days', t: 'Quick wins', c: 'var(--rose)' }, { w: '30–90 days', t: 'Bigger fixes', c: 'var(--amber)' }, { w: '90–180 days', t: 'Long-term', c: 'var(--emerald)' }].map((p, i) => <motion.div key={p.w} initial={{ opacity: 0, y: 8 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.12 }} className="rounded-lg p-2.5" style={{ background: 'var(--line)', borderTop: `2px solid ${p.c}` }}><div className="text-[11px] font-bold uppercase tracking-wider" style={{ color: p.c }}>{p.w}</div><div className="text-[12.5px] font-extrabold">{p.t}</div></motion.div>)}</div>
           <p className="mt-2 text-[11.5px] text-[var(--muted)]">Every topic checked, what was found, and a roadmap built from your actual fixes. Download as Markdown or PDF.</p>
         </BeamCard></Reveal>
 

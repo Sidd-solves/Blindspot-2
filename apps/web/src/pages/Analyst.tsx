@@ -42,7 +42,7 @@ function EvidenceDrawer({ ev }: { ev: NonNullable<Msg['evidence']> }) {
             <div className="mt-1.5 space-y-1.5">
               {ev.map((e, i) => (
                 <motion.div key={i} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }} className="rounded-lg border p-2" style={{ borderColor: 'var(--line)', background: 'var(--line)' }}>
-                  <div className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full" style={{ background: e.ok ? 'var(--emerald)' : 'var(--rose)' }} /><span className="mono text-[11px] font-semibold">{e.tool}</span>{!e.ok && <span className="text-[10.5px] text-[var(--rose)]">{e.summary}</span>}</div>
+                  <div className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full" style={{ background: e.ok ? 'var(--emerald)' : 'var(--rose)' }} /><span className="mono text-[11px] font-semibold">{e.tool}</span>{!e.ok && <span className="text-[11.5px] text-[var(--rose)]">{e.summary}</span>}</div>
                   {brief(e.data).map((b, j) => <div key={j} className="mt-0.5 pl-3 text-[11px] text-[var(--muted)]">· {b}</div>)}
                 </motion.div>
               ))}
@@ -70,18 +70,18 @@ function Workflow_() {
               {run.steps.map((s: any, i: number) => (
                 <motion.div key={i} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.12 }} className="relative">
                   <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: i * 0.12 + 0.05, type: 'spring' }} className="absolute -left-[23px] top-1 grid h-3.5 w-3.5 place-items-center rounded-full" style={{ background: s.status === 'ok' ? 'var(--emerald)' : 'var(--rose)' }}>{s.status === 'ok' ? <Check size={9} color="white" /> : <X size={9} color="white" />}</motion.span>
-                  <div className="flex items-center gap-2"><span className="mono text-[11px] font-semibold">{s.tool}</span><span className="mono ml-auto text-[10px] text-[var(--faint)]">{s.ms}ms</span></div>
-                  <div className="truncate text-[10.5px] text-[var(--muted)]" title={s.summary}>{s.summary}</div>
+                  <div className="flex items-center gap-2"><span className="mono text-[11px] font-semibold">{s.tool}</span><span className="mono ml-auto text-[11px] text-[var(--faint)]">{s.ms}ms</span></div>
+                  <div className="truncate text-[11.5px] text-[var(--muted)]" title={s.summary}>{s.summary}</div>
                 </motion.div>
               ))}
             </div>
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: run.steps.length * 0.12 }} className="tint mt-3 rounded-lg p-2.5" style={{ '--c': 'var(--emerald)' } as CSSProperties}>
-              <div className="flex items-center justify-between"><span className="label">Tokens sent to the model</span><Chip c="var(--emerald)"><CountUp value={run.tokenMeter.savedPct} format={(n) => `${n.toFixed(1)}%`} /> saved</Chip></div>
+              <div className="flex items-center justify-between"><span className="label">Tokens sent to the model</span><Chip c="var(--emerald)">≈<CountUp value={run.tokenMeter.savedPct} format={(n) => `${n.toFixed(1)}%`} /> fewer (estimate)</Chip></div>
               <div className="mt-2 space-y-1.5 text-[11px]">
                 <div className="flex items-center gap-2"><span className="w-16 text-[var(--muted)]">Naive</span><div className="flex-1"><Meter value={1} c="var(--rose)" /></div><span className="mono w-16 text-right">{run.tokenMeter.naiveTokens.toLocaleString()}</span></div>
                 <div className="flex items-center gap-2"><span className="w-16 text-[var(--muted)]">Workflow</span><div className="flex-1"><Meter value={Math.max(0.01, run.tokenMeter.workflowTokens / run.tokenMeter.naiveTokens)} c="var(--emerald)" /></div><span className="mono w-16 text-right">{run.tokenMeter.workflowTokens.toLocaleString()}</span></div>
               </div>
-              <div className="mt-1.5 text-[10px] text-[var(--faint)]">{run.tokenMeter.method}</div>
+              <div className="mt-1.5 text-[11px] text-[var(--faint)]">{run.tokenMeter.method}</div>
             </motion.div>
           </>
         )}
@@ -106,7 +106,7 @@ function Hypotheses() {
         {res?.aiNote && <div className="text-[11px] text-[var(--amber)]">{res.aiNote}</div>}
         {res?.results.map((h: any, i: number) => (
           <motion.div key={h.id + i} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="rounded-lg border p-2" style={{ borderColor: 'var(--line)', borderLeft: `3px solid ${VERDICT[h.verdict].c}` }}>
-            <div className="flex flex-wrap items-center gap-1.5"><Chip c={VERDICT[h.verdict].c}>{VERDICT[h.verdict].label}</Chip>{h.source === 'ai' && <Chip c="var(--fuchsia)">AI idea</Chip>}{h.stat && <span className="mono text-[10px] text-[var(--faint)]">{h.stat.name.replace('_', ' ')} = {h.stat.value}</span>}</div>
+            <div className="flex flex-wrap items-center gap-1.5"><Chip c={VERDICT[h.verdict].c}>{VERDICT[h.verdict].label}</Chip>{h.source === 'ai' && <Chip c="var(--fuchsia)">AI idea</Chip>}{h.stat && <span className="mono text-[11px] text-[var(--faint)]">{h.stat.name.replace('_', ' ')} = {h.stat.value}</span>}</div>
             <div className="mt-1 text-[12px] font-bold">{h.claim}</div>
             <div className="text-[11px] text-[var(--muted)]">{h.summary}</div>
           </motion.div>
@@ -159,7 +159,7 @@ export default function Analyst() {
                 {m.role === 'assistant' && (
                   <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                     {m.blocked ? <Chip c="var(--rose)"><ShieldCheck size={10} />Guardrail</Chip> : <Chip c={m.mode === 'claude' ? 'var(--fuchsia)' : 'var(--amber)'}>{m.mode === 'claude' ? health?.ai ?? 'Claude' : 'Deterministic'}</Chip>}
-                    {m.note && <span className="text-[10.5px] text-[var(--faint)]">{m.note}</span>}
+                    {m.note && <span className="text-[11.5px] text-[var(--faint)]">{m.note}</span>}
                   </div>
                 )}
                 {m.evidence && m.evidence.length > 0 && <EvidenceDrawer ev={m.evidence} />}

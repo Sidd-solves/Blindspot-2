@@ -27,7 +27,7 @@ export function recommend(findings: Finding[]) {
       expectedBenefitUsd: benefit,
       /** Profitability fixes recover profit; concentration/trend/outlier benefits are revenue protected or recovered. */
       benefitKind: f.category === 'profitability' || f.category === 'pricing' ? ('profit' as const) : ('revenue' as const),
-      benefitBasis: benefit === null ? (recoverable ? 'No money figure to recover from this data' : 'Nothing to recover: this money was never earned or lost') : `${Math.round(p.recovery * 100)}% of the ${f.impactBasis?.toLowerCase()} is won back (a planning assumption, not a measured result)`,
+      benefitBasis: benefit === null ? (recoverable ? 'No money figure to recover from this data' : 'Nothing to recover: this money was never earned or lost') : `${Math.round(p.recovery * 100)}% of it is won back (${f.impactBasis?.replace(/\.$/, '')}; a planning assumption, not a measured result)`,
       effort: p.effort, risks: p.risks, evidence: f.evidence, severity: f.severity,
       /** A ranking score (scenario benefit ÷ effort weight), not a return on investment: real costs aren't in the data. */
       benefitToEffort: benefit === null ? null : round(benefit / COST[p.effort] ** 2, 0),

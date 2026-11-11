@@ -31,12 +31,12 @@ function RoleCard({ role, i }: { role: Role; i: number }) {
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 + i * 0.03 }} className="rounded-xl border p-2.5" style={{ borderColor: col ? `color-mix(in srgb, ${c} 30%, var(--line))` : 'var(--line)', background: col ? `color-mix(in srgb, ${c} 5%, transparent)` : 'transparent' }}>
       <div className="mb-1.5 flex items-center justify-between gap-1">
-        <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: col ? c : 'var(--faint)' }}>{LABEL[role]}</span>
-        {col ? (conf >= 0.9 ? <span className="flex items-center gap-0.5 text-[9.5px] font-bold text-[var(--emerald)]"><Check size={10} />{fromOther ? 'Added' : 'Found'}</span> : <span className="text-[9.5px] font-bold text-[var(--amber)]">Best guess</span>) : <span className="text-[9.5px] text-[var(--faint)]">—</span>}
+        <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: col ? c : 'var(--faint)' }}>{LABEL[role]}</span>
+        {col ? (conf >= 0.9 ? <span className="flex items-center gap-0.5 text-[11px] font-bold text-[var(--emerald)]"><Check size={10} />{fromOther ? 'Added' : 'Found'}</span> : <span className="text-[11px] font-bold text-[var(--amber)]">Best guess</span>) : <span className="text-[11px] text-[var(--faint)]">—</span>}
       </div>
       {fromOther ? <div className="truncate rounded-md px-2 py-1.5 text-[11.5px] font-semibold" style={{ background: 'var(--line)' }} title={col}>{col}</div>
         : <Dropdown width="100%" c={c} value={col ? [col] : []} placeholder={NONE} options={[NONE, ...rep.columns]} onChange={pick} />}
-      <div className="mt-1 h-[15px] truncate text-[10.5px] text-[var(--faint)]">{rep.samples[role]?.length ? rep.samples[role]!.join(' · ') : ''}</div>
+      <div className="mt-1 h-[15px] truncate text-[11.5px] text-[var(--faint)]">{rep.samples[role]?.length ? rep.samples[role]!.join(' · ') : ''}</div>
     </motion.div>
   );
 }
@@ -50,13 +50,13 @@ function IssueRow({ it, i, onFix }: { it: Issue; i: number; onFix: (mode: 'repla
         <s.icon size={14} className="mt-0.5 flex-none" style={{ color: s.c }} />
         <div className="min-w-0 flex-1">
           <div className="text-[12px] font-semibold leading-snug">{it.message}</div>
-          {it.lines.length > 0 && <div className="mt-1 flex flex-wrap items-center gap-1 text-[10.5px] text-[var(--muted)]">Line{it.lines.length > 1 ? 's' : ''} {it.lines.map((l) => <span key={l} className="mono rounded px-1" style={{ background: 'var(--line)' }}>{l}</span>)}{it.count > it.lines.length && <span>and {(it.count - it.lines.length).toLocaleString()} more</span>}</div>}
+          {it.lines.length > 0 && <div className="mt-1 flex flex-wrap items-center gap-1 text-[11.5px] text-[var(--muted)]">Line{it.lines.length > 1 ? 's' : ''} {it.lines.map((l) => <span key={l} className="mono rounded px-1" style={{ background: 'var(--line)' }}>{l}</span>)}{it.count > it.lines.length && <span>and {(it.count - it.lines.length).toLocaleString()} more</span>}</div>}
         </div>
-        <span className="chip flex-none !py-0 !text-[9.5px]" style={{ '--c': s.c } as CSSProperties}>{s.label}</span>
+        <span className="chip flex-none !py-0 !text-[11px]" style={{ '--c': s.c } as CSSProperties}>{s.label}</span>
       </div>
       {fixable && <div className="mt-2 flex flex-wrap gap-1.5 pl-6">
-        <button className="btn !h-6 text-[10.5px]" onClick={() => onFix('replace')}><RefreshCw size={11} />Upload a fixed file</button>
-        <button className="btn !h-6 text-[10.5px]" onClick={() => onFix('add')}><FilePlus2 size={11} />Add a file with the missing info</button>
+        <button className="btn !h-6 text-[11.5px]" onClick={() => onFix('replace')}><RefreshCw size={11} />Upload a fixed file</button>
+        <button className="btn !h-6 text-[11.5px]" onClick={() => onFix('add')}><FilePlus2 size={11} />Add a file with the missing info</button>
       </div>}
     </motion.div>
   );
@@ -69,7 +69,7 @@ function UnlockRow({ u, i }: { u: Unlock; i: number }) {
       <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.3 + i * 0.05, type: 'spring' }} className="grid h-5 w-5 flex-none place-items-center rounded-full" style={{ background: `color-mix(in srgb, ${c} 18%, transparent)`, color: c }}>
         {u.ok === true ? <Check size={11} strokeWidth={3} /> : u.ok === 'partial' ? <span className="text-[11px] font-bold">~</span> : <Lock size={10} />}
       </motion.span>
-      <div className="min-w-0 flex-1"><div className="text-[12px] font-bold" style={{ color: u.ok ? 'var(--text)' : 'var(--muted)' }}>{u.label}</div><div className="truncate text-[10.5px] text-[var(--faint)]" title={u.note}>{u.note}</div></div>
+      <div className="min-w-0 flex-1"><div className="text-[12px] font-bold" style={{ color: u.ok ? 'var(--text)' : 'var(--muted)' }}>{u.label}</div><div className="truncate text-[11.5px] text-[var(--faint)]" title={u.note}>{u.note}</div></div>
     </motion.div>
   );
 }
@@ -97,8 +97,8 @@ export function ReadReview() {
             <div className="min-w-0 flex-1">
               <div className="text-[16px] font-extrabold tracking-tight">{upload.busy ? 'Reading your file…' : failed ? 'We need your help with this file' : 'Here\'s how we read your file'}</div>
               <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                {upload.files.map((f) => <span key={f.name} className="chip !py-0.5 !text-[10.5px]" style={{ '--c': 'var(--violet)' } as CSSProperties}><KIcon size={10} />{f.name}</span>)}
-                {rep?.files[0]?.format && <span className="chip !py-0.5 !text-[10.5px]" style={{ '--c': 'var(--cyan)' } as CSSProperties}><Sparkles size={10} />{rep.format}</span>}
+                {upload.files.map((f) => <span key={f.name} className="chip !py-0.5 !text-[11.5px]" style={{ '--c': 'var(--violet)' } as CSSProperties}><KIcon size={10} />{f.name}</span>)}
+                {rep?.files[0]?.format && <span className="chip !py-0.5 !text-[11.5px]" style={{ '--c': 'var(--cyan)' } as CSSProperties}><Sparkles size={10} />{rep.format}</span>}
               </div>
             </div>
             {!failed && <button onClick={close} className="btn !h-7 !px-2" aria-label="Close"><X size={14} /></button>}
@@ -117,15 +117,15 @@ export function ReadReview() {
                 {[{ icon: Rows3, l: 'Rows used', v: rep.rowsUsed, sub: `of ${rep.rowsRead.toLocaleString()} read`, c: 'var(--emerald)' }, rep.roles.order || rep.roles.customer ? { icon: Hash, l: 'Orders', v: rep.ordersFound, sub: rep.roles.order ? 'by order number' : 'same customer + day', c: 'var(--blue)' } : { icon: Hash, l: 'Orders', v: null, sub: 'No order numbers', c: 'var(--blue)' },
                   { icon: Calendar, l: 'Dates', v: null, sub: rep.dateRange ? `${rep.dateRange[0]} → ${rep.dateRange[1]}` : 'No dates', c: 'var(--cyan)' }, { icon: Coins, l: 'Currency', v: null, sub: rep.currency ?? 'Not stated: pick it below', c: 'var(--amber)' }].map((x, i) => (
                   <motion.div key={x.l} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="rounded-xl border p-2.5" style={{ borderColor: 'var(--line)' }}>
-                    <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider" style={{ color: x.c }}><x.icon size={11} />{x.l}</div>
+                    <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider" style={{ color: x.c }}><x.icon size={11} />{x.l}</div>
                     {x.v !== null ? <CountUp value={x.v} className="mt-0.5 block text-[18px] font-semibold" /> : <div className="mono mt-0.5 truncate text-[12.5px] font-semibold" title={x.sub}>{x.sub}</div>}
-                    {x.v !== null && <div className="text-[10.5px] text-[var(--faint)]">{x.sub}</div>}
+                    {x.v !== null && <div className="text-[11.5px] text-[var(--faint)]">{x.sub}</div>}
                   </motion.div>
                 ))}
               </div>}
 
               {rep?.columns && <div>
-                <div className="mb-2 flex items-center justify-between"><div className="label flex items-center gap-1"><Wand2 size={11} style={{ color: 'var(--violet)' }} />What each column means</div><span className="text-[10.5px] text-[var(--faint)]">Wrong? Pick the right column.</span></div>
+                <div className="mb-2 flex items-center justify-between"><div className="label flex items-center gap-1"><Wand2 size={11} style={{ color: 'var(--violet)' }} />What each column means</div><span className="text-[11.5px] text-[var(--faint)]">Wrong? Pick the right column.</span></div>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">{MAIN.map((r, i) => <RoleCard key={r} role={r} i={i} />)}</div>
                 <button onClick={() => setMore(!more)} className="mt-2 flex items-center gap-1 text-[11px] font-bold text-[var(--muted)] hover:text-[var(--text)]"><ChevronDown size={12} style={{ transform: more ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} />More columns</button>
                 <AnimatePresence initial={false}>{more && <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden"><div className="grid grid-cols-2 gap-2 pt-2 sm:grid-cols-3 xl:grid-cols-5">{MORE.map((r, i) => <RoleCard key={r} role={r} i={i} />)}</div></motion.div>}</AnimatePresence>

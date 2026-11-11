@@ -4,7 +4,7 @@ export const CATCHES = [
   { k: 'returns', t: 'Returns and cancellations', d: 'Which products keep coming back, and what it costs.' },
   { k: 'retention', t: 'Customers who stopped buying', d: 'Your best buyers going quiet, and new ones not returning.' },
   { k: 'product', t: 'Products that stopped selling', d: 'Sold this time last year, nothing now.' },
-  { k: 'anomaly', t: 'Anything falling behind', d: 'Every product, customer and country scanned against the rest.' },
+  { k: 'anomaly', t: 'Anything falling behind', d: 'Your main products, customers and countries compared with the rest.' },
   { k: 'trend', t: 'Shrinking sales or basket size', d: 'Compared with the same period last year.' },
   { k: 'seasonality', t: 'Seasonal cash crunches', d: 'When most of the year\'s money lands in a few months.' },
   { k: 'data-quality', t: 'Messy records', d: 'Duplicates, missing customers, fees mixed into sales.' },

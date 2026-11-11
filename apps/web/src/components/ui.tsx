@@ -28,10 +28,14 @@ export function CardHead({ icon, title, c, right }: { icon?: ReactNode; title: s
   );
 }
 
+const SEEN = new Set<number>();
 export function CountUp({ value, format = (n: number) => Math.round(n).toLocaleString(), duration = 1.1, className = '' }: { value: number; format?: (n: number) => string; duration?: number; className?: string }) {
   const ref = useRef<HTMLSpanElement>(null);
-  const prev = useRef(0), shown = useRef(0);
+  // A number already shown this session appears instantly when you come back (no replay from zero).
+  const seen = SEEN.has(value), prev = useRef(seen ? value : 0), shown = useRef(seen ? value : 0);
   useEffect(() => {
+    SEEN.add(value);
+    if (prev.current === value) { shown.current = value; if (ref.current) ref.current.textContent = format(value); return; }
     const ctl = animate(prev.current, value, { duration, ease: [0.16, 1, 0.3, 1], onUpdate: (v) => { shown.current = v; if (ref.current) ref.current.textContent = format(v); } });
     prev.current = value;
     return () => ctl.stop();
@@ -99,7 +103,7 @@ export function Tabs<T extends string>({ tabs, value, onChange, layoutId }: { ta
       {tabs.map((t) => (
         <button key={t.id} onClick={() => onChange(t.id)} className="relative flex items-center gap-1.5 whitespace-nowrap px-2.5 py-1.5 text-[12px] font-bold transition-colors" style={{ color: value === t.id ? 'var(--text)' : 'var(--muted)' }}>
           {t.c && <span className="h-1.5 w-1.5 rounded-full" style={{ background: t.c }} />}
-          {t.label}{t.count !== undefined && <span className="mono text-[10px] text-[var(--faint)]">{t.count}</span>}
+          {t.label}{t.count !== undefined && <span className="mono text-[11px] text-[var(--faint)]">{t.count}</span>}
           {value === t.id && <motion.span layoutId={layoutId} className="absolute inset-x-1 -bottom-px h-[2px] rounded-full" style={{ background: `linear-gradient(90deg, ${t.c ?? 'var(--violet)'}, var(--cyan))`, boxShadow: `0 0 8px ${t.c ?? 'var(--violet)'}` }} transition={{ type: 'spring', stiffness: 420, damping: 34 }} />}
         </button>
       ))}

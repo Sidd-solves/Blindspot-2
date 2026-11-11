@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { analyzeSmart, detectFields, profileData, pearson, numeric, interpretSegments, round, type Dataset, type Row } from '@blindspot/analytics';
 import { defineTool, ToolError } from '../core';
 
-const FindingOut = z.object({ id: z.string(), category: z.string(), title: z.string(), severity: z.enum(['critical', 'high', 'medium', 'low']), confidence: z.number(), basis: z.enum(['measured', 'tested', 'rule']), pValue: z.number().nullable(), period: z.string().nullable(), exposure: z.enum(['lost', 'at-risk', 'reversed', 'untracked']).nullable(), metric: z.string(), explanation: z.string(), evidence: z.record(z.string(), z.unknown()), impactUsd: z.number().nullable(), impactBasis: z.string().nullable(), nextAction: z.string(), score: z.number() });
+const FindingOut = z.object({ id: z.string(), category: z.string(), title: z.string(), severity: z.enum(['critical', 'high', 'medium', 'low']), confidence: z.number(), basis: z.enum(['measured', 'tested', 'rule']), pValue: z.number().nullable(), period: z.string().nullable(), exposure: z.enum(['lost', 'at-risk', 'reversed', 'untracked']).nullable(), drill: z.object({ field: z.string(), values: z.array(z.string()), label: z.string() }).nullable().optional(), metric: z.string(), explanation: z.string(), evidence: z.record(z.string(), z.unknown()), impactUsd: z.number().nullable(), impactBasis: z.string().nullable(), nextAction: z.string(), score: z.number() });
 
 export const analyzeDashboardSmart = defineTool({
   name: 'analyze-dashboard-smart', category: 'Data Analysis',

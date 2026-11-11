@@ -25,7 +25,7 @@ export function CurrencyPicker() {
       <motion.button whileTap={{ scale: 0.96 }} onClick={() => setOpen((o) => !o)} disabled={loading} className="input flex h-7 items-center gap-1.5 !px-2 text-[11.5px] font-bold" style={{ borderColor: converted ? 'var(--amber)' : undefined }} title="Show amounts in another currency">
         <Coins size={13} style={{ color: 'var(--amber)' }} />
         <span className="mono">{fx.to}</span>
-        {converted && <span className="hidden text-[10px] font-semibold text-[var(--faint)] sm:inline">from {fx.base}</span>}
+        {converted && <span className="hidden text-[11px] font-semibold text-[var(--faint)] sm:inline">from {fx.base}</span>}
         <ChevronDown size={12} className="transition-transform" style={{ transform: open ? 'rotate(180deg)' : 'none' }} />
       </motion.button>
       <AnimatePresence>
@@ -43,15 +43,15 @@ export function CurrencyPicker() {
                   <motion.button key={c} initial={{ opacity: 0, x: -4 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: Math.min(i, 10) * 0.015 }} onClick={() => pick(c)}
                     className="row-hover flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[12px]">
                     <span className="mono w-9 flex-none font-bold" style={{ color: on ? 'var(--amber)' : 'var(--text)' }}>{c}</span>
-                    <span className="min-w-0 flex-1 truncate text-[var(--muted)]">{fx.names[c]}{c === fx.base && <span className="ml-1 text-[10px] font-bold text-[var(--emerald)]">original</span>}</span>
-                    {c !== fx.base && <span className="mono text-[10px] text-[var(--faint)]">{rate(c)}</span>}
+                    <span className="min-w-0 flex-1 truncate text-[var(--muted)]">{fx.names[c]}{c === fx.base && <span className="ml-1 text-[11px] font-bold text-[var(--emerald)]">original</span>}</span>
+                    {c !== fx.base && <span className="mono text-[11px] text-[var(--faint)]">{rate(c)}</span>}
                     {on && <Check size={13} style={{ color: 'var(--amber)' }} />}
                   </motion.button>
                 );
               })}
               {!list.length && <div className="px-2 py-3 text-center text-[11.5px] text-[var(--faint)]">No currency matches "{q}"</div>}
             </div>
-            <div className="mt-1 border-t px-2 pt-1.5 text-[10px] text-[var(--faint)]" style={{ borderColor: 'var(--line)' }}>
+            <div className="mt-1 border-t px-2 pt-1.5 text-[11px] text-[var(--faint)]" style={{ borderColor: 'var(--line)' }}>
               {fx.live ? `Today's rate (${fx.date}, European Central Bank). ` : 'Approximate rate (live rates unavailable). '}Your data is in {fx.base}; every amount is converted at this rate.
             </div>
           </motion.div>

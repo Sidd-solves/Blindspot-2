@@ -36,15 +36,15 @@ function Pipeline() {
 
 const STEPS = [
   { c: 'var(--emerald)', icon: PlugZap, t: 'Connect your sales', d: 'Link Shopify (read-only), drop in Shopify\'s order export, or upload any CSV, Excel or PDF sales report. No setup, no account.', ex: 'A store with 50,000 orders is ready in seconds.' },
-  { c: 'var(--cyan)', icon: Search, t: 'Blindspot hunts for problems', d: 'It cleans the data, runs every check, scans every product, customer and country, and tests business ideas, all with real calculations.', ex: '1 million real sales analysed in about 6 seconds.' },
+  { c: 'var(--cyan)', icon: Search, t: 'Blindspot hunts for problems', d: 'It cleans the data, runs every check, compares your main products, customers and countries with the rest of the business, and tests business ideas, all with real calculations.', ex: '1 million real sales analysed in about 6 seconds.' },
   { c: 'var(--violet)', icon: Wrench, t: 'You get a plan', d: 'Each problem comes with what it costs, how sure Blindspot is, what fixing it could be worth, and a roadmap ordered from easy to hard.', ex: 'Plus a one-page report to send a partner or investor.' },
 ];
 
 const LAYERS = [
   { icon: Brush, c: 'var(--amber)', t: 'Cleans your data', d: 'Removes duplicate lines, separates returns and fees, flags sales with no customer, and shows exactly what changed.', ex: 'Found 34,335 duplicate lines in a real shop.' },
   { icon: Search, c: 'var(--cyan)', t: 'Checks what matters to shops', d: 'Returns, repeat buyers, lost customers, products that stopped selling, order size, seasonality, money-losing products.', ex: 'Found 42 best customers who had stopped ordering.' },
-  { icon: Layers, c: 'var(--rose)', t: 'Scans everything else', d: 'Compares every product, customer and country with the business as a whole, so it catches problems nobody thought to check.', ex: 'A best-seller down 51% while the shop grew 5%.' },
-  { icon: FlaskConical, c: 'var(--fuchsia)', t: 'Tests ideas with math', d: 'Business theories, built-in or suggested by AI, are tested and labeled true, false or not enough evidence.', ex: 'Proved growth was coming from old customers, not new ones.' },
+  { icon: Layers, c: 'var(--rose)', t: 'Scans the rest', d: 'Compares each sizeable product, customer and country (the 40 largest of each) with the business as a whole, adjusting for testing many at once, so it catches problems nobody thought to check.', ex: 'A best-seller down 51% while the shop grew 5%.' },
+  { icon: FlaskConical, c: 'var(--fuchsia)', t: 'Tests ideas with math', d: 'Business theories, built-in or suggested by AI, are tested with statistics and labelled supported, not supported, real but small, or not enough evidence, for your data.', ex: 'Proved growth was coming from old customers, not new ones.' },
 ];
 
 export default function How() {

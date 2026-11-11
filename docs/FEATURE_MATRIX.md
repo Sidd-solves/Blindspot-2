@@ -21,7 +21,7 @@
 | Optional | Tableau extension + WebSocket bridge | Bridge tested with a simulated extension; **unverified** in Tableau |
 | Optional | Dashboard screenshot vision review | Built; needs an image upload, not exercised in tests |
 
-**Tests:** `npm test` → 64 passed. **Fact check:** 7/7 match on the full dataset.
+**Tests:** `npm test` → 164 passed. **Fact check:** 7/7 match on the full dataset.
 
 ## Known limitations
 1. The real case study is a public dataset from 2009–2011, not the team's own store; "tested on real business data", not "used by a business".

@@ -24,5 +24,5 @@ export function loadCaseStudy(): Dataset {
   const d = JSON.parse(zlib.gunzipSync(fs.readFileSync(CASE_STUDY_FILE)).toString('utf8')) as { cols: string[]; strCols: string[]; dict: Record<string, string[]>; rows: (string | number | null)[][]; prep: Dataset['prep'] };
   const isStr = d.cols.map((c) => d.strCols.includes(c));
   const rows = d.rows.map((a) => { const o: Row = {}; for (let i = 0; i < d.cols.length; i++) o[d.cols[i]] = isStr[i] ? d.dict[d.cols[i]][a[i] as number] : a[i]; return o; });
-  return { name: 'UK online gift shop', source: 'case-study', currency: 'GBP', prep: d.prep, rows, label: 'REAL DATA: UCI Online Retail II (UK online gift shop, 2009–2011), 25% sample of customers whose overall trend matches the full data' };
+  return { name: 'UK online gift shop', source: 'case-study', currency: 'GBP', prep: d.prep, rows, label: 'REAL DATA: UCI Online Retail II (UK online gift shop, 2009–2011), 25% sample of customers, chosen so its overall sales trend matches the full data (other figures can differ from the full data). Historical analysis of public data, not a store that used Blindspot' };
 }

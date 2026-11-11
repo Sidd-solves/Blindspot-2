@@ -49,8 +49,8 @@ export default function Reports() {
           </div>
 
           <h3 className="mb-2 mt-5 text-[11px] font-extrabold uppercase tracking-[.1em]" style={{ color: 'var(--emerald)' }}>Priority recommendations</h3>
-          <div className="overflow-x-auto"><table className="w-full text-[12px]"><thead><tr className="text-left text-[10.5px] uppercase tracking-wider text-[var(--faint)]"><th className="pb-1.5 font-bold">Action</th><th className="pb-1.5 font-bold">Effort</th><th className="pb-1.5 text-right font-bold">Benefit</th><th className="hidden pb-1.5 pl-3 font-bold md:table-cell">Risk</th></tr></thead>
-            <tbody>{rep.recommendations.map((r: any, i: number) => <motion.tr key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 + i * 0.08 }} className="border-t" style={{ borderColor: 'var(--line)' }}><td className="py-2 pr-3 font-bold">{r.intervention}</td><td><Chip c={r.effort === 'low' ? 'var(--cyan)' : r.effort === 'medium' ? 'var(--amber)' : 'var(--rose)'}>{r.effort}</Chip></td><td className="mono text-right font-semibold" style={{ color: 'var(--emerald)' }}>{usd(r.expectedBenefitUsd)}<span className="ml-1 text-[9.5px] font-bold uppercase text-[var(--faint)]">{r.benefitKind}</span></td><td className="hidden pl-3 text-[11px] text-[var(--muted)] md:table-cell">{r.risks}</td></motion.tr>)}</tbody></table></div>
+          <div className="overflow-x-auto"><table className="w-full text-[12px]"><thead><tr className="text-left text-[11.5px] uppercase tracking-wider text-[var(--faint)]"><th className="pb-1.5 font-bold">Action</th><th className="pb-1.5 font-bold">Effort</th><th className="pb-1.5 text-right font-bold">Benefit</th><th className="hidden pb-1.5 pl-3 font-bold md:table-cell">Risk</th></tr></thead>
+            <tbody>{rep.recommendations.map((r: any, i: number) => <motion.tr key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 + i * 0.08 }} className="border-t" style={{ borderColor: 'var(--line)' }}><td className="py-2 pr-3 font-bold">{r.intervention}</td><td><Chip c={r.effort === 'low' ? 'var(--cyan)' : r.effort === 'medium' ? 'var(--amber)' : 'var(--rose)'}>{r.effort}</Chip></td><td className="mono text-right font-semibold" style={{ color: 'var(--emerald)' }}>{r.expectedBenefitUsd ? <>{usd(r.expectedBenefitUsd)}<span className="ml-1 text-[11px] font-bold uppercase text-[var(--faint)]">{r.benefitKind}</span></> : <span className="text-[11px] font-bold text-[var(--faint)]">not estimated</span>}</td><td className="hidden pl-3 text-[11px] text-[var(--muted)] md:table-cell">{r.risks}</td></motion.tr>)}</tbody></table></div>
 
           <h3 className="mb-2 mt-5 text-[11px] font-extrabold uppercase tracking-[.1em]" style={{ color: 'var(--blue)' }}>Every topic checked</h3>
           <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
@@ -68,7 +68,7 @@ export default function Reports() {
             {(rep.roadmap ?? []).map((p: any, i: number) => { const st = PHASE_STYLE[i]; return (
               <motion.div key={p.when} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 + i * 0.2 }} className="relative">
                 <span className="relative z-10 grid h-8 w-8 place-items-center rounded-full" style={{ background: st.c, boxShadow: `0 0 0 4px var(--panel-solid), 0 0 16px ${st.c}` }}><st.icon size={14} color="white" /></span>
-                <div className="mt-2 text-[10.5px] font-bold uppercase tracking-wider" style={{ color: st.c }}>{p.when}</div>
+                <div className="mt-2 text-[11.5px] font-bold uppercase tracking-wider" style={{ color: st.c }}>{p.when}</div>
                 <div className="text-[13px] font-extrabold">{p.title}</div>
                 {p.items.length ? <ul className="mt-1 space-y-1">{p.items.map((it: string) => <li key={it} className="text-[11.5px] leading-snug text-[var(--muted)]">• {it}</li>)}</ul> : <div className="mt-1 text-[11.5px] text-[var(--faint)]">Nothing urgent in this phase.</div>}
               </motion.div>
@@ -77,8 +77,8 @@ export default function Reports() {
 
           <h3 className="mb-2 mt-5 text-[11px] font-extrabold uppercase tracking-[.1em]" style={{ color: 'var(--amber)' }}>What fixing it could be worth (estimate)</h3>
           <div className="tint grid gap-3 rounded-xl p-3 md:grid-cols-[auto_1fr]" style={{ '--c': 'var(--amber)' } as CSSProperties}>
-            <div><div className="label flex items-center gap-1"><TrendingUp size={11} />Illustrative scenario</div><div className="mono text-[20px] font-semibold" style={{ color: 'var(--emerald)' }}>+{usd(rep.scenario.delta.profit)}</div><div className="text-[10.5px] text-[var(--muted)]">churn −5%, opex −8%</div></div>
-            <div className="space-y-0.5">{rep.scenario.formulas.map((f: string) => <div key={f} className="mono text-[10.5px] text-[var(--muted)]">{f}</div>)}<div className="pt-1 text-[10.5px] text-[var(--faint)]">{rep.scenario.disclaimer}</div></div>
+            <div><div className="label flex items-center gap-1"><TrendingUp size={11} />Illustrative scenario</div><div className="mono text-[20px] font-semibold" style={{ color: 'var(--emerald)' }}>+{usd(rep.scenario.delta.profit)}</div><div className="text-[11.5px] text-[var(--muted)]">churn −5%, opex −8%</div></div>
+            <div className="space-y-0.5">{rep.scenario.formulas.map((f: string) => <div key={f} className="mono text-[11.5px] text-[var(--muted)]">{f}</div>)}<div className="pt-1 text-[11.5px] text-[var(--faint)]">{rep.scenario.disclaimer}</div></div>
           </div>
         </Card>
       )}

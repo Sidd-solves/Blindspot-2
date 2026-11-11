@@ -8,7 +8,7 @@ import { openApp } from './SiteLayout';
 /* ---------- tiny animated mock-ups of each step ---------- */
 
 const Win = ({ title, children }: { title: string; children: ReactNode }) => (
-  <div className="overflow-hidden rounded-lg border text-[10.5px]" style={{ borderColor: 'var(--line-strong)', background: 'var(--bg2)' }}>
+  <div className="overflow-hidden rounded-lg border text-[11.5px]" style={{ borderColor: 'var(--line-strong)', background: 'var(--bg2)' }}>
     <div className="flex items-center gap-1 border-b px-2 py-1" style={{ borderColor: 'var(--line)' }}>{[0, 1, 2].map((i) => <span key={i} className="h-1.5 w-1.5 rounded-full" style={{ background: 'var(--line-strong)' }} />)}<span className="ml-1.5 font-bold text-[var(--faint)]">{title}</span></div>
     <div className="relative p-2.5">{children}</div>
   </div>

@@ -3,7 +3,7 @@ import { useEffect, useState, type CSSProperties } from 'react';
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, ComposedChart, Line, ReferenceArea, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Activity, ArrowRight, Check, Crosshair, DollarSign, FlaskConical, Gauge, Layers, Lightbulb, PieChart, Radar, ShoppingCart, TrendingUp, X } from 'lucide-react';
 import { useStore } from '../store';
-import { ago, get, pct, SEV, CAT, tool, usd, evidenceText, VERDICT } from '../api';
+import { ago, get, pct, SEV, CAT, tool, usd, evidenceText, VERDICT , exposureText } from '../api';
 import { Card, CardHead, Chip, CountUp, Meter, Ring, Sparkline, stagger, Loading } from '../components/ui';
 import { ChartTip, axis, glowDefs } from '../components/charts';
 import { go } from '../App';
@@ -26,7 +26,7 @@ function DriversCard() {
         {err && <div className="text-[11.5px] text-[var(--faint)]">{err}</div>}
         {!d && !err && <div className="skeleton h-32" />}
         {d && (<>
-          <div className="text-[10.5px] text-[var(--faint)]">{d.windows.label}</div>
+          <div className="text-[11.5px] text-[var(--faint)]">{d.windows.label}</div>
           {d.decomposition && <div className="mt-1.5 grid grid-cols-2 gap-1.5 text-[11px]">
             <div className="tint rounded-md px-2 py-1" style={{ '--c': 'var(--cyan)' } as CSSProperties}><div className="label">Orders</div><span className="mono">{d.decomposition.orders[0].toLocaleString()} → {d.decomposition.orders[1].toLocaleString()}</span></div>
             <div className="tint rounded-md px-2 py-1" style={{ '--c': 'var(--violet)' } as CSSProperties}><div className="label">Avg order</div><span className="mono">{usd(d.decomposition.aov[0])} → {usd(d.decomposition.aov[1])}</span></div>
@@ -60,7 +60,7 @@ function IdeasCard() {
           <motion.div key={h.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }} className="rounded-lg px-2 py-1.5" style={{ background: 'var(--line)', borderLeft: `3px solid ${VERDICT[h.verdict]?.c}` }}>
             <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider" style={{ color: VERDICT[h.verdict]?.c }}>{h.verdict === 'supported' ? <Check size={11} /> : <X size={11} />}{VERDICT[h.verdict]?.label}</div>
             <div className="text-[11.5px] font-bold leading-snug">{h.claim}</div>
-            <div className="truncate text-[10.5px] text-[var(--muted)]" title={h.summary}>{h.summary}</div>
+            <div className="truncate text-[11.5px] text-[var(--muted)]" title={h.summary}>{h.summary}</div>
           </motion.div>
         ))}
       </div>
@@ -70,12 +70,12 @@ function IdeasCard() {
 
 export default function Overview() {
   const { dash, findings, bySeverity, actions, dataset, loading, version } = useStore();
-  const [conc, setConc] = useState<any>(null);
+  const [conc, setConc] = useState<any>(null), [concState, setConcState] = useState<'loading' | 'none' | 'ok'>('loading');
   useEffect(() => {
     if (!dataset) return;
     const dim = dataset.fields.highCardDims[0];
     const dim2 = dataset.fields.highCardDims.find((d) => /customer|client|account/i.test(d)) ?? dataset.fields.highCardDims.find((d) => !/^(order|invoice)/i.test(d) && !/country|region|state/i.test(d));
-    if (dim2) tool('interpret-concentration', { dimension: dim2, limit: 12 }).then((r) => setConc(r.ok ? r.data : null)); else setConc(null);
+    if (dim2) { setConcState('loading'); tool('interpret-concentration', { dimension: dim2, limit: 12 }).then((r) => { setConc(r.ok ? r.data : null); setConcState(r.ok ? 'ok' : 'none'); }); } else { setConc(null); setConcState('none'); }
   }, [version]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!dash) return <Loading steps={['Loading dataset…', 'Profiling columns…', 'Detecting risks…', 'Ranking findings…']} />;
@@ -107,7 +107,7 @@ export default function Overview() {
                 <div className="label flex items-center gap-1"><st.icon size={11} style={{ color: st.c }} />{k.label}</div>
                 <CountUp value={k.value} format={fmt(k)} className="mt-1 block text-[22px] font-semibold tracking-tight" />
               </div>
-              {spark.length > 1 ? <Sparkline data={spark.slice(-12)} c={st.c} /> : k.format === 'pct' ? <Ring value={Math.max(0, k.value) * 4} size={42} stroke={5} c={st.c}><span className="mono text-[9px]">{pct(k.value, 0)}</span></Ring> : <div className="flex items-end gap-[3px]">{series.slice(-10).map((v: number, j: number) => <motion.span key={j} className="w-[5px] rounded-sm" style={{ background: st.c, opacity: 0.35 + j / 16 }} initial={{ height: 0 }} animate={{ height: 6 + (v / Math.max(...series)) * 20 }} transition={{ delay: j * 0.04 }} />)}</div>}
+              {spark.length > 1 ? <Sparkline data={spark.slice(-12)} c={st.c} /> : k.format === 'pct' ? <Ring value={Math.max(0, k.value) * 4} size={42} stroke={5} c={st.c}><span className="mono text-[11px]">{pct(k.value, 0)}</span></Ring> : <div className="flex items-end gap-[3px]">{series.slice(-10).map((v: number, j: number) => <motion.span key={j} className="w-[5px] rounded-sm" style={{ background: st.c, opacity: 0.35 + j / 16 }} initial={{ height: 0 }} animate={{ height: 6 + (v / Math.max(...series)) * 20 }} transition={{ delay: j * 0.04 }} />)}</div>}
             </div>
             {i === 0 && <div className="mt-1.5 flex items-center gap-1.5 text-[11px]"><Chip c={momentum >= 0 ? 'var(--emerald)' : 'var(--rose)'}>{momentum >= 0 ? '▲' : '▼'} {pct(Math.abs(momentum))}</Chip><span className="text-[var(--faint)]">{yoy ? 'last 6 full months vs same months last year' : 'last 6 full months vs prior 6'}</span></div>}
             {i === 1 && <div className="mt-1.5 text-[11px] text-[var(--faint)]">{k.label === 'Avg order' ? 'revenue per order' : 'after cost of goods'}</div>}
@@ -118,7 +118,7 @@ export default function Overview() {
       })}
 
       <Card c="var(--violet)" className="md:col-span-6 xl:col-span-8" hover={false}>
-        <CardHead icon={<Activity size={13} />} title={`${dataset?.fields.measure ?? 'Revenue'} trend`} c="var(--violet)" right={<div className="flex items-center gap-1.5">{partialMonth && <Chip c="var(--faint)">{partialMonth} is a partial month</Chip>}<Chip c="var(--rose)">Shaded: last 6 months</Chip></div>} />
+        <CardHead icon={<Activity size={13} />} title={`${dataset?.fields.measure ?? 'Revenue'} trend`} c="var(--violet)" right={<div className="flex items-center gap-1.5">{partialMonth && <Chip c="var(--faint)">{partialMonth} is a partial month</Chip>}<Chip c="var(--violet)">Shaded: last 6 months</Chip></div>} />
         <div className="h-[230px] px-1 pb-2">
           <ResponsiveContainer>
             <AreaChart data={trend} margin={{ top: 8, right: 14, left: 0, bottom: 0 }}>
@@ -138,7 +138,7 @@ export default function Overview() {
         <div className="flex items-center justify-between"><div className="label flex items-center gap-1"><Radar size={11} style={{ color: band.c }} />Business health</div><Chip c={band.c}>{band.label}</Chip></div>
         <div className="mt-2 flex items-center gap-4">
           <Ring value={health / 100} size={104} stroke={9} c={band.c}>
-            <div><CountUp value={health} className="text-[26px] font-semibold" /><div className="text-[9.5px] font-bold uppercase tracking-wider text-[var(--faint)]">out of 100</div></div>
+            <div><CountUp value={health} className="text-[26px] font-semibold" /><div className="text-[11px] font-bold uppercase tracking-wider text-[var(--faint)]">out of 100</div></div>
           </Ring>
           <div className="flex-1 space-y-1.5">
             {Object.entries(SEV).map(([k, s]) => (
@@ -179,7 +179,7 @@ export default function Overview() {
           {loading && !findings.length ? <div className="space-y-2 p-2">{[0, 1, 2, 3].map((i) => <div key={i} className="skeleton h-7" />)}</div> : findings.length === 0 ? <div className="px-2 pb-2 text-[12px] text-[var(--muted)]">No problems found in this data.</div> : findings.slice(0, 6).map((f, i) => (
             <motion.button key={f.id} onClick={() => go('risk', `?f=${encodeURIComponent(f.id)}`)} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.05 * i }} className="row-hover flex w-full items-center gap-2.5 rounded-lg px-2 py-[7px] text-left">
               <span className="h-6 w-1 flex-none rounded-full" style={{ background: SEV[f.severity].c, boxShadow: `0 0 8px ${SEV[f.severity].c}` }} />
-              <span className="min-w-0 flex-1"><span className="block truncate text-[12.5px] font-bold">{f.title}</span><span className="block truncate text-[10.5px] text-[var(--faint)]">{CAT[f.category]?.label} · {evidenceText(f)}</span></span>
+              <span className="min-w-0 flex-1"><span className="line-clamp-2 block text-[12.5px] font-bold leading-snug" title={f.title}>{f.title}</span><span className="block truncate text-[11.5px] text-[var(--faint)]">{CAT[f.category]?.label} · {evidenceText(f)}{exposureText(f) ? ` · ${exposureText(f)}` : ''}</span></span>
               <span className="mono text-[11.5px] font-semibold" style={{ color: SEV[f.severity].c }}>{f.impactUsd ? usd(f.impactUsd, true) : '—'}</span>
             </motion.button>
           ))}
@@ -204,7 +204,7 @@ export default function Overview() {
             </div>
             <div className="px-3.5 pb-3 text-[11px] text-[var(--muted)]">Just <span className="mono font-semibold text-[var(--text)]">{conc.groupsFor80Pct}</span> of {conc.groupCount.toLocaleString()} {conc.dimension.toLowerCase()}s bring in 80% of sales.</div>
           </>
-        ) : <div className="px-3.5 pb-3 text-[12px] text-[var(--muted)]">This data has no customer or product column to check.</div>}
+        ) : concState === 'loading' ? <Loading className="px-3.5 pb-3" steps={['Measuring who your sales depend on…']} /> : <div className="px-3.5 pb-3 text-[12px] text-[var(--muted)]">This data has no customer or product column to check.</div>}
       </Card>
 
       <Card c="var(--emerald)" className="md:col-span-3 xl:col-span-4">
@@ -213,8 +213,8 @@ export default function Overview() {
           {actions.length === 0 && <div className="text-[12px] text-[var(--muted)]">Nothing to fix right now.</div>}
           {actions.slice(0, 3).map((a, i) => (
             <motion.div key={a.findingId} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 * i }} className="tint rounded-lg p-2" style={{ '--c': 'var(--emerald)' } as CSSProperties}>
-              <div className="flex items-center justify-between gap-2"><span className="mono grid h-5 w-5 flex-none place-items-center rounded-md text-[10.5px] font-bold" style={{ background: 'var(--emerald)', color: 'white' }}>{i + 1}</span><span className="flex-1 text-[12px] font-bold leading-snug">{a.intervention}</span></div>
-              <div className="mt-1 flex flex-wrap items-center gap-1.5 pl-7 text-[10.5px]">{a.expectedBenefitUsd ? <Chip c="var(--emerald)">could win back {usd(a.expectedBenefitUsd, true)}</Chip> : null}<Chip c={a.effort === 'low' ? 'var(--cyan)' : a.effort === 'medium' ? 'var(--amber)' : 'var(--rose)'}>{a.effort === 'low' ? 'easy' : a.effort === 'medium' ? 'moderate' : 'hard'}</Chip><span className="text-[var(--faint)]">estimate</span></div>
+              <div className="flex items-center justify-between gap-2"><span className="mono grid h-5 w-5 flex-none place-items-center rounded-md text-[11.5px] font-bold" style={{ background: 'var(--emerald)', color: 'white' }}>{i + 1}</span><span className="flex-1 text-[12px] font-bold leading-snug">{a.intervention}</span></div>
+              <div className="mt-1 flex flex-wrap items-center gap-1.5 pl-7 text-[11.5px]">{a.expectedBenefitUsd ? <Chip c="var(--emerald)">could win back {usd(a.expectedBenefitUsd, true)}</Chip> : null}<Chip c={a.effort === 'low' ? 'var(--cyan)' : a.effort === 'medium' ? 'var(--amber)' : 'var(--rose)'}>{a.effort === 'low' ? 'easy' : a.effort === 'medium' ? 'moderate' : 'hard'}</Chip><span className="text-[var(--faint)]">estimate</span></div>
             </motion.div>
           ))}
         </div>

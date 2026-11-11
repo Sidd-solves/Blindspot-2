@@ -115,10 +115,21 @@ app.get('/api/fx', async (req, res) => {
   res.json({ ...t, names: CURRENCIES });
 });
 
+/** Drill-through: keep rows whose `field` is one of the JSON-encoded `values` (used by "See the affected rows"). */
+function drillRows(rows: any[], field?: string, values?: string) {
+  if (!field || !values) return rows;
+  let list: unknown;
+  try { list = JSON.parse(values); } catch { return rows; }
+  if (!Array.isArray(list)) return rows;
+  const set = new Set(list.map(String));
+  return rows.filter((r) => set.has(String(r[field] ?? '')));
+}
+
 /** The exact rows being analysed (after cleaning and the visitor's filters), so anyone can check the numbers. */
 app.get('/api/rows', (req, res) => {
-  const q = z.object({ offset: z.coerce.number().int().min(0).default(0), limit: z.coerce.number().int().min(1).max(200).default(50), q: z.string().max(100).default('') }).parse(req.query);
-  const v = sessions.get(sid(req)).view(), all = v.rows, needle = q.q.trim().toLowerCase();
+  const q = z.object({ offset: z.coerce.number().int().min(0).default(0), limit: z.coerce.number().int().min(1).max(200).default(50), q: z.string().max(100).default(''), field: z.string().max(100).optional(), in: z.string().max(60_000).optional() }).parse(req.query);
+  const v = sessions.get(sid(req)).view(), needle = q.q.trim().toLowerCase();
+  const all = drillRows(v.rows, q.field, q.in);
   const columns = all.length ? Object.keys(all[0]) : [];
   const matched = needle ? all.filter((r) => columns.some((c) => String(r[c] ?? '').toLowerCase().includes(needle))) : all;
   const fm = detectFields(v), tx = all[0] && 'IsReturn' in all[0];
@@ -136,7 +147,8 @@ app.get('/api/rows', (req, res) => {
 });
 
 app.get('/api/rows.csv', (req, res) => {
-  const v = sessions.get(sid(req)).view(), cols = v.rows.length ? Object.keys(v.rows[0]) : [];
+  const v0 = sessions.get(sid(req)).view(), f = z.object({ field: z.string().max(100).optional(), in: z.string().max(60_000).optional() }).parse(req.query);
+  const v = { ...v0, rows: drillRows(v0.rows, f.field, f.in) }, cols = v.rows.length ? Object.keys(v.rows[0]) : [];
   const esc = (x: unknown) => { const t = x == null ? '' : String(x); return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t; };
   res.set({ 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': `attachment; filename="${v.name.replace(/[^\w -]/g, '').trim() || 'data'}.csv"` });
   res.write(cols.join(',') + '\n');

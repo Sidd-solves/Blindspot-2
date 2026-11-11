@@ -36,7 +36,7 @@ UCI **Online Retail II**: a real UK online gift shop, 1,067,371 sales lines (Dec
 ```bash
 npm install
 npm run dev     # API on :8787, web on :5173
-npm test        # 64 tests: analytics, all 34 tools, sessions, API + MCP integration
+npm test        # 164 tests: statistics, file reading (incl. real PDFs), analytics, all 34 tools, sessions, API + MCP
 ```
 Add `ANTHROPIC_API_KEY=` to `.env` for Claude answers (optional; without it the analyst answers common questions with real queries). Production: see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
