@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useState, type CSSProperties } from 'react';
 import { Copy, Eye, ImageUp, Palette, Plus, ScanEye, Star, Wand2, X, Check } from 'lucide-react';
-import { simulateCvd, hexToRgb, rgbToHex } from '@blindspot/analytics';
+import { simulateCvd, hexToRgb, rgbToHex, paletteFromPixels, CVD_MATRICES } from '@blindspot/analytics';
 import { tool } from '../api';
 import { Card, CardHead, Chip, CountUp, Empty, Loading, Meter, Ring, Tabs, stagger } from '../components/ui';
 
@@ -414,98 +414,310 @@ function PaletteGen() {
   );
 }
 
+const CVD_VIEWS = [
+  { id: 'normal', label: 'Normal' },
+  { id: 'deuteranopia', label: 'Deuteranopia' },
+  { id: 'protanopia', label: 'Protanopia' },
+  { id: 'tritanopia', label: 'Tritanopia' },
+] as const;
+type CvdView = (typeof CVD_VIEWS)[number]['id'];
+const matrixValues = (k: Exclude<CvdView, 'normal'>) =>
+  CVD_MATRICES[k].map((row) => [...row, 0, 0].join(' ')).join(' ') + ' 0 0 0 1 0';
+
+/** Reads a screenshot's chart colors in the browser (no upload needed for this part). */
+async function readPalette(file: File) {
+  const url = URL.createObjectURL(file);
+  const img = await new Promise<HTMLImageElement>((res, rej) => {
+    const i = new Image();
+    i.onload = () => res(i);
+    i.onerror = rej;
+    i.src = url;
+  });
+  const scale = Math.min(1, 400 / img.width);
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(img.width * scale));
+  c.height = Math.max(1, Math.round(img.height * scale));
+  const ctx = c.getContext('2d')!;
+  ctx.drawImage(img, 0, 0, c.width, c.height);
+  return { url, ...paletteFromPixels(ctx.getImageData(0, 0, c.width, c.height).data) };
+}
+
 function Vision() {
   const [drag, setDrag] = useState(false),
-    [busy, setBusy] = useState(false),
-    [res, setRes] = useState<any>(null),
+    [file, setFile] = useState<File | null>(null),
+    [preview, setPreview] = useState(''),
+    [bg, setBg] = useState('#ffffff'),
+    [found, setFound] = useState<{ hex: string; share: number }[]>([]),
+    [off, setOff] = useState<Set<string>>(new Set()),
+    [colorRes, setColorRes] = useState<any>(null),
+    [view, setView] = useState<CvdView>('normal'),
+    [ai, setAi] = useState<any>(null),
+    [aiBusy, setAiBusy] = useState(false),
     [err, setErr] = useState('');
-  const [preview, setPreview] = useState('');
-  const handle = async (file?: File) => {
-    if (!file) return;
-    if (!/image\/(png|jpeg)/.test(file.type) || file.size > 5e6) return setErr('PNG or JPEG under 5MB.');
+  const used = found.filter((c) => !off.has(c.hex)).map((c) => c.hex);
+  useEffect(() => {
+    if (used.length < 1) return setColorRes(null);
+    tool('analyze-color-harmony', { colors: used, background: bg }).then((r) =>
+      setColorRes(r.ok ? r.data : null),
+    );
+  }, [used.join(), bg]);
+
+  const handle = async (f?: File) => {
+    if (!f) return;
+    if (!/image\/(png|jpeg)/.test(f.type) || f.size > 5e6) return setErr('PNG or JPEG under 5MB.');
     setErr('');
-    setBusy(true);
-    setRes(null);
+    setAi(null);
+    setOff(new Set());
+    setView('normal');
+    setFile(f);
+    try {
+      const p = await readPalette(f);
+      setPreview(p.url);
+      setBg(p.background);
+      setFound(p.colors);
+      if (!p.colors.length) setErr('No chart colors found: the image looks gray-only.');
+    } catch {
+      setErr('That image could not be read.');
+    }
+  };
+  // The AI review is a separate, explicit step: it sends the image to Claude.
+  const runAi = async () => {
+    if (!file) return;
+    setAiBusy(true);
     const b64 = await new Promise<string>((r) => {
       const fr = new FileReader();
       fr.onload = () => r(String(fr.result).split(',')[1]);
       fr.readAsDataURL(file);
     });
-    setPreview(URL.createObjectURL(file));
     const up = await tool('get-dashboard-screenshot', { uploadedBase64: b64, mediaType: file.type });
     if (!up.ok) {
       setErr(up.error!.message);
-      setBusy(false);
+      setAiBusy(false);
       return;
     }
     const a = await tool('analyze-design', { useVision: true, spec: { charts: [] } });
-    setRes(a.data);
-    setBusy(false);
+    setAi(a.data);
+    setAiBusy(false);
   };
+
   return (
-    <Card c="var(--cyan)" hover={false} className="lg:col-span-7">
-      <CardHead icon={<Wand2 size={13} />} title="Vision review" c="var(--cyan)" />
+    <Card c="var(--cyan)" hover={false} className="lg:col-span-12">
+      <CardHead
+        icon={<Wand2 size={13} />}
+        title="Audit any dashboard screenshot"
+        c="var(--cyan)"
+        right={
+          colorRes && (
+            <Chip c={colorRes.issues.length ? 'var(--amber)' : 'var(--emerald)'}>
+              {colorRes.issues.length
+                ? `${colorRes.issues.length} color issue${colorRes.issues.length === 1 ? '' : 's'}`
+                : 'Colors pass'}
+            </Chip>
+          )
+        }
+      />
+      <svg width="0" height="0" className="absolute" aria-hidden>
+        {(['protanopia', 'deuteranopia', 'tritanopia'] as const).map((k) => (
+          <filter key={k} id={`cvd-${k}`} colorInterpolationFilters="linearRGB">
+            <feColorMatrix type="matrix" values={matrixValues(k)} />
+          </filter>
+        ))}
+      </svg>
       <div className="grid gap-3 px-3.5 pb-3.5 md:grid-cols-2">
-        <label
-          onDragOver={(e) => {
-            e.preventDefault();
-            setDrag(true);
-          }}
-          onDragLeave={() => setDrag(false)}
-          onDrop={(e) => {
-            e.preventDefault();
-            setDrag(false);
-            handle(e.dataTransfer.files[0]);
-          }}
-          className={`relative grid min-h-[150px] cursor-pointer place-items-center overflow-hidden rounded-xl border-2 border-dashed text-center transition-colors ${busy ? 'scan' : ''}`}
-          style={{
-            borderColor: drag ? 'var(--cyan)' : 'var(--line-strong)',
-            background: drag ? 'color-mix(in srgb, var(--cyan) 8%, transparent)' : 'transparent',
-          }}
-        >
-          <input
-            type="file"
-            accept="image/png,image/jpeg"
-            className="hidden"
-            onChange={(e) => handle(e.target.files?.[0])}
-          />
-          {preview ? (
-            <img
-              src={preview}
-              alt="Uploaded dashboard"
-              className="absolute inset-0 h-full w-full object-cover opacity-60"
+        <div className="space-y-2">
+          <label
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDrag(true);
+            }}
+            onDragLeave={() => setDrag(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDrag(false);
+              handle(e.dataTransfer.files[0]);
+            }}
+            className="relative grid min-h-[170px] cursor-pointer place-items-center overflow-hidden rounded-xl border-2 border-dashed text-center transition-colors"
+            style={{
+              borderColor: drag ? 'var(--cyan)' : 'var(--line-strong)',
+              background: drag ? 'color-mix(in srgb, var(--cyan) 8%, transparent)' : 'transparent',
+            }}
+          >
+            <input
+              type="file"
+              accept="image/png,image/jpeg"
+              className="hidden"
+              onChange={(e) => handle(e.target.files?.[0])}
             />
-          ) : null}
-          <div className="relative">
-            <motion.div
-              animate={{ y: drag ? -4 : [0, -3, 0] }}
-              transition={{ duration: 2, repeat: drag ? 0 : Infinity }}
-            >
-              <ImageUp size={22} className="mx-auto" style={{ color: 'var(--cyan)' }} />
-            </motion.div>
-            <div className="mt-1 text-[12px] font-bold">Drop a dashboard screenshot</div>
-            <div className="text-[11.5px] text-[var(--faint)]">PNG or JPEG</div>
-          </div>
-        </label>
-        <div className="min-w-0 text-[12px]">
-          {busy && (
-            <Loading steps={['Validating image bytes…', 'Storing capture…', 'Running vision review…']} />
+            {preview ? (
+              <motion.img
+                key={view}
+                initial={{ opacity: 0.4 }}
+                animate={{ opacity: 1 }}
+                src={preview}
+                alt="Uploaded dashboard"
+                className="absolute inset-0 h-full w-full object-contain"
+                style={{ filter: view === 'normal' ? undefined : `url(#cvd-${view})` }}
+              />
+            ) : (
+              <div className="relative">
+                <motion.div
+                  animate={{ y: drag ? -4 : [0, -3, 0] }}
+                  transition={{ duration: 2, repeat: drag ? 0 : Infinity }}
+                >
+                  <ImageUp size={22} className="mx-auto" style={{ color: 'var(--cyan)' }} />
+                </motion.div>
+                <div className="mt-1 text-[12px] font-bold">Drop a dashboard screenshot</div>
+                <div className="text-[11.5px] text-[var(--faint)]">
+                  From any tool · PNG or JPEG · read in your browser
+                </div>
+              </div>
+            )}
+          </label>
+          {preview && (
+            <Tabs
+              layoutId="cvd-view"
+              value={view}
+              onChange={setView}
+              tabs={CVD_VIEWS.map((v) => ({ ...v }))}
+            />
           )}
-          {err && <div className="text-[var(--rose)]">{err}</div>}
-          {!busy && !res && !err && (
-            <div className="text-[var(--muted)]">
-              Vision runs only on the image you provide. It never substitutes another image.
+        </div>
+        <div className="min-w-0 space-y-2.5 text-[12px]">
+          {err && <div className="text-[var(--amber)]">{err}</div>}
+          {!preview && !err && (
+            <div className="space-y-1.5 text-[var(--muted)]">
+              <div>
+                Drop a screenshot of a dashboard from any tool. Blindspot, with no AI and nothing uploaded:
+              </div>
+              {[
+                'reads the chart colors out of the image',
+                'checks each against the background for contrast (WCAG 3:1)',
+                'shows how it looks to color-blind viewers, and which colors they can’t tell apart',
+              ].map((t, i) => (
+                <motion.div
+                  key={t}
+                  initial={{ opacity: 0, x: 6 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.1 + i * 0.08 }}
+                  className="flex items-center gap-1.5"
+                >
+                  <Check size={12} style={{ color: 'var(--emerald)' }} />
+                  {t}
+                </motion.div>
+              ))}
             </div>
           )}
-          {res &&
-            (res.vision.ran ? (
-              <div className="whitespace-pre-wrap text-[var(--muted)]">{res.vision.review}</div>
-            ) : (
-              <div className="tint rounded-lg p-2.5" style={{ '--c': 'var(--amber)' } as CSSProperties}>
-                <div className="font-bold">Image received. Vision not run.</div>
-                <div className="mt-0.5 text-[11.5px] text-[var(--muted)]">{res.vision.reason}</div>
+          {found.length > 0 && (
+            <>
+              <div>
+                <div className="label mb-1">Colors found · click one to leave it out</div>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="flex items-center gap-1 text-[11px] text-[var(--muted)]">
+                    <span
+                      className="h-5 w-5 rounded-md border"
+                      style={{ background: bg, borderColor: 'var(--line-strong)' }}
+                    />
+                    background
+                  </span>
+                  {found.map((c, i) => {
+                    const isOff = off.has(c.hex);
+                    const ratio = colorRes?.contrast.find((x: any) => x.color === c.hex)?.ratio;
+                    return (
+                      <motion.button
+                        key={c.hex}
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1, opacity: isOff ? 0.35 : 1 }}
+                        transition={{ delay: i * 0.05, type: 'spring', stiffness: 400, damping: 18 }}
+                        whileHover={{ y: -2 }}
+                        onClick={() => {
+                          const n = new Set(off);
+                          if (isOff) n.delete(c.hex);
+                          else n.add(c.hex);
+                          setOff(n);
+                        }}
+                        className="flex flex-col items-center"
+                        title={`${c.hex} · ${(c.share * 100).toFixed(1)}% of the image${ratio ? ` · contrast ${ratio}:1` : ''}`}
+                      >
+                        <span
+                          className="h-7 w-7 rounded-lg"
+                          style={{
+                            background: c.hex,
+                            boxShadow: isOff ? undefined : `0 4px 12px -5px ${c.hex}`,
+                          }}
+                        />
+                        <span
+                          className="mono mt-0.5 text-[9.5px]"
+                          style={{
+                            color: ratio !== undefined && ratio < 3 ? 'var(--amber)' : 'var(--faint)',
+                          }}
+                        >
+                          {ratio !== undefined && !isOff ? `${ratio}:1` : ' '}
+                        </span>
+                      </motion.button>
+                    );
+                  })}
+                </div>
               </div>
-            ))}
+              {colorRes && (
+                <div className="space-y-1">
+                  {colorRes.issues.length === 0 && (
+                    <div className="flex items-center gap-1.5" style={{ color: 'var(--emerald)' }}>
+                      <Check size={13} /> Every color stands out from the background and stays distinct for
+                      color-blind viewers.
+                    </div>
+                  )}
+                  {colorRes.issues.map((x: any, i: number) => (
+                    <motion.div
+                      key={x.message}
+                      initial={{ opacity: 0, x: 6 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.06 }}
+                      className="flex gap-1.5"
+                    >
+                      <span
+                        className="mt-1 h-1.5 w-1.5 flex-none rounded-full"
+                        style={{
+                          background:
+                            x.severity === 'high'
+                              ? 'var(--orange)'
+                              : x.severity === 'medium'
+                                ? 'var(--amber)'
+                                : 'var(--sky)',
+                        }}
+                      />
+                      <span className="text-[var(--muted)]">{x.message}</span>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+              <div className="border-t pt-2" style={{ borderColor: 'var(--line)' }}>
+                {!ai && (
+                  <motion.button
+                    whileTap={{ scale: 0.96 }}
+                    disabled={aiBusy}
+                    onClick={runAi}
+                    className="btn !h-7 text-[11.5px]"
+                  >
+                    <Wand2 size={12} />
+                    {aiBusy ? 'Asking Claude…' : 'Also get an AI design review'}
+                  </motion.button>
+                )}
+                {!ai && (
+                  <div className="mt-1 text-[10.5px] text-[var(--faint)]">
+                    Sends the image to Claude for layout and labeling advice.
+                  </div>
+                )}
+                {ai &&
+                  (ai.vision.ran ? (
+                    <div className="whitespace-pre-wrap text-[var(--muted)]">{ai.vision.review}</div>
+                  ) : (
+                    <div className="text-[11.5px] text-[var(--muted)]">
+                      AI review not available: {ai.vision.reason}
+                    </div>
+                  ))}
+              </div>
+            </>
+          )}
         </div>
       </div>
     </Card>
@@ -520,10 +732,12 @@ export default function Audit() {
       animate="show"
       className="grid grid-cols-1 gap-3 lg:grid-cols-12"
     >
-      <DesignAudit />
-      <ColorLab />
       <Vision />
-      <PaletteGen />
+      <DesignAudit />
+      <div className="grid content-start gap-3 lg:col-span-5">
+        <ColorLab />
+        <PaletteGen />
+      </div>
     </motion.div>
   );
 }

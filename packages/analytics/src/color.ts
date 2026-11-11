@@ -183,3 +183,69 @@ export function generatePalette(
     check: analyzeColors(colors, background),
   };
 }
+
+/** The CVD matrices, for drawing a whole image the way color-blind viewers see it (e.g. an SVG feColorMatrix). */
+export const CVD_MATRICES = CVD;
+
+/**
+ * The colors a chart actually uses, read from a screenshot's pixels (RGBA, row after row).
+ * Pixels are grouped into coarse color bins; the most common bin is the background; the chart colors are the
+ * saturated bins that cover a visible share of the image, with near-duplicates merged (anti-aliased edges and
+ * gradients produce many neighbors of one color). Grays and near-background tints are left out: they are text,
+ * gridlines and panels, not data colors.
+ */
+export function paletteFromPixels(
+  data: ArrayLike<number>,
+  opts: { maxColors?: number; minShare?: number } = {},
+): { background: string; colors: { hex: string; share: number }[] } {
+  const maxColors = opts.maxColors ?? 8,
+    minShare = opts.minShare ?? 0.002;
+  const bins = new Map<number, { n: number; r: number; g: number; b: number }>();
+  let total = 0;
+  for (let i = 0; i + 3 < data.length; i += 4) {
+    if (data[i + 3] < 200) continue; // skip transparent pixels
+    const r = data[i],
+      g = data[i + 1],
+      b = data[i + 2];
+    const key = ((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3);
+    const e = bins.get(key) ?? { n: 0, r: 0, g: 0, b: 0 };
+    e.n++;
+    e.r += r;
+    e.g += g;
+    e.b += b;
+    bins.set(key, e);
+    total++;
+  }
+  if (!total) return { background: '#ffffff', colors: [] };
+  const list = [...bins.values()]
+    .map((e) => ({ rgb: [e.r / e.n, e.g / e.n, e.b / e.n] as RGB, n: e.n }))
+    .sort((a, b) => b.n - a.n);
+  const bg = list[0].rgb;
+  // Chroma (max − min channel) separates data colors from grays, text and the faint tints of dark-mode panels.
+  const chroma = ([r, g, b]: RGB) => Math.max(r, g, b) - Math.min(r, g, b);
+  // Anti-aliased edges and glows are mixes of a color with the background: c ≈ bg + t·(p − bg).
+  const blendOf = (c: RGB, p: RGB) => {
+    const d = [p[0] - bg[0], p[1] - bg[1], p[2] - bg[2]];
+    const len2 = d[0] ** 2 + d[1] ** 2 + d[2] ** 2;
+    if (!len2) return false;
+    const t = ((c[0] - bg[0]) * d[0] + (c[1] - bg[1]) * d[1] + (c[2] - bg[2]) * d[2]) / len2;
+    if (t < 0.12 || t > 1.05) return false;
+    const proj: RGB = [bg[0] + t * d[0], bg[1] + t * d[1], bg[2] + t * d[2]];
+    return dist(proj, c) < 30;
+  };
+  const picked: { rgb: RGB; n: number }[] = [];
+  for (const c of list.slice(1)) {
+    if (chroma(c.rgb) < 50 || dist(c.rgb, bg) < 45) continue;
+    const near = picked.find((p) => dist(p.rgb, c.rgb) < 48 || blendOf(c.rgb, p.rgb));
+    if (near) near.n += c.n;
+    else picked.push({ ...c });
+  }
+  return {
+    background: rgbToHex(bg),
+    colors: picked
+      .filter((p) => p.n / total >= minShare)
+      .sort((a, b) => b.n - a.n)
+      .slice(0, maxColors)
+      .map((p) => ({ hex: rgbToHex(p.rgb), share: Math.round((p.n / total) * 10000) / 10000 })),
+  };
+}

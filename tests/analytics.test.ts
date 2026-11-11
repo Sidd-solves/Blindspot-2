@@ -123,3 +123,26 @@ describe('analytics engine', () => {
     expect(none.summary).toMatch(/no orders matched/);
   });
 });
+
+describe('palette from a screenshot', () => {
+  it('finds the background and the chart colors, ignoring gray text and merging anti-aliased edges', async () => {
+    const { paletteFromPixels } = await import('@blindspot/analytics');
+    const W = 100,
+      H = 100,
+      px = new Uint8ClampedArray(W * H * 4);
+    const put = (x: number, y: number, [r, g, b]: number[]) => px.set([r, g, b, 255], (y * W + x) * 4);
+    for (let y = 0; y < H; y++)
+      for (let x = 0; x < W; x++) {
+        let c = [255, 255, 255]; // white background
+        if (x >= 10 && x < 30 && y >= 20 && y < 90) c = [220, 38, 38]; // red bar
+        if (x === 30 && y >= 20 && y < 90) c = [235, 120, 120]; // anti-aliased red edge
+        if (x >= 50 && x < 70 && y >= 40 && y < 90) c = [37, 99, 235]; // blue bar
+        if (y === 5 && x < 60) c = [90, 90, 90]; // gray text
+        put(x, y, c);
+      }
+    const p = paletteFromPixels(px);
+    expect(p.background).toBe('#ffffff');
+    expect(p.colors.map((c) => c.hex)).toEqual(['#dc2626', '#2563eb']);
+    expect(p.colors[0].share).toBeGreaterThan(p.colors[1].share);
+  });
+});
