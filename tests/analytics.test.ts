@@ -15,9 +15,9 @@ describe('analytics engine', () => {
   it('finds planted concentration, loss-making Tables, and Central decline', () => {
     const f = analyzeSmart(ds);
     console.log(f.slice(0, 6).map((x) => `${x.severity} ${x.score} ${x.title}`).join('\n'));
-    expect(f.some((x) => x.category === 'concentration' && /Customer/.test(x.title))).toBe(true);
+    expect(f.some((x) => x.category === 'concentration' && /customer/i.test(x.title))).toBe(true);
     expect(f.some((x) => x.category === 'profitability' && /Tables/.test(x.title))).toBe(true);
-    expect(f.some((x) => x.category === 'trend' && /Central/.test(x.title))).toBe(true);
+    expect(f.some((x) => (x.category === 'anomaly' || x.category === 'trend') && /Central/.test(x.title))).toBe(true);
     expect(f[0].score).toBeGreaterThanOrEqual(f[f.length - 1].score);
   });
   it('concentration shares are real percentages summing correctly', () => {

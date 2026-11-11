@@ -41,7 +41,7 @@ const post = (p: string, body: unknown) => fetch(base + p, { method: 'POST', hea
 describe('API + WebSocket bridge (real server, fake Tableau extension)', () => {
   it('health reports 30 tools and a connected extension', async () => {
     const h = await fetch(base + '/api/health').then((r) => r.json());
-    expect(h).toMatchObject({ ok: true, tools: 30, extension: true });
+    expect(h).toMatchObject({ ok: true, tools: 34, extension: true });
   });
   it('tool call is relayed over the bridge to the extension and back', async () => {
     const r = await post('/api/tools/get-worksheet-data', { worksheet: 'Sales by Region', loadIntoSession: true });
@@ -81,6 +81,13 @@ describe('API + WebSocket bridge (real server, fake Tableau extension)', () => {
     expect(good.json.answer).toMatch(/Central/);
     expect(good.json.evidence.length).toBeGreaterThan(0);
   });
+  it('answers ask-anything questions without AI using real queries', async () => {
+    const a = await post('/api/chat', { message: 'top 3 customers by sales' });
+    expect(a.json.answer).toMatch(/Total Sales by customer/);
+    expect(a.json.evidence[0].tool).toBe('query-data');
+    const b = await post('/api/chat', { message: 'show sales by month' });
+    expect(b.json.answer).toMatch(/by month/);
+  });
   it('accepts CSV uploads and analyses them', async () => {
     const csv = 'Customer,Sales,Profit\n' + Array.from({ length: 40 }, (_, i) => `C${i},${i < 3 ? 5000 : 100},${i % 7 === 0 ? -20 : 15}`).join('\n');
     const r = await fetch(base + '/api/dataset/csv?name=test', { method: 'POST', headers: { 'Content-Type': 'text/csv' }, body: csv }).then((x) => x.json());
@@ -92,11 +99,11 @@ describe('API + WebSocket bridge (real server, fake Tableau extension)', () => {
 });
 
 describe('MCP server over stdio', () => {
-  it('lists 30 tools and executes one', async () => {
+  it('lists 34 tools and executes one', async () => {
     const client = new Client({ name: 'test', version: '1.0.0' });
     await client.connect(new StdioClientTransport({ command: 'npx', args: ['tsx', 'services/mcp-server/src/index.ts'], stderr: 'ignore' }));
     const { tools } = await client.listTools();
-    expect(tools.length).toBe(30);
+    expect(tools.length).toBe(34);
     const r: any = await client.callTool({ name: 'interpret-concentration', arguments: { dimension: 'Customer' } });
     expect(JSON.parse(r.content[0].text).top5Share).toBeGreaterThan(0.4);
     await client.close();

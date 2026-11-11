@@ -14,6 +14,8 @@ import { makeLlm, claudeChat, MODELS, getModel, setModel, type ModelId } from '.
 import { deterministicAnswer } from './deterministic';
 import { zodToJsonSchema } from './zod-json';
 import { fetchShopifyDataset, ShopifyError } from './shopify';
+import { loadCaseStudy, caseStudyAvailable, CASE_STUDY_CITATION } from './case-study';
+import { analyzeSmart, profileData as profile } from '@blindspot/analytics';
 
 // Load the repo-root .env for local runs (hosted platforms inject real env vars, which take precedence).
 const rootEnv = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../.env');
@@ -75,7 +77,7 @@ app.get('/api/activity', (_req, res) => res.json(activity.slice(0, 20)));
 
 app.get('/api/dataset', (_req, res) => {
   const v = state.view();
-  res.json({ name: v.name, source: v.source, label: v.label, rows: v.rows.length, totalRows: state.dataset.rows.length, filters: Object.fromEntries(state.filters), fields: detectFields(v), columns: profileData(v).columns.map((c) => ({ name: c.name, type: c.type, distinct: c.distinct, values: c.type === 'category' ? [...new Set(state.dataset.rows.map((r) => String(r[c.name] ?? '')))].sort().slice(0, 50) : undefined })) });
+  res.json({ name: v.name, source: v.source, label: v.label, currency: v.currency ?? 'USD', prep: v.prep ?? null, citation: v.source === 'case-study' ? CASE_STUDY_CITATION : null, caseStudyAvailable: caseStudyAvailable(), rows: v.rows.length, totalRows: state.dataset.rows.length, filters: Object.fromEntries(state.filters), fields: detectFields(v), columns: profileData(v).columns.map((c) => ({ name: c.name, type: c.type, distinct: c.distinct, values: c.type === 'category' ? [...new Set(state.dataset.rows.map((r) => String(r[c.name] ?? '')))].sort().slice(0, 50) : undefined })) });
 });
 
 app.get('/api/crosstab', (req, res) => {
@@ -123,6 +125,14 @@ app.post('/api/connect/shopify', rateLimit({ windowMs: 60_000, limit: 6 }), expr
 
 app.post('/api/dataset/sample', (_req, res) => { state.setDataset(generateSampleDataset()); broadcast('state', { dataset: 'sample' }); res.json({ ok: true }); });
 
+app.post('/api/dataset/case-study', (_req, res) => {
+  if (!caseStudyAvailable()) return res.status(404).json({ error: { code: 'NO_CASE_STUDY', message: 'Case study data is not bundled with this server.' } });
+  const ds = loadCaseStudy();
+  state.setDataset(ds);
+  broadcast('state', { dataset: ds.name, rows: ds.rows.length });
+  res.json({ ok: true, name: ds.name, rows: ds.rows.length, citation: CASE_STUDY_CITATION });
+});
+
 app.post('/api/chat', chatLimit, express.json({ limit: '32kb' }), async (req, res) => {
   const parsed = z.object({ message: z.string().min(1).max(2000) }).safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: { code: 'INVALID_INPUT', message: 'message (1-2000 chars) is required.' } });
@@ -164,5 +174,13 @@ const HOST = env.HOST ?? (PROD ? '0.0.0.0' : '127.0.0.1');
 server.listen(PORT, HOST, () => {
   log(`Blindspot API on http://${HOST}:${PORT} | tools=${listTools().length} | ai=${llm.configured ? llm.model : 'deterministic'} | bridge ws://127.0.0.1:${PORT}/bridge${env.BRIDGE_TOKEN ? ' (token required)' : ' (no token, dev only)'}`);
   if (PROD && !env.BRIDGE_TOKEN) log('WARNING: BRIDGE_TOKEN not set in production');
+  // Production opens on the real-data case study, analysed once at boot so the first visitor doesn't wait.
+  if ((env.DEFAULT_DATASET ?? (PROD ? 'case-study' : 'demo')) === 'case-study' && caseStudyAvailable()) {
+    setImmediate(() => {
+      const t = Date.now();
+      try { state.setDataset(loadCaseStudy()); profile(state.view()); analyzeSmart(state.view()); log(`case study ready: ${state.dataset.rows.length} rows in ${Date.now() - t}ms`); }
+      catch (e: any) { log(`case study failed to load: ${e?.message}`); }
+    });
+  }
 });
 export { app, server, state, bridge };

@@ -19,16 +19,26 @@ export class SessionState {
   lastImage: { base64: string; mediaType: string; at: string } | null = null;
   private seq = 0;
   nextId(p: string) { return `${p}-${++this.seq}`; }
-  /** Rows after session filters. Every analysis tool reads this, never the raw dataset. */
+  private viewCache: { key: string; ds: Dataset } | null = null;
+  /** Rows after session filters. Every analysis tool reads this, never the raw dataset. Memoized so analysis caches hit. */
   view(): Dataset {
     if (!this.filters.size) return this.dataset;
-    const rows = this.dataset.rows.filter((r: Row) => [...this.filters].every(([f, vals]) => vals.includes(String(r[f] ?? ''))));
-    return { ...this.dataset, rows };
+    const key = JSON.stringify([...this.filters]);
+    if (this.viewCache?.key === key) return this.viewCache.ds;
+    const sets = [...this.filters].map(([f, vals]) => [f, new Set(vals)] as const);
+    const rows = this.dataset.rows.filter((r: Row) => sets.every(([f, vals]) => vals.has(String(r[f] ?? ''))));
+    this.viewCache = { key, ds: { ...this.dataset, rows } };
+    return this.viewCache.ds;
   }
-  setDataset(d: Dataset) { this.dataset = d; this.filters.clear(); this.canvas = []; }
+  setDataset(d: Dataset) { this.dataset = d; this.filters.clear(); this.canvas = []; this.viewCache = null; }
 }
 
-export interface LlmLike { configured: boolean; model: string; describeImage?(base64: string, mediaType: string, prompt: string): Promise<string> }
+export interface LlmLike {
+  configured: boolean; model: string;
+  describeImage?(base64: string, mediaType: string, prompt: string): Promise<string>;
+  /** Layer 3: propose testable hypotheses from a data schema. Every proposal is verified by code before being shown. */
+  proposeHypotheses?(schema: { columns: { name: string; type: string; distinct: number; examples?: string[] }[]; measure: string; date: string | null; rows: number; alreadyTested: string[] }): Promise<unknown[]>;
+}
 export interface RestConfig { serverUrl?: string; site?: string; patName?: string; patSecret?: string }
 
 export interface ToolContext {

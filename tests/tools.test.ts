@@ -21,10 +21,10 @@ const ok = async (name: string, input: unknown = {}) => { const r = await run(na
 beforeEach(() => { ctx = { state: new SessionState() }; });
 
 describe('registry', () => {
-  it('registers exactly the 26 reference tools plus 4 business extras', () => {
+  it('registers exactly the 26 reference tools plus 8 Blindspot tools', () => {
     const core = listTools().filter((t) => t.core).map((t) => t.name);
     expect(core.sort()).toEqual([...CORE].sort());
-    expect(ALL_TOOLS.length).toBe(30);
+    expect(ALL_TOOLS.length).toBe(34);
     for (const t of ALL_TOOLS) { expect(t.description.length).toBeGreaterThan(20); expect(t.input).toBeTruthy(); expect(t.output).toBeTruthy(); }
   });
   it('rejects unknown tools and invalid input', async () => {
@@ -195,6 +195,32 @@ describe('business extras', () => {
     const d = await ok('audit-dashboard-quality', { spec: { charts: [{ id: 'p', type: 'pie', slices: 9, colors: ['#ff0000', '#ee1100'] }] } });
     expect(d.designIssues.length).toBeGreaterThan(0);
     expect(d.colorIssues.length).toBeGreaterThan(0);
+  });
+});
+
+describe('Blindspot analysis layers', () => {
+  it('Layer 4 query-data groups, filters and rejects unknown fields', async () => {
+    const d = await ok('query-data', { metric: 'sum', measure: 'Sales', groupBy: ['Region'], limit: 2 });
+    expect(d.rows).toHaveLength(2);
+    expect(d.rows[0][1]).toBeGreaterThan(d.rows[1][1]);
+    const m = await ok('query-data', { metric: 'count', timeGrain: 'quarter', filters: [{ field: 'Region', op: 'eq', value: 'Central' }] });
+    expect(m.rows.length).toBe(8);
+    expect((await run('query-data', { metric: 'sum', measure: 'Nope' })).error?.code).toBe('UNKNOWN_FIELD');
+  });
+  it('Layer 2 explain-change and scan-anomalies find the Central decline year over year', async () => {
+    const d = await ok('explain-change');
+    expect(d.windows.mode).toBe('year-over-year');
+    expect(d.byDimension.find((x: any) => x.dimension === 'Region').drags[0].segment).toBe('Central');
+    const s = await ok('scan-anomalies');
+    expect(s.anomalies.some((a: any) => a.segment === 'Central')).toBe(true);
+  });
+  it('Layer 3 test-hypotheses verifies library and supplied hypotheses, and never fakes AI', async () => {
+    const d = await ok('test-hypotheses', { useAI: true, hypotheses: [{ claim: 'West orders are bigger than South orders', level: 'row', metric: 'avg', measure: 'Sales', a: { label: 'West', filters: [{ field: 'Region', op: 'eq', value: 'West' }] }, b: { label: 'South', filters: [{ field: 'Region', op: 'eq', value: 'South' }] }, expect: 'a>b' }] });
+    expect(d.aiUsed).toBe(false);
+    expect(d.aiNote).toMatch(/not configured/);
+    const ai = d.results.find((r: any) => r.source === 'ai');
+    expect(['supported', 'rejected', 'inconclusive']).toContain(ai.verdict);
+    expect(d.results.some((r: any) => r.source === 'library')).toBe(true);
   });
 });
 

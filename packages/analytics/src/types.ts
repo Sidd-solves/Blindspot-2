@@ -3,10 +3,14 @@ export type Row = Record<string, Cell>;
 
 export interface Dataset {
   name: string;
-  source: 'sample' | 'csv' | 'tableau' | 'shopify';
+  source: 'sample' | 'csv' | 'tableau' | 'shopify' | 'case-study';
   /** Human-facing label. Sample data must always say it is synthetic. */
   label: string;
   rows: Row[];
+  /** ISO currency code for money formatting (default USD). */
+  currency?: string;
+  /** Cleaning report when the dataset was prepared from a raw transaction log. */
+  prep?: import('./retail').PrepReport;
 }
 
 export type ColType = 'number' | 'category' | 'date' | 'text';
@@ -31,7 +35,7 @@ export type Severity = 'critical' | 'high' | 'medium' | 'low';
 
 export interface Finding {
   id: string;
-  category: 'concentration' | 'profitability' | 'trend' | 'outlier' | 'data-quality' | 'pricing';
+  category: 'concentration' | 'profitability' | 'trend' | 'outlier' | 'data-quality' | 'pricing' | 'returns' | 'retention' | 'product' | 'seasonality' | 'anomaly';
   title: string;
   severity: Severity;
   /** 0..1 strength of the statistical evidence */

@@ -8,6 +8,11 @@ const PLAYBOOK: Record<Finding['category'], { intervention: string; recovery: nu
   trend: { intervention: 'Root-cause the decline and run a regional recovery pilot.', recovery: 0.4, effort: 'medium', risks: 'Cause may be structural (market shift), capping recovery.' },
   outlier: { intervention: 'Audit the largest orders for duplicates or entry errors.', recovery: 0, effort: 'low', risks: 'Low; mostly validation time.' },
   'data-quality': { intervention: 'Fix source feed and add validation at entry.', recovery: 0, effort: 'medium', risks: 'Needs IT time.' },
+  returns: { intervention: 'Fix the top returned products (quality, photos, sizing, descriptions) and tighten cancellation terms.', recovery: 0.25, effort: 'medium', risks: 'Stricter policies can lower conversion.' },
+  retention: { intervention: 'Win-back outreach to lapsed best customers plus a post-purchase email flow for new buyers.', recovery: 0.2, effort: 'low', risks: 'Discount-led win-backs can train customers to wait for offers.' },
+  product: { intervention: 'Restock or relist products that stopped selling; retire true losers on purpose, not by accident.', recovery: 0.3, effort: 'low', risks: 'Some may have been discontinued for a reason.' },
+  seasonality: { intervention: 'Plan stock and cash for the peak; run off-season campaigns to smooth revenue.', recovery: 0, effort: 'medium', risks: 'Off-season promotions can cut margin.' },
+  anomaly: { intervention: 'Investigate the segment that is falling behind the rest of the business and run a targeted recovery test.', recovery: 0.4, effort: 'medium', risks: 'The cause may be outside your control (market, competitor).' },
 };
 const COST = { low: 1, medium: 2, high: 3 } as const;
 

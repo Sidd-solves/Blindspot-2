@@ -68,7 +68,7 @@ function Heatmap() {
   return (
     <Card c="var(--emerald)" hover={false}>
       <CardHead icon={<Grid3x3 size={13} />} title={isRatio ? 'Margin heatmap' : 'Heatmap'} c="var(--emerald)" right={<div className="flex gap-1.5"><Dropdown width={112} value={row} options={dims} onChange={setRow} placeholder={r ?? 'Rows'} c="var(--emerald)" /><Dropdown width={122} value={col} options={dims.filter((d) => d !== r)} onChange={setCol} placeholder={c ?? 'Columns'} c="var(--emerald)" /></div>} />
-      {data ? (
+      {dims.length < 2 ? <Empty icon={<Grid3x3 size={18} />} title="No small categories to cross">This data has no pair of columns with few enough values for a heatmap.</Empty> : data ? (
         <div className="overflow-x-auto px-3 pb-3">
           <table className="w-full border-separate" style={{ borderSpacing: 3 }}>
             <thead><tr><th />{data.cols.map((x: string) => <th key={x} className="whitespace-nowrap px-1 text-left text-[10px] font-bold text-[var(--faint)]">{x}</th>)}</tr></thead>
@@ -90,7 +90,7 @@ function Heatmap() {
 
 function Pareto() {
   const { dataset, version } = useStore();
-  const dims = dataset ? [...dataset.fields.highCardDims, ...dataset.fields.dims] : [];
+  const dims = dataset ? [...dataset.fields.highCardDims, ...dataset.fields.dims].filter((d) => !/^(order|invoice)/i.test(d)) : [];
   const [dim, setDim] = useState<string[]>([]);
   const [data, setData] = useState<any>(null);
   const d = dim[0] ?? dims[0];

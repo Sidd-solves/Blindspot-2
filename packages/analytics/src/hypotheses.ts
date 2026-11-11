@@ -1,0 +1,130 @@
+import type { Dataset, Row } from './types';
+import { detectFields } from './profile';
+import { comparisonWindows, inWin, toMs, bucket, pickWindowDays } from './time';
+import { mean, round, sum, pearson } from './stats';
+import { welch, propZ } from './insights';
+import { money, pctStr } from './money';
+import type { Filter } from './query';
+
+/**
+ * Layer 3: "AI suggests, math checks." Every hypothesis, whether from this built-in library or
+ * proposed by the AI, is tested with real calculations and reported only with its verdict.
+ */
+export type Verdict = 'supported' | 'rejected' | 'inconclusive';
+export interface HypothesisResult { id: string; claim: string; source: 'library' | 'ai'; verdict: Verdict; summary: string; stat: { name: string; value: number } | null; evidence: Record<string, unknown> }
+
+/** Generic, AI-proposable test: compare a metric between two filtered groups. */
+export interface GenericHypothesis {
+  claim: string; level: 'row' | 'order'; metric: 'avg' | 'sum' | 'count'; measure: string;
+  a: { label: string; filters: Filter[] }; b: { label: string; filters: Filter[] };
+  expect: 'a>b' | 'a<b'; minEffect?: number;
+}
+
+const UNKNOWN = new Set(['Unknown customer', 'Guest checkout', '']);
+const match = (r: Row, fs: Filter[]) => fs.every((f) => {
+  const v = r[f.field], n = Number(v);
+  switch (f.op) {
+    case 'eq': return String(v) === String(f.value); case 'neq': return String(v) !== String(f.value);
+    case 'in': return Array.isArray(f.value) && f.value.map(String).includes(String(v)); case 'nin': return Array.isArray(f.value) && !f.value.map(String).includes(String(v));
+    case 'gt': return n > Number(f.value); case 'gte': return n >= Number(f.value); case 'lt': return n < Number(f.value); case 'lte': return n <= Number(f.value);
+    case 'contains': return String(v ?? '').toLowerCase().includes(String(f.value).toLowerCase());
+    case 'between': return Array.isArray(f.value) && n >= Number(f.value[0]) && n <= Number(f.value[1]);
+  }
+});
+
+function orderTotals(rows: Row[], measure: string) {
+  const m = new Map<string, number>();
+  for (const r of rows) if (r.IsReturn !== 1) m.set(String(r.Order), (m.get(String(r.Order)) ?? 0) + ((r[measure] as number) || 0));
+  return [...m.values()];
+}
+
+function judge(effect: number, stat: number, expectPositive: boolean, minEffect: number): Verdict {
+  const dirOk = expectPositive ? effect > 0 : effect < 0;
+  if (Math.abs(stat) < 2) return 'inconclusive';
+  if (dirOk && Math.abs(effect) >= minEffect) return 'supported';
+  return 'rejected';
+}
+
+export function testGeneric(ds: Dataset, h: GenericHypothesis, id = 'ai'): HypothesisResult {
+  const cols = new Set(Object.keys(ds.rows[0] ?? {}));
+  const bad = [h.measure, ...h.a.filters.map((f) => f.field), ...h.b.filters.map((f) => f.field)].filter((c) => c && !cols.has(c));
+  if (bad.length) return { id, claim: h.claim, source: 'ai', verdict: 'inconclusive', summary: `Can't test: unknown field(s) ${bad.join(', ')}.`, stat: null, evidence: {} };
+  const A = ds.rows.filter((r) => match(r, h.a.filters)), B = ds.rows.filter((r) => match(r, h.b.filters));
+  const vals = (rs: Row[]) => (h.level === 'order' && 'Order' in (rs[0] ?? {}) ? orderTotals(rs, h.measure) : rs.filter((r) => r.IsReturn !== 1).map((r) => (r[h.measure] as number) || 0));
+  const va = vals(A), vb = vals(B);
+  const agg = (v: number[]) => (h.metric === 'avg' ? mean(v) : h.metric === 'sum' ? sum(v) : v.length);
+  const ga = agg(va), gb = agg(vb), effect = gb ? (ga - gb) / Math.abs(gb) : 0;
+  const t = h.metric === 'avg' ? welch(va, vb) : h.metric === 'count' ? propZ(va.length, va.length + vb.length, vb.length, va.length + vb.length) : (va.length >= 30 && vb.length >= 30 ? 2.5 * Math.sign(effect) : 0);
+  const verdict = va.length < 20 || vb.length < 20 ? 'inconclusive' : judge(effect, t, h.expect === 'a>b', h.minEffect ?? 0.05);
+  const $ = (n: number) => (h.metric === 'count' ? n.toLocaleString() : money(n, ds.currency));
+  return { id, claim: h.claim, source: 'ai', verdict, summary: `${h.a.label}: ${$(ga)} vs ${h.b.label}: ${$(gb)} (${effect >= 0 ? '+' : ''}${pctStr(effect)}; ${h.metric === 'avg' ? 'Welch t' : 'z'} = ${round(t, 2)}, n = ${va.length} vs ${vb.length}).`, stat: { name: h.metric === 'avg' ? 'welch_t' : 'z', value: round(t, 2) }, evidence: { a: { label: h.a.label, value: round(ga), n: va.length }, b: { label: h.b.label, value: round(gb), n: vb.length }, effect: round(effect, 4) } };
+}
+
+/** Built-in library: questions a good analyst would ask of any shop's data. */
+export function runHypothesisLibrary(ds: Dataset): HypothesisResult[] {
+  const fm = detectFields(ds), rows = ds.rows, $ = (n: number) => money(n, ds.currency), out: HypothesisResult[] = [];
+  const tx = rows.length > 0 && 'Order' in rows[0] && 'Customer' in rows[0] && !!fm.date;
+  const lib = (id: string, claim: string, verdict: Verdict, summary: string, stat: HypothesisResult['stat'], evidence: Record<string, unknown>) => out.push({ id, claim, source: 'library', verdict, summary, stat, evidence });
+
+  if (tx) {
+    const sales = rows.filter((r) => r.IsReturn !== 1);
+    // Orders with first/repeat flags
+    const orders = new Map<string, { c: string; t: number; v: number; country: string; dow: string }>();
+    for (const r of sales) { const id = String(r.Order); const o = orders.get(id) ?? { c: String(r.Customer), t: toMs(r[fm.date!]), v: 0, country: String(r.Country ?? ''), dow: bucket(r[fm.date!], 'weekday') }; o.v += (r[fm.measure] as number) || 0; orders.set(id, o); }
+    const os = [...orders.values()].filter((o) => !UNKNOWN.has(o.c)).sort((a, b) => a.t - b.t);
+    const seen = new Set<string>(), first: number[] = [], repeat: number[] = [];
+    for (const o of os) { (seen.has(o.c) ? repeat : first).push(o.v); seen.add(o.c); }
+    { const t = welch(repeat, first), e = mean(first) ? (mean(repeat) - mean(first)) / mean(first) : 0;
+      lib('h-repeat-aov', 'Repeat customers spend more per order than first-time customers', first.length >= 30 && repeat.length >= 30 ? judge(e, t, true, 0.05) : 'inconclusive',
+        `Repeat orders average ${$(mean(repeat))} vs first orders ${$(mean(first))} (${e >= 0 ? '+' : ''}${pctStr(e)}, Welch t = ${t}).`, { name: 'welch_t', value: t }, { repeatAvg: round(mean(repeat)), firstAvg: round(mean(first)), repeatOrders: repeat.length, firstOrders: first.length }); }
+
+    // Returns concentrated in few products
+    const ret = new Map<string, number>(); let rtot = 0;
+    for (const r of rows) if (r.IsReturn === 1) { const v = Math.abs((r[fm.measure] as number) || 0); ret.set(String(r.Product), (ret.get(String(r.Product)) ?? 0) + v); rtot += v; }
+    if (ret.size >= 20) {
+      const sorted = [...ret.values()].sort((a, b) => b - a), top = Math.ceil(sorted.length * 0.1), share = sum(sorted.slice(0, top)) / rtot;
+      lib('h-returns-concentrated', 'A small set of products causes most returns', share >= 0.5 ? 'supported' : 'rejected', `The top 10% of returned products (${top}) account for ${pctStr(share)} of returned value.`, null, { topProducts: top, share: round(share, 3), returnedProducts: sorted.length });
+    }
+
+    // Big orders come from few customers
+    const vals = os.map((o) => o.v).sort((a, b) => b - a), cut = vals[Math.max(0, Math.ceil(vals.length * 0.01) - 1)] ?? Infinity;
+    const bigCust = new Set(os.filter((o) => o.v >= cut).map((o) => o.c));
+    if (vals.length >= 200) lib('h-big-orders-few-customers', 'Your biggest orders come from a small group of repeat buyers', bigCust.size <= Math.ceil(vals.length * 0.01) * 0.5 ? 'supported' : 'rejected',
+      `The top 1% of orders (${Math.ceil(vals.length * 0.01)}) came from ${bigCust.size} customers.`, null, { topOrders: Math.ceil(vals.length * 0.01), customers: bigCust.size, threshold: round(cut) });
+
+    // Home vs international basket size
+    const countries = new Map<string, number>(); for (const o of os) countries.set(o.country, (countries.get(o.country) ?? 0) + 1);
+    const home = [...countries].sort((a, b) => b[1] - a[1])[0]?.[0];
+    if (home && countries.size > 1) {
+      const h = os.filter((o) => o.country === home).map((o) => o.v), x = os.filter((o) => o.country !== home).map((o) => o.v);
+      const t = welch(x, h), e = mean(h) ? (mean(x) - mean(h)) / mean(h) : 0;
+      lib('h-intl-aov', `International customers place bigger orders than ${home} customers`, x.length >= 30 ? judge(e, t, true, 0.05) : 'inconclusive',
+        `Outside ${home}: ${$(mean(x))} per order vs ${$(mean(h))} at home (${e >= 0 ? '+' : ''}${pctStr(e)}, Welch t = ${t}).`, { name: 'welch_t', value: t }, { homeCountry: home, intlAvg: round(mean(x)), homeAvg: round(mean(h)), intlOrders: x.length, homeOrders: h.length });
+    }
+
+    // Growth from new vs existing customers
+    const days = pickWindowDays(sales, fm.date!), w = comparisonWindows(sales, fm.date!, days);
+    if (w) {
+      const firstSeen = new Map<string, number>(); for (const o of os) if (!firstSeen.has(o.c)) firstSeen.set(o.c, o.t);
+      const split = (win: [number, number]) => { let n = 0, e = 0; for (const o of os) if (inWin(o.t, win)) (firstSeen.get(o.c)! >= win[0] ? (n += o.v) : (e += o.v)); return { n, e }; };
+      const B = split(w.baseline), C = split(w.current), dn = C.n - B.n, de = C.e - B.e;
+      lib('h-growth-source', 'Growth is coming from new customers rather than existing ones', Math.abs(dn) + Math.abs(de) === 0 ? 'inconclusive' : dn > de ? 'supported' : 'rejected',
+        `${w.label}: new-customer revenue ${dn >= 0 ? '+' : ''}${$(dn)}, existing-customer revenue ${de >= 0 ? '+' : ''}${$(de)}.`, null, { window: w.label, newDelta: round(dn), existingDelta: round(de) });
+    }
+
+    // Weekday pattern
+    const byDow = new Map<string, number[]>(); for (const o of os) byDow.set(o.dow, [...(byDow.get(o.dow) ?? []), o.v]);
+    const wkend = [...(byDow.get('Sat') ?? []), ...(byDow.get('Sun') ?? [])], wkday = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].flatMap((d) => byDow.get(d) ?? []);
+    if (wkend.length >= 30) { const t = welch(wkend, wkday), e = mean(wkday) ? (mean(wkend) - mean(wkday)) / mean(wkday) : 0;
+      lib('h-weekend', 'Weekend orders are bigger than weekday orders', judge(e, t, true, 0.05), `Weekend ${$(mean(wkend))} vs weekday ${$(mean(wkday))} per order (Welch t = ${t}).`, { name: 'welch_t', value: t }, { weekendAvg: round(mean(wkend)), weekdayAvg: round(mean(wkday)), weekendOrders: wkend.length }); }
+    else lib('h-weekend', 'Weekend orders are bigger than weekday orders', 'inconclusive', `Only ${wkend.length} weekend orders exist${(byDow.get('Sat') ?? []).length === 0 ? ' (no Saturday orders at all)' : ''}, too few to compare.`, null, { weekendOrders: wkend.length, saturdayOrders: (byDow.get('Sat') ?? []).length });
+  }
+
+  // Discount hypotheses (datasets with discount + profit)
+  if (fm.discount && fm.profit) {
+    const pts = rows.filter((r) => typeof r[fm.discount!] === 'number' && typeof r.Quantity === 'number');
+    const r = pearson(pts.map((p) => p[fm.discount!] as number), pts.map((p) => p.Quantity as number));
+    lib('h-discount-volume', 'Bigger discounts make customers buy more units', Math.abs(r) < 0.1 ? 'rejected' : r > 0 ? 'supported' : 'rejected', `Correlation between discount and units per order: ${r.toFixed(2)} across ${pts.length} orders${Math.abs(r) < 0.1 ? ', meaning discounts are not buying extra volume' : ''}.`, { name: 'pearson_r', value: round(r, 3) }, { pearson: round(r, 3), orders: pts.length });
+  }
+  return out;
+}

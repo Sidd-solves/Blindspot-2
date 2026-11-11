@@ -25,10 +25,16 @@ export const buildDashboard = defineTool({
     if (!v.rows.length) throw new ToolError('NO_DATA', 'No rows match the current filters.');
     const rev = v.rows.reduce((s, r) => s + num(r[fm.measure]), 0);
     const prof = fm.profit ? v.rows.reduce((s, r) => s + num(r[fm.profit!]), 0) : 0;
+    // Order-level KPIs when rows are order lines (real store data); row-level otherwise.
+    const tx = 'Order' in v.rows[0];
+    const orderIds = tx ? new Set(v.rows.filter((r) => r.IsReturn !== 1).map((r) => String(r.Order))) : null;
+    const customers = 'Customer' in v.rows[0] ? new Set(v.rows.map((r) => String(r.Customer)).filter((c) => c !== 'Unknown customer' && c !== 'Guest checkout')).size : 0;
+    const orders = orderIds ? orderIds.size : v.rows.length;
     const kpis = [
       { label: fm.measure, value: round(rev), format: 'usd' as const },
-      ...(fm.profit ? [{ label: fm.profit, value: round(prof), format: 'usd' as const }, { label: 'Margin', value: round(rev ? prof / rev : 0, 4), format: 'pct' as const }] : []),
-      { label: 'Orders', value: v.rows.length, format: 'int' as const },
+      ...(fm.profit ? [{ label: fm.profit, value: round(prof), format: 'usd' as const }, { label: 'Margin', value: round(rev ? prof / rev : 0, 4), format: 'pct' as const }]
+        : [{ label: 'Avg order', value: round(orders ? rev / orders : 0), format: 'usd' as const }, { label: 'Customers', value: customers, format: 'int' as const }]),
+      { label: 'Orders', value: orders, format: 'int' as const },
     ];
     const dim = dimension ?? fm.dims[0];
     const charts: { id: string; type: string; title: string; data: Record<string, unknown>[] }[] = [];

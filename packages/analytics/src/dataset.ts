@@ -1,6 +1,7 @@
 import Papa from 'papaparse';
 import type { Dataset, Row } from './types';
 import { isShopifyOrderExport, shopifyExportToDataset } from './shopify';
+import { prepareTransactions } from './retail';
 
 function rng(seed: number) {
   return () => {
@@ -72,9 +73,10 @@ export function generateSampleDataset(n = 1400, seed = 42): Dataset {
   return { name: 'Demo online shop', source: 'sample', label: 'SYNTHETIC DEMO DATA, a fictional small online shop', rows };
 }
 
-export function parseCsv(text: string, name = 'Uploaded CSV', maxRows = 200_000): Dataset {
+export function parseCsv(text: string, name = 'Uploaded CSV', maxRows = 1_200_000): Dataset {
   const ds = parseCsvRaw(text, name, maxRows);
-  return isShopifyOrderExport(ds.rows) ? shopifyExportToDataset(ds.rows, name) : ds;
+  if (isShopifyOrderExport(ds.rows)) return shopifyExportToDataset(ds.rows, name);
+  return prepareTransactions(ds.rows, name) ?? ds;
 }
 
 function parseCsvRaw(text: string, name: string, maxRows: number): Dataset {

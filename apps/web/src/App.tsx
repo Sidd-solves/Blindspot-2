@@ -41,7 +41,7 @@ function ThemeToggle() {
 function FilterBar() {
   const { dataset, setFilter, clearFilters, loading } = useStore();
   if (!dataset) return null;
-  const dims = dataset.columns.filter((c) => c.type === 'category' && c.values && c.distinct <= 12).slice(0, 3);
+  const dims = dataset.columns.filter((c) => c.type === 'category' && c.values && c.distinct <= 50 && c.name !== 'IsReturn').slice(0, 3);
   const colors = ['var(--cyan)', 'var(--fuchsia)', 'var(--emerald)'];
   const active = Object.keys(dataset.filters).length;
   return (
@@ -88,7 +88,7 @@ export default function App() {
           </nav>
           <div className="hidden px-3 pt-3 md:block">
             <div className="panel space-y-1.5 p-2.5 text-[11px]">
-              <div className="flex items-center justify-between"><span className="text-[var(--muted)]">Data</span><Chip c={dataset?.source === 'shopify' ? 'var(--emerald)' : dataset?.source === 'sample' ? 'var(--amber)' : 'var(--blue)'} pulse={dataset?.source === 'shopify' || extension}>{dataset?.source === 'shopify' ? 'Shopify' : dataset?.source === 'sample' ? 'Demo' : extension ? 'Tableau' : 'File'}</Chip></div>
+              <div className="flex items-center justify-between"><span className="text-[var(--muted)]">Data</span><Chip c={dataset?.source === 'shopify' ? 'var(--emerald)' : dataset?.source === 'case-study' ? 'var(--violet)' : dataset?.source === 'sample' ? 'var(--amber)' : 'var(--blue)'} pulse={dataset?.source === 'shopify' || extension}>{dataset?.source === 'shopify' ? 'Shopify' : dataset?.source === 'case-study' ? 'Real data' : dataset?.source === 'sample' ? 'Demo' : extension ? 'Tableau' : 'File'}</Chip></div>
               <div className="flex items-center justify-between"><span className="text-[var(--muted)]">AI</span><Chip c={health?.ai ? 'var(--fuchsia)' : 'var(--amber)'}>{health?.ai ? health.ai.replace('claude-', '') : 'Deterministic'}</Chip></div>
               <div className="flex items-center justify-between"><span className="text-[var(--muted)]">Tools</span><span className="mono font-semibold">{health?.tools ?? '—'}</span></div>
             </div>
@@ -100,7 +100,7 @@ export default function App() {
             <div className="flex min-w-0 items-center gap-2">
               <nav.icon size={15} style={{ color: nav.c }} />
               <h1 className="truncate text-[15px] font-extrabold tracking-tight">{nav.label}</h1>
-              {dataset && <Chip c={dataset.source === 'sample' ? 'var(--amber)' : dataset.source === 'shopify' ? 'var(--emerald)' : dataset.source === 'tableau' ? 'var(--cyan)' : 'var(--blue)'} pulse={dataset.source === 'shopify'}>{dataset.source === 'sample' ? 'Demo shop (synthetic)' : dataset.source === 'shopify' ? 'Live Shopify' : dataset.source === 'tableau' ? 'Live Tableau' : 'Uploaded file'}</Chip>}
+              {dataset && <Chip c={dataset.source === 'sample' ? 'var(--amber)' : dataset.source === 'case-study' ? 'var(--violet)' : dataset.source === 'shopify' ? 'var(--emerald)' : dataset.source === 'tableau' ? 'var(--cyan)' : 'var(--blue)'} pulse={dataset.source === 'shopify' || dataset.source === 'case-study'}>{dataset.source === 'sample' ? 'Demo shop (synthetic)' : dataset.source === 'case-study' ? 'Real data · UK gift shop' : dataset.source === 'shopify' ? 'Live Shopify' : dataset.source === 'tableau' ? 'Live Tableau' : 'Uploaded file'}</Chip>}
               {dataset && dataset.rows !== dataset.totalRows && <Chip c="var(--cyan)"><span className="mono">{dataset.rows.toLocaleString()}</span>/{dataset.totalRows.toLocaleString()} rows</Chip>}
             </div>
             <div className="ml-auto flex flex-wrap items-center gap-2">

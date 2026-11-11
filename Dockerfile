@@ -9,4 +9,5 @@ COPY apps ./apps
 RUN npm ci && npm install --no-save @tailwindcss/oxide-linux-x64-gnu@4.3.3 && npm run build -w @blindspot/web
 ENV NODE_ENV=production PORT=8787
 EXPOSE 8787
-CMD ["npx", "tsx", "services/api/src/index.ts"]
+# Cap the heap below the free plan's 512 MB so garbage collection runs before the container is killed.
+CMD ["node", "--max-old-space-size=400", "--import", "tsx", "services/api/src/index.ts"]

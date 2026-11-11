@@ -12,6 +12,38 @@ const KPI_STYLE = [
   { c: 'var(--violet)', icon: DollarSign }, { c: 'var(--emerald)', icon: TrendingUp }, { c: 'var(--cyan)', icon: Gauge }, { c: 'var(--amber)', icon: ShoppingCart },
 ];
 
+/** Layer 2 on the front page: what moved revenue, compared with the same period last year when possible. */
+function DriversCard() {
+  const { version } = useStore();
+  const [d, setD] = useState<any>(null), [err, setErr] = useState('');
+  useEffect(() => { tool('explain-change').then((r) => (r.ok ? setD(r.data) : setErr(r.error!.message))); }, [version]);
+  const drags = d ? (d.byDimension as any[]).filter((x) => !/^order/i.test(x.dimension)).flatMap((x) => x.drags.slice(0, 2).map((g: any) => ({ ...g, dim: x.dimension }))).sort((a: any, b: any) => a.delta - b.delta).slice(0, 5) : [];
+  const max = Math.max(1, ...drags.map((g: any) => Math.abs(g.delta)));
+  return (
+    <Card c="var(--cyan)" className="md:col-span-3 xl:col-span-4">
+      <CardHead icon={<Layers size={13} />} title="What's driving the change" c="var(--cyan)" right={d && <Chip c={d.changePct >= 0 ? 'var(--emerald)' : 'var(--rose)'}>{d.changePct >= 0 ? '▲' : '▼'} {pct(Math.abs(d.changePct))}</Chip>} />
+      <div className="px-3.5 pb-3">
+        {err && <div className="text-[11.5px] text-[var(--faint)]">{err}</div>}
+        {!d && !err && <div className="skeleton h-32" />}
+        {d && (<>
+          <div className="text-[10.5px] text-[var(--faint)]">{d.windows.label}</div>
+          {d.decomposition && <div className="mt-1.5 grid grid-cols-2 gap-1.5 text-[11px]">
+            <div className="tint rounded-md px-2 py-1" style={{ '--c': 'var(--cyan)' } as CSSProperties}><div className="label">Orders</div><span className="mono">{d.decomposition.orders[0].toLocaleString()} → {d.decomposition.orders[1].toLocaleString()}</span></div>
+            <div className="tint rounded-md px-2 py-1" style={{ '--c': 'var(--violet)' } as CSSProperties}><div className="label">Avg order</div><span className="mono">{usd(d.decomposition.aov[0])} → {usd(d.decomposition.aov[1])}</span></div>
+          </div>}
+          <div className="label mt-2 mb-1">Biggest drags</div>
+          <div className="space-y-1">{drags.map((g: any, i: number) => (
+            <motion.div key={g.dim + g.segment} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }} className="text-[11px]" title={`${g.dim}: ${g.segment}`}>
+              <div className="flex justify-between gap-2"><span className="truncate"><span className="text-[var(--faint)]">{g.dim} · </span><span className="font-semibold">{g.segment}</span></span><span className="mono flex-none" style={{ color: 'var(--rose)' }}>{usd(g.delta, true)}</span></div>
+              <Meter value={Math.abs(g.delta) / max} c="var(--rose)" h={3} />
+            </motion.div>
+          ))}</div>
+        </>)}
+      </div>
+    </Card>
+  );
+}
+
 export default function Overview() {
   const { dash, findings, bySeverity, actions, dataset, loading, version, conn } = useStore();
   const [conc, setConc] = useState<any>(null);
@@ -31,12 +63,14 @@ export default function Overview() {
   const seg = dash.charts.find((c) => c.type === 'bar');
   const series = trend.map((d: any) => d.y);
   const half = Math.floor(series.length / 2);
-  const recentSum = series.slice(-6).reduce((a: number, b: number) => a + b, 0), priorSum = series.slice(-12, -6).reduce((a: number, b: number) => a + b, 0);
+  // With 18+ months, compare against the same months last year so seasonality doesn't fake growth.
+  const yoy = series.length >= 18;
+  const recentSum = series.slice(-6).reduce((a: number, b: number) => a + b, 0), priorSum = (yoy ? series.slice(-18, -12) : series.slice(-12, -6)).reduce((a: number, b: number) => a + b, 0);
   const momentum = priorSum ? (recentSum - priorSum) / priorSum : 0;
   const riskIndex = Math.min(100, Math.round(findings.reduce((s, f) => s + (SEV[f.severity]?.w ?? 1) * f.confidence, 0) * 3.2));
   // Largest single exposure: exposures overlap (e.g. concentration and outliers share revenue), so summing would double count.
   const exposure = Math.max(0, ...findings.map((f) => f.impactUsd ?? 0));
-  const fmt = (k: { format: string }) => (k.format === 'usd' ? (n: number) => usd(n, true) : k.format === 'pct' ? (n: number) => pct(n) : (n: number) => Math.round(n).toLocaleString());
+  const fmt = (k: { format: string; value: number }) => (k.format === 'usd' ? (n: number) => usd(n, k.value >= 10000) : k.format === 'pct' ? (n: number) => pct(n) : (n: number) => Math.round(n).toLocaleString());
 
   return (
     <motion.div variants={stagger} initial="hidden" animate="show" className="grid grid-cols-1 gap-3 md:grid-cols-6 xl:grid-cols-12">
@@ -52,10 +86,10 @@ export default function Overview() {
               </div>
               {spark.length > 1 ? <Sparkline data={spark.slice(-12)} c={st.c} /> : k.format === 'pct' ? <Ring value={Math.max(0, k.value) * 4} size={42} stroke={5} c={st.c}><span className="mono text-[9px]">{pct(k.value, 0)}</span></Ring> : <div className="flex items-end gap-[3px]">{series.slice(-10).map((v: number, j: number) => <motion.span key={j} className="w-[5px] rounded-sm" style={{ background: st.c, opacity: 0.35 + j / 16 }} initial={{ height: 0 }} animate={{ height: 6 + (v / Math.max(...series)) * 20 }} transition={{ delay: j * 0.04 }} />)}</div>}
             </div>
-            {i === 0 && <div className="mt-1.5 flex items-center gap-1.5 text-[11px]"><Chip c={momentum >= 0 ? 'var(--emerald)' : 'var(--rose)'}>{momentum >= 0 ? '▲' : '▼'} {pct(Math.abs(momentum))}</Chip><span className="text-[var(--faint)]">last 6 mo vs prior 6</span></div>}
-            {i === 1 && <div className="mt-1.5 text-[11px] text-[var(--faint)]">after cost of goods</div>}
-            {i === 2 && <div className="mt-1.5"><Meter value={Math.max(0, k.value) * 4} c={st.c} h={4} /></div>}
-            {i === 3 && <div className="mt-1.5 text-[11px] text-[var(--faint)]">{dataset?.columns.length} columns profiled</div>}
+            {i === 0 && <div className="mt-1.5 flex items-center gap-1.5 text-[11px]"><Chip c={momentum >= 0 ? 'var(--emerald)' : 'var(--rose)'}>{momentum >= 0 ? '▲' : '▼'} {pct(Math.abs(momentum))}</Chip><span className="text-[var(--faint)]">{yoy ? 'last 6 mo vs same months last year' : 'last 6 mo vs prior 6'}</span></div>}
+            {i === 1 && <div className="mt-1.5 text-[11px] text-[var(--faint)]">{k.label === 'Avg order' ? 'revenue per order' : 'after cost of goods'}</div>}
+            {i === 2 && (k.format === 'pct' ? <div className="mt-1.5"><Meter value={Math.max(0, k.value) * 4} c={st.c} h={4} /></div> : <div className="mt-1.5 text-[11px] text-[var(--faint)]">known buyers</div>)}
+            {i === 3 && <div className="mt-1.5 text-[11px] text-[var(--faint)]">{dataset?.rows.toLocaleString()} sales lines analysed</div>}
           </Card>
         );
       })}
@@ -159,7 +193,8 @@ export default function Overview() {
         </div>
       </Card>
 
-      <Card c="var(--cyan)" className="md:col-span-3 xl:col-span-4">
+      {!seg && <DriversCard />}
+      {seg && <Card c="var(--cyan)" className="md:col-span-3 xl:col-span-4">
         <CardHead icon={<Layers size={13} />} title={seg?.title ?? 'Segments'} c="var(--cyan)" />
         <div className="h-[150px] px-1 pb-2">
           <ResponsiveContainer>
@@ -171,7 +206,7 @@ export default function Overview() {
             </BarChart>
           </ResponsiveContainer>
         </div>
-      </Card>
+      </Card>}
 
       <Card c="var(--blue)" className="md:col-span-3 xl:col-span-4">
         <CardHead icon={<Zap size={13} />} title="Live activity" c="var(--blue)" right={<Chip c="var(--emerald)" pulse>Live</Chip>} />

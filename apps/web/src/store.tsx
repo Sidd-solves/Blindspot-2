@@ -1,9 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { get, tool } from './api';
+import { get, setCurrency, tool } from './api';
 
 export interface Finding { id: string; category: string; title: string; severity: string; confidence: number; metric: string; explanation: string; evidence: any; impactUsd: number | null; impactBasis: string | null; nextAction: string; score: number }
 export interface Action { findingId: string; problem: string; intervention: string; expectedBenefitUsd: number | null; benefitKind: 'profit' | 'revenue'; benefitBasis: string; effort: 'low' | 'medium' | 'high'; risks: string; severity: string; benefitToEffort: number | null; evidence: any }
-export interface DatasetMeta { name: string; source: string; label: string; rows: number; totalRows: number; filters: Record<string, string[]>; fields: { measure: string; profit: string | null; date: string | null; dims: string[]; highCardDims: string[] }; columns: { name: string; type: string; distinct: number; values?: string[] }[] }
+export interface DatasetMeta { name: string; source: string; label: string; currency: string; prep: Record<string, any> | null; citation: string | null; caseStudyAvailable: boolean; rows: number; totalRows: number; filters: Record<string, string[]>; fields: { measure: string; profit: string | null; date: string | null; dims: string[]; highCardDims: string[] }; columns: { name: string; type: string; distinct: number; values?: string[] }[] }
 export interface Dash { kpis: { label: string; value: number; format: string }[]; charts: { id: string; type: string; title: string; data: any[] }[] }
 
 interface Store {
@@ -26,6 +26,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     try {
       const [dataset, a, r, d, health, conn] = await Promise.all([get<DatasetMeta>('/api/dataset'), tool('analyze-dashboard-smart', { top: 30 }), tool('recommend-actions', { top: 10 }), tool('build-dashboard', { title: 'Overview' }), get('/api/health'), tool('check-connection')]);
       await tool('clear-canvas');
+      setCurrency(dataset.currency);
       setS((p) => ({ ...p, dataset, findings: a.data?.findings ?? [], bySeverity: a.data?.bySeverity ?? {}, actions: r.data?.actions ?? [], dash: d.ok ? d.data : null, health, conn: conn.data, extension: !!health.extension, loading: false, version: p.version + 1 }));
       retries.current = 0;
     } catch {

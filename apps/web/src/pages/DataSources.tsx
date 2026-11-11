@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useState, type CSSProperties } from 'react';
-import { Check, ChevronDown, Database, ExternalLink, FileSpreadsheet, KeyRound, Lock, PlugZap, RotateCcw, ShoppingBag, Sparkles, Store } from 'lucide-react';
+import { BookOpen, Brush, Check, ChevronDown, Database, ExternalLink, FileSpreadsheet, Globe2, KeyRound, Lock, PlugZap, RotateCcw, ShoppingBag, Sparkles, Store } from 'lucide-react';
 import { post } from '../api';
 import { useStore } from '../store';
 import { Card, CardHead, Chip, Dropdown, Loading, Tabs, stagger } from '../components/ui';
@@ -104,10 +104,31 @@ export default function DataSources() {
         </Card>
       </div>
 
+      {dataset?.caseStudyAvailable && <Card c="var(--violet)" hover={false} className="p-3.5 lg:col-span-7">
+        <div className="flex flex-wrap items-start gap-3">
+          <span className="grid h-9 w-9 flex-none place-items-center rounded-lg tint" style={{ '--c': 'var(--violet)', color: 'var(--violet)' } as CSSProperties}><Globe2 size={16} /></span>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-1.5"><span className="text-[13px] font-extrabold">Real case study: UK online gift shop</span><Chip c="var(--violet)">Real data</Chip></div>
+            <div className="mt-0.5 text-[11.5px] text-[var(--muted)]">Two years of a real online retailer's sales (2009–2011), messy as real data is: returns, duplicates, fees and unknown customers. A 25% sample of customers, from the UCI Machine Learning Repository.</div>
+          </div>
+          <button className="btn btn-primary" onClick={async () => { await post('/api/dataset/case-study', {}); refresh(); }} disabled={dataset?.source === 'case-study'}>{dataset?.source === 'case-study' ? <><Check size={13} />Loaded</> : <><BookOpen size={13} />Load real data</>}</button>
+        </div>
+      </Card>}
+      {dataset?.prep && <Card c="var(--amber)" hover={false} className="p-3.5 lg:col-span-5">
+        <div className="label mb-2 flex items-center gap-1"><Brush size={11} style={{ color: 'var(--amber)' }} />Cleaned before analysis</div>
+        <div className="grid grid-cols-2 gap-1.5 text-[11px]">
+          {[
+            ['Duplicate lines removed', dataset.prep.duplicateRows], ['Return / cancel lines', dataset.prep.returnLines],
+            ['Fee & postage lines set aside', dataset.prep.feeLines], ['Zero-price lines removed', dataset.prep.zeroPriceRows],
+            ['Sales with no customer', dataset.prep.missingCustomerRows], ['Lines analysed', dataset.prep.keptRows],
+          ].map(([k, v], i) => <motion.div key={k as string} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.04 }} className="rounded-md px-2 py-1.5" style={{ background: 'var(--line)' }}><div className="text-[9.5px] font-bold uppercase tracking-wider text-[var(--faint)]">{k}</div><div className="mono text-[13px] font-semibold">{Number(v).toLocaleString()}</div></motion.div>)}
+        </div>
+      </Card>}
+
       <Card c="var(--violet)" hover={false} className="p-3.5 lg:col-span-12">
         <div className="flex flex-wrap items-center gap-3">
           <span className="grid h-8 w-8 place-items-center rounded-lg tint" style={{ '--c': 'var(--violet)', color: 'var(--violet)' } as CSSProperties}><Sparkles size={15} /></span>
-          <div className="min-w-0 flex-1"><div className="text-[12.5px] font-extrabold">Currently analysing: {dataset?.name}</div><div className="text-[11px] text-[var(--muted)]">{dataset?.label} · {dataset?.rows.toLocaleString()} rows</div></div>
+          <div className="min-w-0 flex-1"><div className="text-[12.5px] font-extrabold">Currently analysing: {dataset?.name}</div><div className="text-[11px] text-[var(--muted)]">{dataset?.label} · {dataset?.rows.toLocaleString()} rows</div>{dataset?.citation && <div className="mt-0.5 text-[10px] text-[var(--faint)]">Source: {dataset.citation}</div>}</div>
           <button className="btn" onClick={async () => { await post('/api/dataset/sample', {}); refresh(); }}><RotateCcw size={13} />Use demo shop</button>
           <button className="btn btn-primary" onClick={() => go('overview')}>See insights</button>
         </div>

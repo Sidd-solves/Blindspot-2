@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import { ArrowUp, Bot, Check, ChevronRight, Cpu, Database, ShieldCheck, ShieldX, Sparkles, User, Workflow, X } from 'lucide-react';
+import { ArrowUp, Bot, Check, ChevronRight, Cpu, Database, FlaskConical, Lightbulb, ShieldCheck, ShieldX, Sparkles, User, Workflow, X } from 'lucide-react';
 import { post, tool } from '../api';
 import { Card, CardHead, Chip, CountUp, Loading, Markdown, Meter, stagger } from '../components/ui';
 import { useStore } from '../store';
@@ -9,10 +9,12 @@ interface Msg { role: 'user' | 'assistant'; text: string; mode?: string; evidenc
 let history: Msg[] = [];
 
 const SUGGESTED = [
-  { q: 'Why did revenue decrease?', c: 'var(--amber)' },
-  { q: 'Which customer segments are underperforming?', c: 'var(--rose)' },
-  { q: 'What is our biggest operational risk?', c: 'var(--violet)' },
+  { q: 'Why did revenue change?', c: 'var(--amber)' },
+  { q: 'What is our biggest risk?', c: 'var(--violet)' },
+  { q: 'Top 5 customers by sales', c: 'var(--cyan)' },
+  { q: 'Show sales by month', c: 'var(--blue)' },
   { q: 'Which recommendation has the highest estimated ROI?', c: 'var(--emerald)' },
+  { q: 'Average sales by weekday', c: 'var(--fuchsia)' },
 ];
 
 function brief(d: any): string[] {
@@ -88,6 +90,33 @@ function Workflow_() {
   );
 }
 
+const VERDICT: Record<string, { c: string; label: string }> = { supported: { c: 'var(--emerald)', label: 'Supported' }, rejected: { c: 'var(--rose)', label: 'Rejected' }, inconclusive: { c: 'var(--faint)', label: 'Not enough evidence' } };
+
+/** Layer 3: ideas (built-in or AI-proposed) are only reported with a verdict from real calculations. */
+function Hypotheses() {
+  const { health, version } = useStore();
+  const [res, setRes] = useState<any>(null), [busy, setBusy] = useState<'' | 'lib' | 'ai'>('');
+  const runIt = async (useAI: boolean) => { setBusy(useAI ? 'ai' : 'lib'); const r = await tool('test-hypotheses', { useAI }); setRes(r.ok ? r.data : { results: [], aiNote: r.error?.message }); setBusy(''); };
+  useEffect(() => { setRes(null); }, [version]);
+  return (
+    <Card c="var(--emerald)" hover={false}>
+      <CardHead icon={<FlaskConical size={13} />} title="Ideas, checked by math" c="var(--emerald)" right={<div className="flex gap-1"><button className="btn btn-primary !h-7" onClick={() => runIt(false)} disabled={!!busy}><Lightbulb size={12} />{busy === 'lib' ? 'Testing' : 'Test ideas'}</button><button className="btn !h-7" onClick={() => runIt(true)} disabled={!!busy || !health?.ai} title={health?.ai ? 'Asks Claude for new ideas (uses your Claude credits), then verifies each one' : 'Add a Claude key to enable'}><Sparkles size={12} style={{ color: 'var(--fuchsia)' }} />{busy === 'ai' ? 'Thinking' : 'AI ideas'}</button></div>} />
+      <div className="max-h-[420px] space-y-1.5 overflow-y-auto px-3.5 pb-3.5">
+        {busy && <Loading steps={busy === 'ai' ? ['Asking AI for new ideas…', 'Translating ideas into tests…', 'Running the math…'] : ['Splitting first vs repeat orders…', 'Comparing countries…', 'Testing returns…', 'Checking growth sources…']} />}
+        {!busy && !res && <div className="text-[11.5px] text-[var(--muted)]">Tests business ideas against the data and reports only what the numbers support. AI ideas use your Claude credits; the math is free.</div>}
+        {res?.aiNote && <div className="text-[11px] text-[var(--amber)]">{res.aiNote}</div>}
+        {res?.results.map((h: any, i: number) => (
+          <motion.div key={h.id + i} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="rounded-lg border p-2" style={{ borderColor: 'var(--line)', borderLeft: `3px solid ${VERDICT[h.verdict].c}` }}>
+            <div className="flex flex-wrap items-center gap-1.5"><Chip c={VERDICT[h.verdict].c}>{VERDICT[h.verdict].label}</Chip>{h.source === 'ai' && <Chip c="var(--fuchsia)">AI idea</Chip>}{h.stat && <span className="mono text-[10px] text-[var(--faint)]">{h.stat.name.replace('_', ' ')} = {h.stat.value}</span>}</div>
+            <div className="mt-1 text-[12px] font-bold">{h.claim}</div>
+            <div className="text-[11px] text-[var(--muted)]">{h.summary}</div>
+          </motion.div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
 export default function Analyst() {
   const { health, dataset } = useStore();
   const [msgs, setMsgs] = useState<Msg[]>(history);
@@ -148,6 +177,7 @@ export default function Analyst() {
       </Card>
 
       <div className="space-y-3 xl:col-span-4">
+        <Hypotheses />
         <Workflow_ />
         <Card c="var(--rose)" hover={false} className="p-3.5">
           <div className="label mb-2 flex items-center gap-1"><ShieldCheck size={11} style={{ color: 'var(--rose)' }} />Guardrails</div>

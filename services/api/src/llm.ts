@@ -12,10 +12,10 @@ export const setModel = (m: ModelId) => { current = m; };
 const fallbackParams = (m: ModelId) => (m === 'claude-haiku-4-5' ? {} : { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' });
 
 /** Tools the chat model may call. Read-only analysis by default; no Tableau writes from chat. */
-export const CHAT_TOOLS = ['analyze-dashboard-smart', 'full-data-exploration', 'profile-data', 'get-semantic-metadata', 'interpret-concentration', 'interpret-segments', 'transform-to-story', 'recommend-actions', 'run-scenario', 'suggest-annotations', 'generate-executive-summary'];
+export const CHAT_TOOLS = ['query-data', 'explain-change', 'scan-anomalies', 'test-hypotheses', 'analyze-dashboard-smart', 'full-data-exploration', 'profile-data', 'get-semantic-metadata', 'interpret-concentration', 'interpret-segments', 'transform-to-story', 'recommend-actions', 'run-scenario', 'suggest-annotations', 'generate-executive-summary'];
 
 const SYSTEM = `You are Blindspot, an AI business analyst giving a second opinion on company data.
-Ground every claim in tool results. Quote the numbers the tools return; never invent figures. Numbers come from deterministic tools, you only interpret.
+Ground every claim in tool results. For any question the other tools don't cover, compose a query-data call (group/filter/aggregate) and answer from its numbers. Use explain-change for "why did X change" and test-hypotheses to check a theory before stating it. Quote the numbers the tools return; never invent figures. Numbers come from deterministic tools, you only interpret.
 State uncertainty plainly: correlation is not causation, scenarios are hypothetical, sample data is synthetic.
 Answer in under 180 words: a direct answer, then 2-4 evidence bullets, then one recommended next step.
 ${UNTRUSTED_RULE}`;
@@ -25,6 +25,18 @@ export function makeLlm(): LlmLike & { client?: Anthropic } {
   const client = new Anthropic();
   return {
     configured: true, get model() { return current; }, client,
+    async proposeHypotheses(schema) {
+      const r = await client.messages.create({
+        model: current, max_tokens: 4000,
+        system: `You propose testable business hypotheses for a small business's sales data. Reply with ONLY a JSON array (max 6) of objects:
+{"claim": string, "level": "row"|"order", "metric": "avg"|"sum"|"count", "measure": <numeric column>, "a": {"label": string, "filters": [{"field": <column>, "op": "eq"|"neq"|"in"|"gt"|"gte"|"lt"|"lte"|"contains", "value": ...}]}, "b": {...same...}, "expect": "a>b"|"a<b"}
+Use only the listed columns and example values. Prefer surprising, decision-relevant ideas not already tested. ${UNTRUSTED_RULE}`,
+        messages: [{ role: 'user', content: wrapUntrusted('schema', schema) }],
+      });
+      const text = r.content.filter((b) => b.type === 'text').map((b: any) => b.text).join('');
+      const json = text.slice(text.indexOf('['), text.lastIndexOf(']') + 1);
+      try { const arr = JSON.parse(json); return Array.isArray(arr) ? arr.slice(0, 6) : []; } catch { return []; }
+    },
     async describeImage(base64, mediaType, prompt) {
       const r = await client.messages.create({ model: current, max_tokens: 4000, messages: [{ role: 'user', content: [{ type: 'image', source: { type: 'base64', media_type: mediaType as 'image/png', data: base64 } }, { type: 'text', text: prompt }] }] });
       return r.content.filter((b) => b.type === 'text').map((b: any) => b.text).join('\n');
@@ -59,7 +71,9 @@ export async function claudeChat(llm: ReturnType<typeof makeLlm>, ctx: ToolConte
         results.push({ type: 'tool_result', tool_use_id: block.id, is_error: true, content: gate.reason ?? 'Tool not allowed in chat.' });
         continue;
       }
-      const r = await callTool(ctx, block.name, block.input);
+      // Nested AI calls from inside chat are not allowed; hypotheses proposed in chat are still verified by code.
+      const input = block.name === 'test-hypotheses' ? { ...(block.input as object), useAI: false } : block.input;
+      const r = await callTool(ctx, block.name, input);
       evidence.push({ tool: block.name, ok: r.ok, summary: r.ok ? 'ok' : r.error!.message, data: r.data });
       results.push({ type: 'tool_result', tool_use_id: block.id, is_error: !r.ok, content: wrapUntrusted(block.name, r.ok ? r.data : r.error) });
     }
