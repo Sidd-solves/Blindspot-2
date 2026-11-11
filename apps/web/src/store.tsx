@@ -12,7 +12,7 @@ export interface FxInfo { base: string; to: string; live: boolean; date: string;
 const fxCache = new Map<string, Promise<Omit<FxInfo, 'to'>>>();
 const ratesFor = (base: string) => { let p = fxCache.get(base); if (!p) { p = get('/api/fx?base=' + base); fxCache.set(base, p); p.catch(() => fxCache.delete(base)); } return p; };
 
-export interface UploadState { files: FileText[]; report: IngestReport | null; error: string | null; busy: string | null; open: boolean; overrides: Partial<Record<Role, string | null>>; dateOrder?: DateOrder }
+export interface UploadState { staged: File[]; raw: File[]; files: FileText[]; report: IngestReport | null; error: string | null; busy: string | null; open: boolean; overrides: Partial<Record<Role, string | null>>; dateOrder?: DateOrder }
 
 interface Store {
   dataset: DatasetMeta | null; findings: Finding[]; bySeverity: Record<string, number>; actions: Action[]; dash: Dash | null; health: any; conn: any;
@@ -21,13 +21,14 @@ interface Store {
   uploadFiles: (files: File[], mode?: 'replace' | 'add') => Promise<'ok' | 'fixable' | 'failed'>;
   fixUpload: (overrides: Partial<Record<Role, string | null>>, dateOrder?: DateOrder) => Promise<void>;
   setReviewOpen: (open: boolean) => void;
+  stageFiles: (files: File[]) => void; unstage: (i: number) => void; readStaged: (mode?: 'replace' | 'add') => Promise<'ok' | 'fixable' | 'failed'>; goBackToFiles: () => void;
   refresh: () => Promise<void>; setDisplayCurrency: (code: string) => Promise<void>; setFilter: (field: string, values: string[]) => Promise<void>; clearFilters: () => Promise<void>;
 }
 const Ctx = createContext<Store>(null as any);
 export const useStore = () => useContext(Ctx);
 
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const [s, setS] = useState<Omit<Store, 'refresh' | 'setFilter' | 'clearFilters' | 'setDisplayCurrency' | 'uploadFiles' | 'fixUpload' | 'setReviewOpen'>>({ upload: { files: [], report: null, error: null, busy: null, open: false, overrides: {} }, fx: null, dataset: null, findings: [], bySeverity: {}, actions: [], dash: null, health: null, conn: null, loading: true, version: 0, extension: false, events: [] });
+  const [s, setS] = useState<Omit<Store, 'refresh' | 'setFilter' | 'clearFilters' | 'setDisplayCurrency' | 'uploadFiles' | 'fixUpload' | 'setReviewOpen' | 'stageFiles' | 'unstage' | 'readStaged' | 'goBackToFiles'>>({ upload: { staged: [], raw: [], files: [], report: null, error: null, busy: null, open: false, overrides: {} }, fx: null, dataset: null, findings: [], bySeverity: {}, actions: [], dash: null, health: null, conn: null, loading: true, version: 0, extension: false, events: [] });
   const busy = useRef(false);
   const retries = useRef(0);
   const refreshRef = useRef<() => Promise<void>>(async () => {});
@@ -77,6 +78,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     catch (e: any) { setUpload({ busy: null, error: e?.message ?? 'This file couldn\'t be opened.', report: null, files: list.map((f) => ({ name: f.name, text: '', kind: /\.pdf$/i.test(f.name) ? 'pdf' as const : 'csv' as const })) }); return 'failed' as const; }
     const prev = uploadRef.current;
     const files = mode === 'add' ? [...prev.files, ...read].slice(0, 5) : read;
+    setUpload({ raw: mode === 'add' ? [...prev.raw, ...list].slice(0, 5) : list });
     return send(files, mode === 'add' ? prev.overrides : {}, mode === 'add' ? prev.dateOrder : undefined);
   }, [send]);
   const fixUpload = useCallback(async (overrides: Partial<Record<Role, string | null>>, dateOrder?: DateOrder) => {
@@ -84,6 +86,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (u.files.length) await send(u.files, overrides, dateOrder ?? u.dateOrder);
   }, [send]);
   const setReviewOpen = useCallback((open: boolean) => setUpload({ open }), []);
+  // Files wait in a list (removable) until Next is pressed; only then is anything read.
+  const stageFiles = useCallback((list: File[]) => {
+    const cur = uploadRef.current.staged, key = (f: File) => `${f.name}|${f.size}|${f.lastModified}`;
+    setUpload({ staged: [...cur, ...list.filter((f) => !cur.some((c) => key(c) === key(f)))].slice(0, 5), error: null });
+  }, []);
+  const unstage = useCallback((i: number) => setUpload({ staged: uploadRef.current.staged.filter((_, k) => k !== i) }), []);
+  const readStaged = useCallback(async (mode: 'replace' | 'add' = 'replace') => {
+    const list = uploadRef.current.staged;
+    if (!list.length) return 'failed' as const;
+    const r = await uploadFiles(list, mode);
+    if (r !== 'failed') setUpload({ staged: [] });
+    return r;
+  }, [uploadFiles]);
+  // "Go back": close the report and put the files back in the list so they can be removed, swapped or added to.
+  const goBackToFiles = useCallback(() => setUpload({ open: false, staged: uploadRef.current.raw.slice(), error: null }), []);
 
   const setFilter = useCallback(async (field: string, values: string[]) => {
     await tool('apply-filter', { field, values, mode: values.length ? 'replace' : 'clear', target: 'session' });
@@ -110,6 +127,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return () => es?.close();
   }, [refresh]);
 
-  const value = useMemo(() => ({ ...s, refresh, setFilter, clearFilters, setDisplayCurrency, uploadFiles, fixUpload, setReviewOpen }), [s, refresh, setFilter, clearFilters, setDisplayCurrency, uploadFiles, fixUpload, setReviewOpen]);
+  const value = useMemo(() => ({ ...s, refresh, setFilter, clearFilters, setDisplayCurrency, uploadFiles, fixUpload, setReviewOpen, stageFiles, unstage, readStaged, goBackToFiles }), [s, refresh, setFilter, clearFilters, setDisplayCurrency, uploadFiles, fixUpload, setReviewOpen, stageFiles, unstage, readStaged, goBackToFiles]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

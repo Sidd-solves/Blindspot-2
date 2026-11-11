@@ -99,9 +99,7 @@ export default function DataSources() {
               <li key={s} className="flex gap-2"><span className="mono grid h-4 w-4 flex-none place-items-center rounded text-[9.5px] font-bold text-white" style={{ background: SHOPIFY }}>{i + 1}</span>{s}</li>
             ))}
           </ol>
-          <div className="px-3.5 pb-1.5">
-            <UploadZone c={SHOPIFY} compact icon={<ShoppingBag size={20} />} title="Drop your Shopify orders export" hint="We spot Shopify's format automatically" />
-          </div>
+          <div className="px-3.5 pb-3 text-[11px] text-[var(--muted)]">Then drop it in <b className="text-[var(--text)]">Upload your files</b> below. <a href="#/guide/shopify-export" className="font-bold" style={{ color: SHOPIFY }}>Full guide</a></div>
         </Card>
         <Card c="var(--cyan)" hover={false} className="p-3.5">
           <div className="flex items-center gap-3">
@@ -111,8 +109,8 @@ export default function DataSources() {
           </div>
         </Card>
         <Card c="var(--blue)" hover={false}>
-          <CardHead icon={<Database size={13} />} title="Any spreadsheet" c="var(--blue)" />
-          <div className="px-3.5 pb-1.5"><UploadZone c="var(--blue)" compact title="Drop any sales file" hint="CSV, Excel, Numbers, Google Sheets or PDF · several files at once is fine" /></div>
+          <CardHead icon={<Database size={13} />} title="Upload your files" c="var(--blue)" />
+          <div className="px-3.5 pb-3"><UploadZone c="var(--blue)" compact title="Drop your sales files" hint="CSV, Excel, Numbers, Google Sheets or PDF · several at once is fine" /></div>
         </Card>
       </div>
 

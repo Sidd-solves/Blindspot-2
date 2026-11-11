@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useState, type CSSProperties } from 'react';
-import { AlertTriangle, ArrowRight, Calendar, Check, ChevronDown, CircleSlash, Coins, FilePlus2, FileSpreadsheet, FileText, Hash, Info, ListChecks, Lock, RefreshCw, Rows3, Sparkles, Wand2, X } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, ArrowRight, Calendar, Check, ChevronDown, CircleSlash, Coins, FilePlus2, FileSpreadsheet, FileText, Hash, Info, ListChecks, Lock, RefreshCw, Rows3, Sparkles, Wand2, X } from 'lucide-react';
 import type { Issue, Role, Unlock } from '@blindspot/analytics';
 import { useStore } from '../store';
 import { CountUp, Dropdown, Loading } from './ui';
@@ -75,7 +75,7 @@ function UnlockRow({ u, i }: { u: Unlock; i: number }) {
 
 /** Shown after every upload: how each column was read, what was wrong with which rows, and what the file unlocks. */
 export function ReadReview() {
-  const { upload, setReviewOpen, fixUpload } = useStore();
+  const { upload, setReviewOpen, fixUpload, goBackToFiles } = useStore();
   const [more, setMore] = useState(false), [fixMode, setFixMode] = useState<null | 'replace' | 'add'>(null), [showInfo, setShowInfo] = useState(false);
   const rep = upload.report;
   if (!upload.open || (!rep && !upload.error && !upload.busy)) return null;
@@ -166,7 +166,8 @@ export function ReadReview() {
           {!upload.busy && <div className="flex flex-wrap items-center justify-between gap-2 border-t px-4 py-3" style={{ borderColor: 'var(--line)' }}>
             <span className="text-[11px] text-[var(--faint)]">{failed ? 'Nothing was changed yet.' : problems.some((p) => p.severity !== 'info') ? 'You can continue: anything that needs missing info will say "not enough info".' : 'Everything checks out.'}</span>
             <div className="flex gap-2">
-              <button className="btn" onClick={() => setFixMode('replace')}><RefreshCw size={13} />Use a different file</button>
+              <button className="btn" onClick={() => { goBackToFiles(); setFixMode(null); go('data'); }}><ArrowLeft size={13} />Go back</button>
+              {!failed && <button className="btn" onClick={() => setFixMode('add')}><FilePlus2 size={13} style={{ color: 'var(--emerald)' }} />Add another file</button>}
               {!failed && <motion.button whileTap={{ scale: 0.96 }} whileHover={{ scale: 1.02 }} className="btn btn-primary" onClick={() => { close(); go('overview'); }}>{problems.length ? 'Continue' : 'Looks right'}<ArrowRight size={13} /></motion.button>}
               {failed && <button className="btn" onClick={close}>Cancel</button>}
             </div>

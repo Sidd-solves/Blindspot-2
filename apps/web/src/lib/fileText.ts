@@ -3,6 +3,8 @@
  * CSV/TSV/TXT: decoded with the right text encoding. Excel/Numbers/ODS: the sheet with the sales.
  * PDF: the table rebuilt from the positions of the words on each page.
  */
+import { pdfItemsToText, type PdfItem } from './pdfLayout';
+
 export interface FileText { name: string; text: string; kind: 'csv' | 'excel' | 'pdf'; note?: string }
 export class FileReadError extends Error {}
 
@@ -55,8 +57,6 @@ async function sheetToText(f: File): Promise<{ text: string; note?: string }> {
   return { text, note: wb.SheetNames.length > 1 ? `Read the "${best.name}" sheet (${best.rows.toLocaleString()} rows)${others.length ? `; also has ${others.map((o) => `"${o.name}"`).join(', ')}` : ''}.` : undefined };
 }
 
-interface Cell { x0: number; x1: number; text: string }
-
 async function pdfToText(f: File): Promise<{ text: string; note?: string }> {
   const pdfjs = await import('pdfjs-dist');
   const worker = (await import('pdfjs-dist/build/pdf.worker.min.mjs?url')).default;
@@ -64,54 +64,15 @@ async function pdfToText(f: File): Promise<{ text: string; note?: string }> {
   let doc;
   try { doc = await pdfjs.getDocument({ data: new Uint8Array(await f.arrayBuffer()) }).promise; }
   catch (e: any) { throw new FileReadError(/password/i.test(e?.message ?? '') ? 'This PDF is password-protected. Open it, save a copy without the password, and try again.' : 'This PDF couldn\'t be opened.'); }
-  const lines: Cell[][] = [];
-  let words = 0;
-  for (let p = 1; p <= Math.min(doc.numPages, 400); p++) {
-    const page = await doc.getPage(p);
-    const content = await page.getTextContent();
-    const items = (content.items as any[]).filter((it) => typeof it.str === 'string' && it.str.trim() !== '')
-      .map((it) => ({ x: it.transform[4] as number, y: it.transform[5] as number, w: (it.width as number) || it.str.length * 4, h: Math.abs(it.transform[3] as number) || 8, s: it.str as string }));
-    words += items.length;
-    // Group words into lines by their vertical position.
-    items.sort((a, b) => b.y - a.y || a.x - b.x);
-    const pageLines: (typeof items)[] = [];
-    for (const it of items) {
-      const line = pageLines.find((l) => Math.abs(l[0].y - it.y) <= Math.max(2, it.h * 0.45));
-      if (line) line.push(it); else pageLines.push([it]);
-    }
-    for (const l of pageLines) {
-      l.sort((a, b) => a.x - b.x);
-      // Words close together belong to the same cell; a wider gap starts a new cell.
-      const cells: Cell[] = [];
-      for (const it of l) {
-        const last = cells[cells.length - 1];
-        const gap = last ? it.x - last.x1 : Infinity;
-        if (last && gap < Math.max(3, it.h * 0.9)) { last.text += (gap > it.h * 0.15 ? ' ' : '') + it.s; last.x1 = it.x + it.w; }
-        else cells.push({ x0: it.x, x1: it.x + it.w, text: it.s });
-      }
-      lines.push(cells.map((c) => ({ ...c, text: c.text.trim() })));
+  const items: PdfItem[] = [];
+  for (let p = 1; p <= Math.min(doc.numPages, 500); p++) {
+    for (const it of (await (await doc.getPage(p)).getTextContent()).items as any[]) {
+      if (typeof it.str !== 'string' || !it.str.trim()) continue;
+      const h = Math.abs(it.transform[3] as number) || 8;
+      items.push({ x: it.transform[4], y: it.transform[5], w: (it.width as number) || it.str.length * h * 0.5, h, s: it.str, page: p });
     }
   }
-  if (!words) throw new FileReadError('This PDF is a scanned picture with no text in it, so the numbers can\'t be read. Download the report from your store as CSV or Excel instead.');
-  // Columns come from the header line (the first wide line made mostly of words); every cell joins the nearest column.
-  const isNum = (s: string) => /^[-(]?[$£€¥₹]?\s?[\d.,]+\)?%?$/.test(s.replace(/\s/g, ''));
-  const header = lines.find((l) => l.length >= 3 && l.filter((c) => !isNum(c.text)).length / l.length >= 0.75 && l.filter((c) => !/\d{2}/.test(c.text)).length >= 2);
-  let text: string;
-  if (header) {
-    const cols = header.map((c) => ({ x0: c.x0, x1: c.x1, mid: (c.x0 + c.x1) / 2 }));
-    const out = lines.map((l) => {
-      if (l.length === 1 && l !== header) return l[0].text;
-      const row: string[] = cols.map(() => '');
-      for (const c of l) {
-        const mid = (c.x0 + c.x1) / 2;
-        // overlap first (text sits under its header), then nearest centre
-        let best = cols.findIndex((k) => c.x0 < k.x1 + 2 && c.x1 > k.x0 - 2);
-        if (best < 0) best = cols.reduce((bi, k, i) => (Math.abs(k.mid - mid) < Math.abs(cols[bi].mid - mid) ? i : bi), 0);
-        row[best] = row[best] ? `${row[best]} ${c.text}` : c.text;
-      }
-      return row.map((v) => v.replace(/\t/g, ' ')).join('\t');
-    });
-    text = out.join('\n');
-  } else text = lines.map((l) => l.map((c) => c.text.replace(/\t/g, ' ')).join('\t')).join('\n');
-  return { text, note: `Read from a ${doc.numPages}-page PDF. Check the columns below: PDFs don't store tables, so Blindspot rebuilt it from the layout.` };
+  if (!items.length) throw new FileReadError('This PDF is a scanned picture with no text in it, so the numbers can\'t be read. Download the report from your store as CSV or Excel instead.');
+  const { text, rows, headerFound } = pdfItemsToText(items);
+  return { text, note: headerFound ? `Read from a ${doc.numPages}-page PDF: ${rows.toLocaleString()} table rows rebuilt from the page layout.` : `Read from a ${doc.numPages}-page PDF without a clear table header; check the columns below.` };
 }

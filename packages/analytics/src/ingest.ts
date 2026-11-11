@@ -548,7 +548,8 @@ export function ingest(files: IngestInput[], opts: IngestOptions = {}): { datase
   const primary = parseFile(files[0], opts.overrides, opts.maxRows);
   const { table, profile, roles } = primary;
   const issues: Issue[] = [];
-  const fileInfo: IngestReport['files'] = [{ name: primary.name, format: profile?.label ?? (table.how ? 'Summary table' : 'Spreadsheet'), rows: table.rows.length, delimiter: table.delimiter, headerLine: table.headerLine, how: table.how }];
+  const kindOf = (name: string) => (/\.pdf$/i.test(name) ? 'PDF report' : /\.(xlsx|xlsm|xls|ods|numbers)$/i.test(name) ? 'Excel workbook' : 'Spreadsheet');
+  const fileInfo: IngestReport['files'] = [{ name: primary.name, format: profile?.label ?? (table.how ? 'Summary table' : kindOf(primary.name)), rows: table.rows.length, delimiter: table.delimiter, headerLine: table.headerLine, how: table.how }];
   if (table.headerLine > 1) issues.push({ kind: 'title-rows', severity: 'info', count: table.headerLine - 1, lines: [], message: `Skipped ${table.headerLine - 1} line(s) above the column headers (titles or notes). Headers are on line ${table.headerLine}.` });
   if (table.secondTable) issues.push({ kind: 'second-table', severity: 'info', count: 1, lines: [table.secondTable.line], message: `A second table starts at line ${table.secondTable.line} (${table.secondTable.label}); only the first table, your sales, was read.` });
   if (table.notes.length) issues.push({ kind: 'notes', severity: 'info', count: table.notes.length, lines: table.notes.slice(0, 5), message: `Skipped ${table.notes.length} line(s) that were notes or page labels, not sales.` });
@@ -743,7 +744,7 @@ export function ingest(files: IngestInput[], opts: IngestOptions = {}): { datase
     if (disc > 0 && gross > 0 && disc < gross) for (const k of ls) { const share = lines[k].sales / gross; lines[k].sales -= share * disc; lines[k].unit = lines[k].sales / (lines[k].qty || 1); }
   }
   // refunds (Shopify "Refunded Amount", Stripe "Amount Refunded"): a return line per refunded order, split by line value
-  let refundOrders = 0, refundValue = 0;
+  let refundOrders = 0, refundValue = 0, refundLines = 0;
   for (const [order, refund] of orderRefund) {
     if (!(refund > 0)) continue;
     const ls = orderLines.get(order) ?? [], gross = ls.reduce((s, k) => s + lines[k].sales, 0);
@@ -751,7 +752,7 @@ export function ingest(files: IngestInput[], opts: IngestOptions = {}): { datase
     refundOrders++; refundValue += Math.min(refund, gross);
     for (const k of ls) {
       const L = lines[k], val = (L.sales / gross) * Math.min(refund, gross);
-      lines.push({ ...L, ret: true, sales: -val, qty: -(L.qty * (val / L.sales)), unit: L.unit });
+      lines.push({ ...L, ret: true, sales: -val, qty: -(L.qty * (val / L.sales)), unit: L.unit }); refundLines++;
     }
   }
   if (refundOrders) issues.push({ kind: 'refunds', severity: 'info', count: refundOrders, lines: [], message: `${refundOrders} order(s) were refunded (${r2(refundValue).toLocaleString()} in total); counted as returns, not sales.` });
@@ -826,7 +827,7 @@ export function ingest(files: IngestInput[], opts: IngestOptions = {}): { datase
   const report: IngestReport = {
     files: fileInfo, format, platform: profile?.id ?? null, columns: table.headers, roles, confidence: primary.confidence, samples,
     dateOrder: roles.date ? dateOrder : null, dateOrderAssumed: !!roles.date && dateOrderAssumed,
-    currency, currencySource, rowsRead, rowsUsed: rows.length, ordersFound: orders,
+    currency, currencySource, rowsRead, rowsUsed: Math.max(0, rows.length - refundLines), ordersFound: orders,
     issues: issues.sort((a, b) => ({ dropped: 0, kept: 1, info: 2 }[a.severity] - { dropped: 0, kept: 1, info: 2 }[b.severity])), unlocks,
     dateRange: dates.length ? [dates[0], dates[dates.length - 1]] : null, prep,
   };
