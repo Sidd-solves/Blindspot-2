@@ -30,7 +30,7 @@ export function UploadZone({ c = 'var(--blue)', title, hint, icon, compact, onDo
     <div className="space-y-2">
       <AnimatePresence initial={false}>
         {staged.map((f, i) => {
-          const pdf = /\.pdf$/i.test(f.name), Icon = pdf ? FileText : FileSpreadsheet, ic = pdf ? 'var(--rose)' : 'var(--emerald)';
+          const pdf = /\.pdf$/i.test(f.name), Icon = pdf ? FileText : FileSpreadsheet, ic = pdf ? 'var(--sky)' : 'var(--emerald)';
           return (
             <motion.div key={`${f.name}${f.size}${f.lastModified}`} layout initial={{ opacity: 0, y: -6, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, x: 20, height: 0, marginTop: 0 }} transition={{ type: 'spring', stiffness: 320, damping: 28 }}
               className="flex items-center gap-2.5 rounded-xl border px-2.5 py-2" style={{ borderColor: `color-mix(in srgb, ${ic} 30%, var(--line))`, background: `color-mix(in srgb, ${ic} 6%, transparent)` }}>
