@@ -49,4 +49,4 @@ Add `ANTHROPIC_API_KEY=` to `.env` for Claude answers (optional; without it the 
 - **Pre-existing work:** none. The project was started on 30 October 2026 (see the commit history); everything else is the open-source libraries listed above.
 
 ## Docs
-[Feature matrix and limitations](docs/FEATURE_MATRIX.md) · [Fact check](docs/FACT_CHECK.md) · [Deployment](docs/DEPLOYMENT.md) · [Phase plan](docs/PHASE_PLAN.md) · [Devpost draft](docs/DEVPOST.md) · [Presentation](docs/PRESENTATION.md) · [AI disclosure](docs/AI_DISCLOSURE.md)
+[Feature matrix and limitations](docs/FEATURE_MATRIX.md) · [Fact check](docs/FACT_CHECK.md) · [Deployment](docs/DEPLOYMENT.md) · [Phase plan](docs/PHASE_PLAN.md) · [Devpost draft](docs/DEVPOST.md) · [Presentation](docs/PRESENTATION.md)
