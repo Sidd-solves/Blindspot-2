@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { detectFields, profileData, recommendChart, validateChartFields, toStory, analyzeSmart, round, type Row } from '@blindspot/analytics';
-import { defineTool, ToolError, num } from '../core';
+import { defineTool, ToolError, num, memo } from '../core';
 
 const monthKey = (s: string) => s.slice(0, 7);
 function aggregate(rows: Row[], x: string, y: string, agg: 'sum' | 'avg' | 'count', limit: number, sortByX: boolean) {
@@ -23,6 +23,7 @@ export const buildDashboard = defineTool({
   async handler(ctx, { title, dimension }) {
     const v = ctx.state.view(), fm = detectFields(v);
     if (!v.rows.length) throw new ToolError('NO_DATA', 'No rows match the current filters.');
+    const { kpis, charts } = memo(v.rows, `dash:${dimension ?? ''}`, () => {
     const rev = v.rows.reduce((s, r) => s + num(r[fm.measure]), 0);
     const prof = fm.profit ? v.rows.reduce((s, r) => s + num(r[fm.profit!]), 0) : 0;
     // Order-level KPIs when rows are order lines (real store data); row-level otherwise.
@@ -48,6 +49,8 @@ export const buildDashboard = defineTool({
     }
     if (dim) charts.push({ id: 'segments', type: 'bar', title: `${fm.measure} by ${dim}`, data: aggregate(v.rows, dim, fm.measure, 'sum', 12, false) });
     charts.push({ id: 'detail', type: 'table', title: 'Top orders', data: [...v.rows].sort((a, b) => num(b[fm.measure]) - num(a[fm.measure])).slice(0, 10) });
+      return { kpis, charts };
+    });
     const id = ctx.state.nextId('dash');
     ctx.state.canvas.push({ id, kind: 'dashboard', title, spec: { kpis, charts }, createdAt: new Date().toISOString() });
     return { id, title, kpis, charts };

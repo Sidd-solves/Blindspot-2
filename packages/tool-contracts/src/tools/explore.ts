@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { runQuery, explainChange, scanAnomalies, runHypothesisLibrary, testGeneric, detectFields, profileData, pickWindowDays, comparisonWindows, type GenericHypothesis } from '@blindspot/analytics';
-import { defineTool, ToolError, type ToolContext } from '../core';
+import { defineTool, ToolError, memo, type ToolContext } from '../core';
 
 const FilterSchema = z.object({ field: z.string().max(100), op: z.enum(['eq', 'neq', 'in', 'nin', 'gt', 'gte', 'lt', 'lte', 'contains', 'between']), value: z.union([z.string().max(200), z.number(), z.array(z.union([z.string().max(200), z.number()])).max(100)]) });
 
@@ -38,7 +38,8 @@ export const explainChangeTool = defineTool({
   async handler(ctx, { days }) {
     const v = ctx.state.view(), fm = detectFields(v);
     if (!fm.date) throw new ToolError('NO_DATES', 'This data has no date column, so changes over time cannot be explained.');
-    const res = explainChange(v.rows, fm, { days: days ?? pickWindowDays(v.rows, fm.date) });
+    const d = days ?? pickWindowDays(v.rows, fm.date);
+    const res = memo(v.rows, `explain:${d}`, () => explainChange(v.rows, fm, { days: d }));
     if (!res) throw new ToolError('NOT_ENOUGH_HISTORY', 'Need at least two comparable periods of data.');
     return { ...(res as any), windows: { ...res.windows }, currency: v.currency ?? 'USD' };
   },
@@ -52,7 +53,8 @@ export const scanAnomaliesTool = defineTool({
   async handler(ctx, { days, topN }) {
     const v = ctx.state.view(), fm = detectFields(v);
     if (!fm.date) throw new ToolError('NO_DATES', 'This data has no date column to scan over time.');
-    const res = scanAnomalies(v.rows, fm, { days: days ?? pickWindowDays(v.rows, fm.date), topN });
+    const d = days ?? pickWindowDays(v.rows, fm.date);
+    const res = memo(v.rows, `scan:${d}:${topN}`, () => scanAnomalies(v.rows, fm, { days: d, topN }));
     if (!res) throw new ToolError('NOT_ENOUGH_HISTORY', 'Need at least two comparable periods of data.');
     return { window: res.windows.label, scanned: res.scanned, anomalies: res.anomalies as any[], currency: v.currency ?? 'USD' };
   },
@@ -71,7 +73,7 @@ export const testHypotheses = defineTool({
   output: z.object({ results: z.array(z.object({ id: z.string(), claim: z.string(), source: z.enum(['library', 'ai']), verdict: z.enum(['supported', 'rejected', 'inconclusive']), summary: z.string(), stat: z.object({ name: z.string(), value: z.number() }).nullable(), evidence: z.record(z.unknown()) })), aiUsed: z.boolean(), aiNote: z.string().nullable() }),
   async handler(ctx, i) {
     const v = ctx.state.view();
-    const results = i.includeLibrary ? runHypothesisLibrary(v) : [];
+    const results = i.includeLibrary ? [...memo(v.rows, 'hypotheses', () => runHypothesisLibrary(v))] : [];
     let proposals: GenericHypothesis[] = i.hypotheses ?? [], aiUsed = false, aiNote: string | null = null;
     if (i.useAI) {
       if (!ctx.llm?.configured || !ctx.llm.proposeHypotheses) aiNote = 'AI is not configured, so only the built-in library ran.';

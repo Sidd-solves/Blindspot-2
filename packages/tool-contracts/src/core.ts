@@ -88,3 +88,12 @@ export async function callTool(ctx: ToolContext, name: string, raw: unknown, tim
 }
 
 export const num = (v: unknown) => (typeof v === 'number' ? v : 0);
+
+/** Memoize an expensive per-dataset computation (keyed by the rows array + a string), so repeat calls are instant. */
+const memoStore = new WeakMap<object, Map<string, unknown>>();
+export function memo<T>(rows: object, key: string, compute: () => T): T {
+  let m = memoStore.get(rows);
+  if (!m) { m = new Map(); memoStore.set(rows, m); }
+  if (!m.has(key)) m.set(key, compute());
+  return m.get(key) as T;
+}

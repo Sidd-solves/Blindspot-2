@@ -178,7 +178,11 @@ server.listen(PORT, HOST, () => {
   if ((env.DEFAULT_DATASET ?? (PROD ? 'case-study' : 'demo')) === 'case-study' && caseStudyAvailable()) {
     setImmediate(() => {
       const t = Date.now();
-      try { state.setDataset(loadCaseStudy()); profile(state.view()); analyzeSmart(state.view()); log(`case study ready: ${state.dataset.rows.length} rows in ${Date.now() - t}ms`); }
+      try {
+        state.setDataset(loadCaseStudy()); profile(state.view()); analyzeSmart(state.view());
+        // Warm the per-dataset caches every page uses, then leave the canvas empty.
+        void (async () => { for (const [name, input] of [['build-dashboard', { title: 'Overview' }], ['explain-change', {}], ['test-hypotheses', { useAI: false }], ['recommend-actions', { top: 10 }]] as const) await callTool(ctx, name, input); state.canvas = []; log(`case study ready: ${state.dataset.rows.length} rows, caches warm in ${Date.now() - t}ms`); })();
+      }
       catch (e: any) { log(`case study failed to load: ${e?.message}`); }
     });
   }
