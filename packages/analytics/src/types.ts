@@ -48,8 +48,8 @@ export interface Finding {
   period: string | null;
   /** What the money figure is: lost (already gone), at-risk (could be lost), reversed (cancelled, never earned), untracked (sales not linked to a customer). */
   exposure: 'lost' | 'at-risk' | 'reversed' | 'untracked' | null;
-  /** The exact rows behind the finding, for drill-through: rows where `field` is one of `values`. */
-  drill?: { field: string; values: string[]; label: string } | null;
+  /** Drill-through: the rows behind the finding (see DrillSpec). */
+  drill?: DrillSpec | null;
   metric: string;
   explanation: string;
   evidence: Record<string, unknown>;
@@ -67,4 +67,23 @@ export interface FieldMap {
   discount: string | null;
   dims: string[];
   highCardDims: string[];
+}
+
+/**
+ * A structured row selection. "Exact" applies every predicate (values, date windows, row type) and should
+ * reproduce the finding's figure; "history" keeps only `field in values` (all related rows, any date or type).
+ */
+export interface DrillSpec {
+  field: string;
+  values: string[];
+  label: string;
+  /** How many values the finding covers; `values` is never truncated silently (values.length === totalValues). */
+  totalValues?: number;
+  /** Which rows count: sale lines, return lines, or all. */
+  rowType?: 'sale' | 'return' | 'all';
+  /** Date column and the windows (epoch ms, [from, to)) the figure was computed over. */
+  dateField?: string;
+  windows?: { label: string; from: number; to: number; expect?: number }[];
+  /** The figure these rows should add up to, and what it is (e.g. "sales in the prior year"). */
+  expect?: { value: number; what: string } | null;
 }

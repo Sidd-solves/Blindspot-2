@@ -14,6 +14,8 @@ export default function Settings() {
   const [up, setUp] = useState<{ msg?: string }>({});
   const [admin, setAdmin] = useState(() => { try { return sessionStorage.getItem('ciq-admin') ?? ''; } catch { return ''; } });
   const [activity, setActivity] = useState<any[]>([]), [adv, setAdv] = useState(false);
+  const [build, setBuild] = useState<{ build: string; started: string } | null>(null);
+  useEffect(() => { get('/api/health').then(setBuild).catch(() => {}); }, []);
   useEffect(() => { get('/api/settings').then(setCfg); get('/api/tools').then(setTools); const load = () => get('/api/activity').then(setActivity).catch(() => {}); load(); const t = setInterval(load, 5000); return () => clearInterval(t); }, []);
   const filtered = useMemo(() => tools.filter((t) => (!cat.length || cat.includes(t.category)) && (t.name + t.description).toLowerCase().includes(q.toLowerCase())), [tools, q, cat]);
   const security = cfg ? [
@@ -39,7 +41,7 @@ export default function Settings() {
       </Card>
 
       <Card c="var(--emerald)" hover={false} className="p-3.5 lg:col-span-4">
-        <div className="label mb-2 flex items-center gap-1"><ShieldCheck size={11} style={{ color: 'var(--emerald)' }} />Security posture</div>
+        <div className="label mb-2 flex items-center gap-1"><ShieldCheck size={11} style={{ color: 'var(--emerald)' }} />Security posture{build && <span className="mono ml-auto normal-case tracking-normal text-[var(--muted)]" title={`Server started ${new Date(build.started).toLocaleString()}`}>build {build.build}</span>}</div>
         <div className="space-y-1.5">{security.map((s, i) => <motion.div key={s.t} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }} className="flex items-center gap-2 text-[11.5px]"><span className="grid h-4 w-4 flex-none place-items-center rounded-full" style={{ background: s.ok ? 'var(--emerald)' : 'var(--amber)' }}>{s.ok ? <Check size={10} color="white" /> : <X size={10} color="white" />}</span><span className={s.ok ? '' : 'text-[var(--muted)]'}>{s.t}{!s.ok && ' (off in dev)'}</span></motion.div>)}</div>
         <div className="mt-3 grid grid-cols-3 gap-1.5">{Object.entries(TOOL_CAT).map(([k, c]) => { const n = tools.filter((t) => t.category === k).length; return n ? <div key={k} className="tint rounded-md px-1.5 py-1 text-center" style={{ '--c': c } as CSSProperties}><div className="mono text-[13px] font-semibold" style={{ color: c }}>{n}</div><div className="truncate text-[11px] font-bold text-[var(--muted)]">{k}</div></div> : null; })}</div>
       </Card>

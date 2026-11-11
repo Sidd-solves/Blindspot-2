@@ -150,7 +150,9 @@ export default function Risk() {
   const list = useMemo(() => (cat === 'all' ? findings : findings.filter((f) => f.category === cat)), [cat, findings]);
   const selected = findings.find((f) => f.id === sel) ?? list[0];
   const cats = Object.entries(CAT).filter(([k]) => findings.some((f) => f.category === k));
-  const bubbles = findings.filter((f) => f.impactUsd).map((f) => ({ x: Math.round(f.confidence * 100), y: f.impactUsd, z: f.score, f }));
+  // x = how the finding was established (categories, not a probability); small offsets keep bubbles in one column apart.
+  const EVX: Record<string, number> = { rule: 1, tested: 2, measured: 3 }, EVL = ['', 'Rule of thumb', 'Tested', 'Measured'];
+  const bubbles = findings.filter((f) => f.impactUsd).map((f, i, a) => ({ x: (EVX[f.basis] ?? 1) + ((a.slice(0, i).filter((g) => g.basis === f.basis).length % 3) - 1) * 0.12, y: f.impactUsd, z: f.score, f }));
 
   return (
     <motion.div variants={stagger} initial="hidden" animate="show" className="grid grid-cols-1 gap-3 xl:grid-cols-12">
@@ -186,12 +188,12 @@ export default function Risk() {
 
       <div className="xl:col-span-4"><Reveal>
         <Card c="var(--orange)" hover={false}>
-          <CardHead icon={<ScatterIcon size={13} />} title="Money × strength of evidence" c="var(--orange)" />
+          <CardHead icon={<ScatterIcon size={13} />} title="Money × how it was established" c="var(--orange)" />
           <div className="h-[250px] px-1 pb-2">
             <ResponsiveContainer>
               <ScatterChart margin={{ top: 8, right: 14, left: 0, bottom: 4 }}>
                 <CartesianGrid stroke="var(--line)" />
-                <XAxis type="number" dataKey="x" name="Evidence strength" unit="%" domain={[35, 105]} ticks={[40, 55, 70, 85, 100]} {...axis} />
+                <XAxis type="number" dataKey="x" name="Evidence" domain={[0.5, 3.5]} ticks={[1, 2, 3]} tickFormatter={(v) => EVL[v] ?? ''} {...axis} />
                 <YAxis type="number" dataKey="y" name="Exposure" {...axis} width={46} tickFormatter={(v) => usd(v, true)} />
                 <ZAxis type="number" dataKey="z" range={[60, 420]} />
                 <Tooltip cursor={{ strokeDasharray: 3 }} content={({ active, payload }: any) => active && payload?.[0] ? <div className="panel max-w-[220px] px-2.5 py-1.5 text-[11.5px]" style={{ background: 'var(--panel-solid)' }}><div className="font-bold">{payload[0].payload.f.title}</div><div className="mono text-[var(--muted)]">{usd(payload[0].payload.y)} · {evidenceText(payload[0].payload.f)}</div></div> : null} />

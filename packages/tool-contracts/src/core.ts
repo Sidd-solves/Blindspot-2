@@ -28,7 +28,15 @@ export class SessionState {
     if (this.viewCache?.key === key) return this.viewCache.ds;
     const sets = [...this.filters].map(([f, vals]) => [f, new Set(vals)] as const);
     const rows = this.dataset.rows.filter((r: Row) => sets.every(([f, vals]) => vals.has(String(r[f] ?? ''))));
-    this.viewCache = { key, ds: { ...this.dataset, rows } };
+    // Cleaning totals were measured on the whole file. Recount what can be recounted (reversed pairs) for this
+    // filter, so a filtered view never mixes a whole-file numerator with a filtered denominator.
+    const p = this.dataset.prep;
+    const prep = p && { ...p, scope: 'filtered' as const, ...(() => {
+      if (!p.reversed) return { cancelledPairs: 0, cancelledPairValue: 0 };
+      const kept = p.reversed.filter((r: Row) => sets.every(([f, vals]) => vals.has(String(r[f] ?? ''))));
+      return { cancelledPairs: kept.length, cancelledPairValue: Math.round(kept.reduce((s: number, r: Row) => s + ((r.Sales as number) || 0), 0)), reversed: kept };
+    })() };
+    this.viewCache = { key, ds: { ...this.dataset, rows, prep } };
     return this.viewCache.ds;
   }
   setDataset(d: Dataset) { this.dataset = d; this.filters.clear(); this.canvas = []; this.viewCache = null; }

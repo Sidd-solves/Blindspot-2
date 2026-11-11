@@ -70,7 +70,7 @@ export const testHypotheses = defineTool({
   name: 'test-hypotheses', category: 'Business Intelligence', core: false,
   description: 'AI suggests, math checks: runs the built-in hypothesis library and any supplied (or AI-proposed) hypotheses, returning supported / rejected / inconclusive with the statistic behind each verdict.',
   input: z.object({ hypotheses: z.array(GenericHypothesisSchema).max(10).optional(), useAI: z.boolean().default(false), includeLibrary: z.boolean().default(true) }),
-  output: z.object({ results: z.array(z.object({ id: z.string(), claim: z.string(), source: z.enum(['library', 'ai']), verdict: z.enum(['supported', 'rejected', 'small-effect', 'inconclusive']), summary: z.string(), basis: z.enum(['tested', 'descriptive']), method: z.string(), p: z.number().nullable(), stat: z.object({ name: z.string(), value: z.number() }).nullable(), evidence: z.record(z.string(), z.unknown()) })), aiUsed: z.boolean(), aiNote: z.string().nullable() }),
+  output: z.object({ results: z.array(z.object({ id: z.string(), claim: z.string(), source: z.enum(['library', 'ai']), verdict: z.enum(['supported', 'rejected', 'small-effect', 'inconclusive']), summary: z.string(), basis: z.enum(['tested', 'descriptive']), method: z.string(), p: z.number().nullable(), pTwoSided: z.number().nullable().optional(), alternative: z.string().nullable().optional(), stat: z.object({ name: z.string(), value: z.number().nullable() }).nullable(), evidence: z.record(z.string(), z.unknown()) })), aiUsed: z.boolean(), aiNote: z.string().nullable() }),
   async handler(ctx, i) {
     const v = ctx.state.view();
     const results = i.includeLibrary ? [...memo(v.rows, 'hypotheses', () => runHypothesisLibrary(v))] : [];

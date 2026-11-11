@@ -15,7 +15,7 @@ const notes = [
   "How it uses AI: AI suggests, math checks. You ask in plain English, Claude calls 34 analysis tools, and it proposes new ideas, but every idea is tested with statistics before you see it. The AI never invents a number.",
   "Step three: decide what to fix. A risk map by money and confidence, a what-if simulator for profit, and a one-page report with a 30, 90 and 180-day roadmap.",
   "How it's built: a React and TypeScript front end, a Node server on Render, my own math engine kept separate from the AI so results are fast, free and repeatable, and Claude with 34 typed tools, also available over MCP.",
-  "Proof, not promises: 7 of 7 headline numbers match an independent Python check, 164 automated tests pass, test files from 5 platforms come out within 5 cents of the true totals, and a million rows take about 6 seconds.",
+  "Proof, not promises: 7 of 7 headline numbers match an independent Python check, 171 automated tests pass, test files from 5 platforms come out within 5 cents of the true totals, and a million rows take about 6 seconds.",
   "It's private, safe and responsible: read-only Shopify access, keys never stored, each visitor's data private, the AI never calculates numbers, and the data license and open-source tools are credited.",
   "Challenges: messy real data, including an 80,995-unit mistaken order; holidays that faked growth; PDFs that don't store tables; and a tiny free server. The AI even caught bugs in my own math.",
   "What I learned: AI is best when it's checked, real data beats demo data, showing your work builds trust, and you should test with the ugliest files you can find.",

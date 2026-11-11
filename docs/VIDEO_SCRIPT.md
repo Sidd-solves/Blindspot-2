@@ -55,7 +55,7 @@
 
 ### 2:25 – 2:45 · Proof
 🎬 Click **Source Data** (the four **Match** badges), then show Slide 13 (Proof, not promises).
-🎙️ "Every number is traceable to the exact rows. Seven of seven headline numbers match an independent check, and a hundred sixty-four automated tests pass."
+🎙️ "Every number is traceable to the exact rows. Seven of seven headline numbers match an independent check, and a hundred seventy-one automated tests pass."
 
 ### 2:45 – 2:55 · Close
 🎬 Slide 19 (Stop guessing. Start knowing.), then Slide 20 (Try it live + QR).
@@ -84,7 +84,7 @@
 🎙️ "Your totals tell you *what*. Blindspot tells you *why*. **Don't guess. Assess.**"
 
 ### 2:10 – 2:30 · How it works (Slide 7)
-🎙️ "Five steps. Upload your data. Blindspot cleans it, finds the problems across every product, customer and country, proves them with statistics, and ranks the fixes by money."
+🎙️ "Five steps. Upload your data. Blindspot cleans it, finds the problems across your products, countries and best customers, proves them with statistics, and ranks the fixes by money."
 
 ### 2:30 – 3:30 · Live: upload any file
 🎬 Browser → **Open the app**.
@@ -114,7 +114,7 @@
 🎙️ "And you never have to take it on faith. Every row it analysed is here, searchable, downloadable, and the totals match the dashboard exactly. **Showing your work builds trust.**"
 
 ### 6:15 – 6:45 · How it's built and proof (Slides 12 and 13, briefly 14)
-🎙️ "Under the hood: React and TypeScript in the browser, Node on the server, my own math engine kept separate from the AI so results are fast, free and repeatable, and Claude with thirty-four typed tools, also available over MCP. Seven of seven numbers match an independent Python check, a hundred sixty-four automated tests pass, and Shopify access is read-only. Your data stays yours."
+🎙️ "Under the hood: React and TypeScript in the browser, Node on the server, my own math engine kept separate from the AI so results are fast, free and repeatable, and Claude with thirty-four typed tools, also available over MCP. Seven of seven numbers match an independent Python check, a hundred seventy-one automated tests pass, and Shopify access is read-only. Your data stays yours."
 
 ### 6:45 – 7:05 · Challenges, learned, next (Slides 15, 16, 18, quickly)
 🎙️ "The hardest parts were messy real data, PDFs that don't store tables, and a free server with five hundred twelve megabytes. I learned that AI is best when it's checked. Next: more live connectors, weekly alerts, and comparing your store with similar shops."

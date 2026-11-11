@@ -14,7 +14,7 @@ An AI analyst for small online stores. Drop in your sales export and it finds wh
 
 **The problem.** Small online stores run on gut feeling. Big companies pay data teams to spot problems like lost customers, products that stopped selling, or rising returns. Small shops can't afford that, so those problems drain money quietly until it's too late.
 
-**What Blindspot does.** You upload a sales export from Shopify, Etsy, WooCommerce, Square, Amazon, Tableau or any spreadsheet, or connect Shopify directly. In seconds Blindspot cleans the data, checks everything that matters to a shop, scans every product, customer and country for anything unusual, and ranks each problem by how much money it puts at risk. You get a health score, a "fix this first" list, a what-if simulator and a one-page report.
+**What Blindspot does.** You upload a sales export from Shopify, Etsy, WooCommerce, Square, Amazon, Tableau or any spreadsheet, or connect Shopify directly. In seconds Blindspot cleans the data, checks everything that matters to a shop, scans each sizeable product and country for anything unusual, checks for best customers who stopped ordering, and ranks each problem by how much money it puts at risk. You get a health score, a "fix this first" list, a what-if simulator and a one-page report.
 
 **How AI is used: "AI suggests, math checks."** Claude acts as the analyst you can talk to. It answers questions in plain English by calling 34 analysis tools, and it suggests new business theories worth testing. But the AI never invents a number: every theory it proposes is tested with statistics and labeled supported, not supported or not enough evidence before you see it. That makes the AI creative and trustworthy at the same time.
 

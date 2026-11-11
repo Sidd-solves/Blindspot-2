@@ -13,7 +13,7 @@ Small shops run on gut feeling. Big companies pay data teams to find problems li
 Small online store owners, especially on Shopify. I run a Shopify store myself, which is why I built it.
 
 **4. Why not just use a dashboard or Shopify's own reports?**
-Dashboards show what happened. You still have to spot the problem yourself. Blindspot does the hunting: it checks every product, customer and country, tells you which problems are real, and what each one costs.
+Dashboards show what happened. You still have to spot the problem yourself. Blindspot does the hunting: it checks each sizeable product and country plus your best customers, tells you which problems hold up statistically, and what each one costs.
 
 ## How it works
 **5. How does it find problems?**

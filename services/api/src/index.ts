@@ -1,3 +1,4 @@
+import { execSync } from 'node:child_process';
 import express, { type Request, type Response, type NextFunction } from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
@@ -17,7 +18,7 @@ import { fetchShopifyDataset, ShopifyError } from './shopify';
 import { loadCaseStudy, caseStudyAvailable, CASE_STUDY_CITATION } from './case-study';
 import { analyzeSmart, profileData as profile } from '@blindspot/analytics';
 import { CURRENCIES, ratesFor, displayRate } from './fx';
-import { convertMoneyDeep } from '@blindspot/analytics';
+import { convertMoneyDeep, toMs } from '@blindspot/analytics';
 
 // Load the repo-root .env for local runs (hosted platforms inject real env vars, which take precedence).
 const rootEnv = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../.env');
@@ -71,7 +72,14 @@ function requireAdmin(req: Request, res: Response, next: NextFunction) {
   res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Admin token required.' } });
 }
 
-app.get('/api/health', (_req, res) => res.json({ ok: true, ...sessions.count(), tools: listTools().length, extension: bridge.isConnected(), ai: llm.configured ? llm.model : null }));
+/** Which commit is running: Render sets RENDER_GIT_COMMIT; locally we ask git. Shown in Settings so a stale deploy is obvious. */
+const BUILD = (() => {
+  const env = process.env.RENDER_GIT_COMMIT || process.env.GIT_COMMIT;
+  if (env) return env.slice(0, 7);
+  try { return execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim() || 'unknown'; } catch { return 'unknown'; }
+})();
+const STARTED = new Date().toISOString();
+app.get('/api/health', (_req, res) => res.json({ ok: true, build: BUILD, started: STARTED, ...sessions.count(), tools: listTools().length, extension: bridge.isConnected(), ai: llm.configured ? llm.model : null }));
 
 app.get('/api/tools', (_req, res) => res.json(listTools().map((t) => ({ name: t.name, category: t.category, core: t.core, description: t.description, sensitive: SENSITIVE.has(t.name), inputSchema: zodToJsonSchema(t.input) }))));
 
@@ -97,7 +105,7 @@ app.get('/api/activity', (_req, res) => res.json(activity.slice(0, 20)));
 
 app.get('/api/dataset', (req, res) => {
   const state = sessions.get(sid(req)), v = state.view();
-  res.json({ name: v.name, source: v.source, label: v.label, currency: v.currency ?? 'USD', prep: v.prep ?? null, citation: v.source === 'case-study' ? CASE_STUDY_CITATION : null, caseStudyAvailable: caseStudyAvailable(), rows: v.rows.length, totalRows: state.dataset.rows.length, filters: Object.fromEntries(state.filters), fields: detectFields(v), columns: profileData(v).columns.map((c) => ({ name: c.name, type: c.type, distinct: c.distinct, values: c.type === 'category' ? [...new Set(state.dataset.rows.map((r) => String(r[c.name] ?? '')))].sort().slice(0, 50) : undefined })) });
+  res.json({ name: v.name, source: v.source, label: v.label, currency: v.currency ?? 'USD', prep: v.prep ? (({ reversed, ...p }) => p)(v.prep) : null, citation: v.source === 'case-study' ? CASE_STUDY_CITATION : null, caseStudyAvailable: caseStudyAvailable(), rows: v.rows.length, totalRows: state.dataset.rows.length, filters: Object.fromEntries(state.filters), fields: detectFields(v), columns: profileData(v).columns.map((c) => ({ name: c.name, type: c.type, distinct: c.distinct, values: c.type === 'category' ? [...new Set(state.dataset.rows.map((r) => String(r[c.name] ?? '')))].sort().slice(0, 50) : undefined })) });
 });
 
 app.get('/api/crosstab', (req, res) => {
@@ -115,21 +123,35 @@ app.get('/api/fx', async (req, res) => {
   res.json({ ...t, names: CURRENCIES });
 });
 
-/** Drill-through: keep rows whose `field` is one of the JSON-encoded `values` (used by "See the affected rows"). */
-function drillRows(rows: any[], field?: string, values?: string) {
-  if (!field || !values) return rows;
-  let list: unknown;
-  try { list = JSON.parse(values); } catch { return rows; }
-  if (!Array.isArray(list)) return rows;
-  const set = new Set(list.map(String));
-  return rows.filter((r) => set.has(String(r[field] ?? '')));
+/**
+ * Drill-through ("See the affected rows"). `drill` is the finding's DrillSpec as JSON. scope=exact applies every
+ * predicate (values, row type, date windows) so the rows reproduce the finding's figure; scope=history keeps only
+ * the values (every related row, any date or type).
+ */
+const DrillQ = z.object({ field: z.string().max(100), values: z.array(z.string()).max(20_000), label: z.string().max(300).default(''), rowType: z.enum(['sale', 'return', 'all']).optional(), dateField: z.string().max(100).optional(), windows: z.array(z.object({ label: z.string(), from: z.number(), to: z.number(), expect: z.number().optional() })).max(4).optional(), expect: z.object({ value: z.number(), what: z.string() }).nullable().optional() });
+type Drill = z.infer<typeof DrillQ>;
+function parseDrill(raw?: string): Drill | null {
+  if (!raw) return null;
+  try { const d = DrillQ.safeParse(JSON.parse(raw)); return d.success ? d.data : null; } catch { return null; }
+}
+function drillRows(rows: any[], d: Drill | null, scope: 'exact' | 'history') {
+  if (!d) return rows;
+  const set = new Set(d.values.map(String));
+  const exact = scope === 'exact', type = exact ? d.rowType ?? 'all' : 'all', wins = exact && d.dateField ? d.windows ?? [] : [];
+  return rows.filter((r) => {
+    if (!set.has(String(r[d.field] ?? ''))) return false;
+    if (type === 'sale' && r.IsReturn === 1) return false;
+    if (type === 'return' && r.IsReturn !== 1) return false;
+    if (wins.length) { const t = toMs(r[d.dateField!]); if (!wins.some((w) => t >= w.from && t < w.to)) return false; }
+    return true;
+  });
 }
 
 /** The exact rows being analysed (after cleaning and the visitor's filters), so anyone can check the numbers. */
 app.get('/api/rows', (req, res) => {
-  const q = z.object({ offset: z.coerce.number().int().min(0).default(0), limit: z.coerce.number().int().min(1).max(200).default(50), q: z.string().max(100).default(''), field: z.string().max(100).optional(), in: z.string().max(60_000).optional() }).parse(req.query);
-  const v = sessions.get(sid(req)).view(), needle = q.q.trim().toLowerCase();
-  const all = drillRows(v.rows, q.field, q.in);
+  const q = z.object({ offset: z.coerce.number().int().min(0).default(0), limit: z.coerce.number().int().min(1).max(200).default(50), q: z.string().max(100).default(''), drill: z.string().max(400_000).optional(), scope: z.enum(['exact', 'history']).default('exact') }).parse(req.query);
+  const v = sessions.get(sid(req)).view(), needle = q.q.trim().toLowerCase(), drill = parseDrill(q.drill);
+  const all = drillRows(v.rows, drill, q.scope);
   const columns = all.length ? Object.keys(all[0]) : [];
   const matched = needle ? all.filter((r) => columns.some((c) => String(r[c] ?? '').toLowerCase().includes(needle))) : all;
   const fm = detectFields(v), tx = all[0] && 'IsReturn' in all[0];
@@ -137,18 +159,28 @@ app.get('/api/rows', (req, res) => {
   const orders = new Set<string>(), customers = new Set<string>();
   for (const r of all) {
     const m = typeof r[fm.measure] === 'number' ? (r[fm.measure] as number) : 0;
-    if ('Customer' in r && r.Customer !== 'Unknown customer' && r.Customer !== 'Guest checkout') customers.add(String(r.Customer));
     if (tx && r.IsReturn === 1) { returns += m; continue; }
     sales += m;
+    if ('Customer' in r && r.Customer && r.Customer !== 'Unknown customer' && r.Customer !== 'Guest checkout') customers.add(String(r.Customer));
     if ('Order' in r) orders.add(String(r.Order));
   }
-  res.json({ columns, total: all.length, matched: matched.length, rows: matched.slice(q.offset, q.offset + q.limit), measure: fm.measure, currency: v.currency ?? 'USD',
+  // Reconciliation: what these rows add up to, per date window, next to the figure the finding reported.
+  const recon = drill && q.scope === 'exact' ? {
+    expect: drill.expect ?? null,
+    actual: Math.round(drill.rowType === 'return' ? Math.abs(returns) : sales),
+    windows: drill.dateField ? (drill.windows ?? []).map((w) => {
+      let t = 0;
+      for (const r of all) { const ms = toMs(r[drill.dateField!]), m = r[fm.measure]; if (ms >= w.from && ms < w.to && typeof m === 'number') t += Math.abs(m); }
+      return { label: w.label, actual: Math.round(t), expect: w.expect ?? null };
+    }) : [],
+  } : null;
+  res.json({ columns, total: all.length, recon, matched: matched.length, rows: matched.slice(q.offset, q.offset + q.limit), measure: fm.measure, currency: v.currency ?? 'USD',
     totals: { sales: Math.round(sales), returns: Math.round(returns), orders: orders.size || all.length, customers: customers.size, lines: all.length } });
 });
 
 app.get('/api/rows.csv', (req, res) => {
-  const v0 = sessions.get(sid(req)).view(), f = z.object({ field: z.string().max(100).optional(), in: z.string().max(60_000).optional() }).parse(req.query);
-  const v = { ...v0, rows: drillRows(v0.rows, f.field, f.in) }, cols = v.rows.length ? Object.keys(v.rows[0]) : [];
+  const v0 = sessions.get(sid(req)).view(), f = z.object({ drill: z.string().max(400_000).optional(), scope: z.enum(['exact', 'history']).default('exact') }).parse(req.query);
+  const v = { ...v0, rows: drillRows(v0.rows, parseDrill(f.drill), f.scope) }, cols = v.rows.length ? Object.keys(v.rows[0]) : [];
   const esc = (x: unknown) => { const t = x == null ? '' : String(x); return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t; };
   res.set({ 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': `attachment; filename="${v.name.replace(/[^\w -]/g, '').trim() || 'data'}.csv"` });
   res.write(cols.join(',') + '\n');

@@ -1,11 +1,13 @@
 import type { Row } from './types';
-import { round, std, mean } from './stats';
+import { round, std, mean, welchTest, fmtP } from './stats';
 
 export interface SegmentStat {
   key: string; value: number; share: number; orders: number;
   profit?: number; margin?: number; recent?: number; prior?: number; trendPct?: number;
   /** Welch t statistic on monthly totals (recent vs prior window). Below -2 is a statistically meaningful decline. */
-  trendT?: number;
+  trendT?: number | null;
+  /** One-sided Welch p-value that the recent window is lower than the prior one (monthly values). */
+  trendP?: number;
 }
 export interface SegmentResult {
   dimension: string; measure: string; segments: SegmentStat[];
@@ -13,10 +15,7 @@ export interface SegmentResult {
   window: { recentFrom: string; priorFrom: string; end: string } | null;
 }
 
-function welchT(a: number[], b: number[]) {
-  const se = Math.sqrt(std(a) ** 2 / a.length + std(b) ** 2 / b.length);
-  return se ? round((mean(a) - mean(b)) / se, 2) : 0;
-}
+function welchT(a: number[], b: number[]) { const r = welchTest(a, b); return { t: r.stat == null ? null : round(r.stat, 2), p: round(r.pLess, 4) }; }
 const ms = (s: string) => Date.parse(s.length === 7 ? s + '-01' : s);
 const iso = (t: number) => new Date(t).toISOString().slice(0, 10);
 
@@ -52,14 +51,14 @@ export function interpretSegments(rows: Row[], dimension: string, measure: strin
     margin: profit && s.value ? round((s.profit ?? 0) / s.value, 4) : undefined,
     recent: date ? round(s.recent!) : undefined, prior: date ? round(s.prior!) : undefined,
     trendPct: date && s.prior ? round((s.recent! - s.prior!) / s.prior!, 4) : undefined,
-    trendT: date && monthly.has(s.key) ? welchT(monthly.get(s.key)!.r, monthly.get(s.key)!.p) : undefined,
+    ...(date && monthly.has(s.key) ? (({ t, p }) => ({ trendT: t, trendP: p }))(welchT(monthly.get(s.key)!.r, monthly.get(s.key)!.p)) : {}),
   })).sort((a, b) => b.value - a.value);
   const anomalies: string[] = [];
   const margins = segments.map((s) => s.margin).filter((x): x is number => x !== undefined);
   for (const s of segments) {
     if (s.margin !== undefined && s.margin < 0) anomalies.push(`${s.key} loses money (margin ${(s.margin * 100).toFixed(1)}%)`);
     else if (margins.length > 3 && std(margins) > 0 && (s.margin! - mean(margins)) / std(margins) < -1.5) anomalies.push(`${s.key} margin is far below peers`);
-    if (s.trendPct !== undefined && s.trendPct <= -0.2 && (s.trendT ?? 0) <= -2) anomalies.push(`${s.key} revenue fell ${(Math.abs(s.trendPct) * 100).toFixed(0)}% vs prior window (t=${s.trendT})`);
+    if (s.trendPct !== undefined && s.trendPct <= -0.2 && (s.trendP ?? 1) < 0.05) anomalies.push(`${s.key} revenue fell ${(Math.abs(s.trendPct) * 100).toFixed(0)}% vs prior window (Welch t-test on monthly sales, ${fmtP(s.trendP!)})`);
   }
   return {
     dimension, measure, segments,

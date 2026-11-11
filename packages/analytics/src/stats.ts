@@ -74,7 +74,11 @@ export function normCdf(z: number) {
   return 0.5 * (1 + s * erf);
 }
 
-export interface TestResult { stat: number; df: number | null; p: number; pGreater: number; pLess: number; method: string }
+/** stat is null when no statistic exists (e.g. zero variance: the difference is exact). */
+/** Rounds a test statistic, keeping null (no statistic) as null. */
+export const roundStat = (x: number | null, d = 2) => (x == null ? null : round(x, d));
+
+export interface TestResult { stat: number | null; df: number | null; p: number; pGreater: number; pLess: number; method: string }
 
 /** Welch's unequal-variance t-test with Welch–Satterthwaite degrees of freedom. Zero variance is handled explicitly. */
 export function welchTest(a: number[], b: number[]): TestResult {
@@ -84,7 +88,7 @@ export function welchTest(a: number[], b: number[]): TestResult {
   if (se === 0) {
     // No variation inside either group: any difference in means is exact, not noise.
     if (diff === 0) return { stat: 0, df: null, p: 1, pGreater: 0.5, pLess: 0.5, method: `${method} (no variation)` };
-    return { stat: diff > 0 ? 99 : -99, df: null, p: 0, pGreater: diff > 0 ? 0 : 1, pLess: diff > 0 ? 1 : 0, method: `${method} (no variation: difference is exact)` };
+    return { stat: null, df: null, p: 0, pGreater: diff > 0 ? 0 : 1, pLess: diff > 0 ? 1 : 0, method: `${method} (no variation: difference is exact)` };
   }
   const t = diff / se;
   const df = (va + vb) ** 2 / ((va ** 2) / (a.length - 1) + (vb ** 2) / (b.length - 1));
@@ -128,3 +132,15 @@ export function bhAdjust(ps: number[]): number[] {
 
 /** Plain-language p-value: "p = 0.003", "p < 0.001". */
 export const fmtP = (p: number) => (p < 0.001 ? 'p < 0.001' : `p = ${p < 0.01 ? p.toFixed(3) : p.toFixed(2)}`);
+
+/**
+ * Significance of a Pearson correlation: t = r·√(n−2)/√(1−r²), n−2 degrees of freedom.
+ * |r| = 1 (every point on a line) has no finite t: the direction is certain, so p is 0 or 1 by side.
+ */
+export function corrTest(r: number, n: number): TestResult {
+  const method = 'Correlation t-test';
+  if (n < 3 || !Number.isFinite(r)) return { stat: null, df: null, p: 1, pGreater: 0.5, pLess: 0.5, method: `${method} (too few points)` };
+  if (Math.abs(r) >= 1) return { stat: null, df: n - 2, p: 0, pGreater: r > 0 ? 0 : 1, pLess: r > 0 ? 1 : 0, method: `${method} (perfect correlation: no finite statistic)` };
+  const t = (r * Math.sqrt(n - 2)) / Math.sqrt(1 - r * r), c = tCdf(t, n - 2);
+  return { stat: round(t, 3), df: n - 2, p: Math.min(1, 2 * Math.min(c, 1 - c)), pGreater: 1 - c, pLess: c, method };
+}

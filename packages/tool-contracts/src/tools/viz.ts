@@ -30,7 +30,8 @@ export const buildDashboard = defineTool({
     // Order-level KPIs when rows are order lines (real store data); row-level otherwise.
     const tx = 'Order' in v.rows[0];
     const orderIds = tx ? new Set(v.rows.filter((r) => r.IsReturn !== 1).map((r) => String(r.Order))) : null;
-    const customers = 'Customer' in v.rows[0] ? new Set(v.rows.map((r) => String(r.Customer)).filter((c) => c !== 'Unknown customer' && c !== 'Guest checkout')).size : 0;
+    // Customers = known customer IDs with at least one sale line (the same definition as Source Data and the analyst).
+    const customers = 'Customer' in v.rows[0] ? new Set(rows.map((r) => String(r.Customer ?? '')).filter((c) => c && c !== 'Unknown customer' && c !== 'Guest checkout')).size : 0;
     const orders = orderIds ? orderIds.size : v.rows.length;
     const kpis = [
       { label: fm.measure, value: round(rev), format: 'usd' as const },

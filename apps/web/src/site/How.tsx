@@ -43,8 +43,8 @@ const STEPS = [
 const LAYERS = [
   { icon: Brush, c: 'var(--amber)', t: 'Cleans your data', d: 'Removes duplicate lines, separates returns and fees, flags sales with no customer, and shows exactly what changed.', ex: 'Found 34,335 duplicate lines in a real shop.' },
   { icon: Search, c: 'var(--cyan)', t: 'Checks what matters to shops', d: 'Returns, repeat buyers, lost customers, products that stopped selling, order size, seasonality, money-losing products.', ex: 'Found 42 best customers who had stopped ordering.' },
-  { icon: Layers, c: 'var(--rose)', t: 'Scans the rest', d: 'Compares each sizeable product, customer and country (the 40 largest of each) with the business as a whole, adjusting for testing many at once, so it catches problems nobody thought to check.', ex: 'A best-seller down 51% while the shop grew 5%.' },
-  { icon: FlaskConical, c: 'var(--fuchsia)', t: 'Tests ideas with math', d: 'Business theories, built-in or suggested by AI, are tested with statistics and labelled supported, not supported, real but small, or not enough evidence, for your data.', ex: 'Proved growth was coming from old customers, not new ones.' },
+  { icon: Layers, c: 'var(--rose)', t: 'Scans the rest', d: 'Compares each sizeable product and country (the 40 largest of each; customers get their own lost-customer check) with the business as a whole, adjusting for testing many at once, so it catches problems nobody thought to check.', ex: 'A best-seller down 51% while the shop grew 5%.' },
+  { icon: FlaskConical, c: 'var(--fuchsia)', t: 'Tests ideas with math', d: 'Business theories, built-in or suggested by AI, are tested with statistics and labelled supported, not supported, real but small, or not enough evidence, for your data.', ex: 'Found growth was coming from old customers, not new ones.' },
 ];
 
 export default function How() {
@@ -92,7 +92,7 @@ export default function How() {
             <ul className="mt-3 space-y-2 text-[12.5px]">
               {['Answers your questions in plain English', 'Suggests new ideas worth testing', 'Reviews dashboard screenshots'].map((t, i) => <motion.li key={t} initial={{ opacity: 0, x: -8 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }} className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full" style={{ background: 'var(--fuchsia)', boxShadow: '0 0 8px var(--fuchsia)' }} />{t}</motion.li>)}
             </ul>
-            <div className="mt-4 rounded-lg px-3 py-2 text-[11.5px]" style={{ background: 'var(--line)' }}>Every AI idea is tested by code before you see it. If the numbers don't back it up, it's labeled false or not enough evidence.</div>
+            <div className="mt-4 rounded-lg px-3 py-2 text-[11.5px]" style={{ background: 'var(--line)' }}>Every AI idea is tested by code before you see it. If the numbers don't back it up, it's labeled not supported or not enough evidence.</div>
           </BeamCard></Reveal>
           {RULES.slice(2).map((r, i) => (
             <Reveal key={r.t}><BeamCard c={['var(--emerald)', 'var(--amber)'][i]} className="h-full p-5"><Calculator size={18} style={{ color: ['var(--emerald)', 'var(--amber)'][i] }} /><div className="mt-2 text-[14px] font-extrabold">{r.t}</div><p className="mt-1 text-[12.5px] text-[var(--muted)]">{r.d}</p></BeamCard></Reveal>

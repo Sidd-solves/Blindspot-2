@@ -8,9 +8,9 @@ export const runScenario = defineTool({
   description: 'Financial impact simulator: churn, conversion, waste and opex levers with explicit, editable assumptions. Output is hypothetical.',
   input: z.object({
     levers: z.object({ churnReductionPct: z.number().min(0).max(100).default(5), conversionLiftPts: z.number().min(0).max(20).default(0), wasteReductionPct: z.number().min(0).max(100).default(0), opexReductionPct: z.number().min(0).max(100).default(0) }).prefault({}),
-    assumptions: z.object({ annualChurnRate: z.number().min(0).max(1), baselineConversion: z.number().min(0.0001).max(1), wasteRateOfCogs: z.number().min(0).max(1), opexRateOfRevenue: z.number().min(0).max(1) }).partial().prefault({}),
+    assumptions: z.object({ annualChurnRate: z.number().min(0).max(1), baselineConversion: z.number().min(0.0001).max(1), wasteRateOfCogs: z.number().min(0).max(1), opexRateOfRevenue: z.number().min(0).max(1), assumedMargin: z.number().min(0).max(1) }).partial().prefault({}),
   }),
-  output: z.object({ hypothetical: z.literal(true), baseline: z.record(z.string(), z.union([z.number(), z.boolean()])), profitChangePct: z.number().nullable(), scenario: z.record(z.string(), z.number()), delta: z.record(z.string(), z.number()), contributions: z.record(z.string(), z.number()), assumptions: z.record(z.string(), z.number()), levers: z.record(z.string(), z.number()), formulas: z.array(z.string()), disclaimer: z.string() }),
+  output: z.object({ hypothetical: z.literal(true), baseline: z.record(z.string(), z.union([z.number(), z.boolean(), z.string()])), profitChangePct: z.number().nullable(), scenario: z.record(z.string(), z.number()), delta: z.record(z.string(), z.number()), contributions: z.record(z.string(), z.number()), assumptions: z.record(z.string(), z.number()), levers: z.record(z.string(), z.number()), formulas: z.array(z.string()), disclaimer: z.string() }),
   async handler(ctx, i) { return simulateScenario(baselineOf(ctx.state.view()), i.levers, i.assumptions); },
 });
 

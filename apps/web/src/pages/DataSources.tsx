@@ -127,12 +127,12 @@ export default function DataSources() {
         </div>
       </Card>}
       {dataset?.prep && <Card c="var(--amber)" hover={false} className="p-3.5 lg:col-span-5">
-        <div className="label mb-2 flex items-center gap-1"><Brush size={11} style={{ color: 'var(--amber)' }} />Cleaned before analysis</div>
+        <div className="label mb-2 flex items-center gap-1"><Brush size={11} style={{ color: 'var(--amber)' }} />Cleaned before analysis{dataset.prep.scope === 'filtered' && <span className="ml-auto normal-case tracking-normal text-[var(--muted)]">whole file; reversed pairs recounted for your filter</span>}</div>
         <div className="grid grid-cols-2 gap-1.5 text-[11px]">
           {[
             ['Duplicate lines removed', dataset.prep.duplicateRows], ['Return / cancel lines', dataset.prep.returnLines],
             ['Fee & postage lines set aside', dataset.prep.feeLines], ['Zero-price lines removed', dataset.prep.zeroPriceRows],
-            ['Sales with no customer', dataset.prep.missingCustomerRows], ['Lines analysed', dataset.prep.keptRows],
+            ['Sales with no customer', dataset.prep.missingCustomerRows], ['Order lines reversed', dataset.prep.cancelledPairs],
           ].map(([k, v], i) => <motion.div key={k as string} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.04 }} className="rounded-md px-2 py-1.5" style={{ background: 'var(--line)' }}><div className="text-[11px] font-bold uppercase tracking-wider text-[var(--faint)]">{k}</div><div className="mono text-[13px] font-semibold">{Number(v).toLocaleString()}</div></motion.div>)}
         </div>
       </Card>}

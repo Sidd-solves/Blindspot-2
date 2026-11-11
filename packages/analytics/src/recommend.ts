@@ -17,7 +17,8 @@ const PLAYBOOK: Record<Finding['category'], { intervention: string; recovery: nu
 const COST = { low: 1, medium: 2, high: 3 } as const;
 
 export function recommend(findings: Finding[]) {
-  return findings.map((f) => {
+  // Unconfirmed signals ("Possible: …") are for watching, not for acting on or putting a money figure on.
+  return findings.filter((f) => !f.id.startsWith('watch-')).map((f) => {
     const p = PLAYBOOK[f.category];
     // Reversed or untracked sales were never lost, so there's nothing to "recover".
     const recoverable = f.exposure !== 'reversed' && f.exposure !== 'untracked';

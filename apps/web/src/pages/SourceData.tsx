@@ -2,11 +2,12 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import { BadgeCheck, ChevronLeft, ChevronRight, Download, ExternalLink, Search, Table2, TriangleAlert , X } from 'lucide-react';
 import { get, SID, usd } from '../api';
-import { useStore } from '../store';
+import { useStore, type Drill } from '../store';
 import { Card, CardHead, Chip, CountUp, Loading, stagger, fadeUp } from '../components/ui';
 import { go } from '../App';
 
-interface Rows { columns: string[]; total: number; matched: number; rows: Record<string, unknown>[]; measure: string; currency: string; totals: { sales: number; returns: number; orders: number; customers: number; lines: number } }
+interface Recon { expect: { value: number; what: string } | null; actual: number; windows: { label: string; actual: number; expect: number | null }[] }
+interface Rows { recon: Recon | null; columns: string[]; total: number; matched: number; rows: Record<string, unknown>[]; measure: string; currency: string; totals: { sales: number; returns: number; orders: number; customers: number; lines: number } }
 const PAGE = 50;
 
 function CheckTile({ label, mine, shown, money, c, i }: { label: string; mine: number; shown: number | undefined; money?: boolean; c: string; i: number }) {
@@ -24,16 +25,21 @@ function CheckTile({ label, mine, shown, money, c, i }: { label: string; mine: n
   );
 }
 
+function Recon({ label, actual, expect }: { label: string; actual: number; expect: number | null }) {
+  const ok = expect == null || Math.abs(actual - expect) <= Math.max(1, Math.abs(expect) * 0.001);
+  return <Chip c={ok ? 'var(--emerald)' : 'var(--amber)'}>{ok ? <BadgeCheck size={11} /> : <TriangleAlert size={11} />}{label}: <span className="mono">{usd(actual)}</span>{expect != null && (ok ? ' matches' : <> vs finding <span className="mono">{usd(expect)}</span></>)}</Chip>;
+}
+
 export default function SourceData() {
   const { dataset, dash, version } = useStore();
   const [q, setQ] = useState(''), [term, setTerm] = useState(''), [page, setPage] = useState(0);
   const [data, setData] = useState<Rows | null>(null), [busy, setBusy] = useState(true);
   useEffect(() => { const t = setTimeout(() => { setTerm(q); setPage(0); }, 250); return () => clearTimeout(t); }, [q]);
-  // Drill-through from a finding: "?drill={field, values, label}" in the address.
-  const readDrill = () => { try { const m = location.hash.match(/[?&]drill=([^&]+)/); return m ? JSON.parse(decodeURIComponent(m[1])) as { field: string; values: string[]; label: string } : null; } catch { return null; } };
-  const [drill, setDrill] = useState(readDrill);
+  // Drill-through from a finding: "?drill=<DrillSpec JSON>" in the address.
+  const readDrill = () => { try { const m = location.hash.match(/[?&]drill=([^&]+)/); return m ? JSON.parse(decodeURIComponent(m[1])) as Drill : null; } catch { return null; } };
+  const [drill, setDrill] = useState(readDrill), [scope, setScope] = useState<'exact' | 'history'>('exact');
   useEffect(() => { const h = () => { setDrill(readDrill()); setPage(0); }; window.addEventListener('hashchange', h); return () => window.removeEventListener('hashchange', h); }, []);
-  const dq = drill ? `&field=${encodeURIComponent(drill.field)}&in=${encodeURIComponent(JSON.stringify(drill.values))}` : '';
+  const dq = drill ? `&drill=${encodeURIComponent(JSON.stringify(drill))}&scope=${scope}` : '';
   useEffect(() => {
     let live = true; setBusy(true);
     get<Rows>(`/api/rows?offset=${page * PAGE}&limit=${PAGE}&q=${encodeURIComponent(term)}${dq}`).then((d) => { if (live) { setData(d); setBusy(false); } }).catch(() => live && setBusy(false));
@@ -56,14 +62,24 @@ export default function SourceData() {
 
       <AnimatePresence>{drill && <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} className="flex flex-wrap items-center gap-2 rounded-xl border px-3.5 py-2.5 text-[12.5px]" style={{ borderColor: 'color-mix(in srgb, var(--sky) 45%, var(--line))', background: 'color-mix(in srgb, var(--sky) 8%, transparent)' }}>
         <Table2 size={15} style={{ color: 'var(--sky)' }} />
-        <span className="flex-1">Showing <b>{drill.label}</b>: rows where {drill.field} is {drill.values.length === 1 ? <b>{drill.values[0]}</b> : <>one of <b>{drill.values.length}</b> values</>}. Totals above are for these rows only.</span>
+        <span className="min-w-0 flex-1">Showing <b>{drill.label}</b>: {drill.field} is {drill.values.length === 1 ? <b>{drill.values[0] || '(blank)'}</b> : <>one of <b>{drill.values.length}</b> values</>}{scope === 'exact' && drill.rowType && drill.rowType !== 'all' && <>, <b>{drill.rowType} lines</b> only</>}{scope === 'exact' && drill.windows?.length ? <>, dated {drill.windows.map((w) => w.label.toLowerCase()).join(' or ')}</> : null}{scope === 'history' && <>, every date and row type</>}.</span>
+        <div className="relative flex rounded-lg border p-0.5" style={{ borderColor: 'var(--line)' }}>
+          {(['exact', 'history'] as const).map((k) => <button key={k} onClick={() => { setScope(k); setPage(0); }} className="relative z-10 px-2.5 py-1 text-[11.5px] font-bold" style={{ color: scope === k ? 'var(--text)' : 'var(--muted)' }}>
+            {scope === k && <motion.span layoutId="drill-scope" className="absolute inset-0 -z-10 rounded-md" style={{ background: 'color-mix(in srgb, var(--sky) 22%, transparent)' }} transition={{ type: 'spring', stiffness: 420, damping: 34 }} />}
+            {k === 'exact' ? 'Rows behind this amount' : 'All related history'}</button>)}
+        </div>
         <button className="btn !h-7 text-[11.5px]" onClick={() => { location.hash = '/source'; }}><X size={12} />Show all rows</button>
       </motion.div>}</AnimatePresence>
+      {drill && scope === 'exact' && data?.recon && (data.recon.expect || data.recon.windows.length > 0) && <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="flex flex-wrap items-center gap-1.5 text-[11.5px]">
+        <span className="label mr-1">Reconciles to the finding</span>
+        {data.recon.windows.map((w) => <Recon key={w.label} label={w.label} actual={w.actual} expect={w.expect} />)}
+        {data.recon.expect && !data.recon.windows.some((w) => w.expect === data.recon!.expect!.value) && <Recon label={data.recon.expect.what} actual={data.recon.actual} expect={data.recon.expect.value} />}
+      </motion.div>}
       <div className="flex flex-wrap gap-1.5 text-[11.5px] text-[var(--muted)]">
         <span className="chip" style={{ '--c': 'var(--violet)' } as any}>Sales = every sale line, before returns</span>
         <span className="chip" style={{ '--c': 'var(--orange)' } as any}>Returns are counted separately, never as sales</span>
         <span className="chip" style={{ '--c': 'var(--cyan)' } as any}>Orders = orders with at least one sale</span>
-        <span className="chip" style={{ '--c': 'var(--fuchsia)' } as any}>Customers = known customer IDs only</span>
+        <span className="chip" style={{ '--c': 'var(--fuchsia)' } as any}>Customers = known customer IDs with at least one sale</span>
         <span className="chip" style={{ '--c': 'var(--amber)' } as any}>Reversed and duplicate lines are removed first</span>
       </div>
       <Card c="var(--sky)" hover={false}>

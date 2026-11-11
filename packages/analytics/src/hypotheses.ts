@@ -1,7 +1,7 @@
 import type { Dataset, Row } from './types';
 import { detectFields } from './profile';
 import { comparisonWindows, inWin, toMs, bucket, pickWindowDays } from './time';
-import { mean, round, sum, pearson, welchTest, bootstrapTest, normCdf, tCdf, fmtP, type TestResult } from './stats';
+import { mean, round, sum, pearson, welchTest, bootstrapTest, normCdf, tCdf, fmtP, corrTest, type TestResult } from './stats';
 import { money, pctStr } from './money';
 import type { Filter } from './query';
 
@@ -19,8 +19,14 @@ export type Verdict = 'supported' | 'rejected' | 'small-effect' | 'inconclusive'
 export interface HypothesisResult {
   id: string; claim: string; source: 'library' | 'ai'; verdict: Verdict; summary: string;
   /** 'tested' = a significance test with a p-value; 'descriptive' = a rule-of-thumb check on counts or shares. */
-  basis: 'tested' | 'descriptive'; method: string; p: number | null;
-  stat: { name: string; value: number } | null; evidence: Record<string, unknown>;
+  basis: 'tested' | 'descriptive'; method: string;
+  /** The p-value the verdict was decided on (one-sided, in the direction stated by the claim before testing). */
+  p: number | null;
+  /** The two-sided p-value of the same test, for reference. */
+  pTwoSided?: number | null;
+  /** What the decision p-value tests, e.g. "one-sided: A > B". */
+  alternative?: string | null;
+  stat: { name: string; value: number | null } | null; evidence: Record<string, unknown>;
 }
 
 /** Generic, AI-proposable test: compare a metric between two filtered groups. */
@@ -61,6 +67,12 @@ function judge(effect: number, r: TestResult, expectPositive: boolean, minEffect
   return 'inconclusive';
 }
 
+/** The p-value behind a verdict: the claimed direction, or the opposite direction when the claim was rejected. */
+function decisionP(v: Verdict, r: TestResult, expectPositive: boolean) {
+  const pFor = expectPositive ? r.pGreater : r.pLess, pAgainst = expectPositive ? r.pLess : r.pGreater;
+  return v === 'rejected' ? { p: pAgainst, alternative: `one-sided: ${expectPositive ? 'lower' : 'higher'} than claimed` } : { p: pFor, alternative: `one-sided: ${expectPositive ? 'higher' : 'lower'}, as claimed` };
+}
+
 export function testGeneric(ds: Dataset, h: GenericHypothesis, id = 'ai'): HypothesisResult {
   const base = { id, claim: h.claim, source: 'ai' as const, basis: 'tested' as const };
   const cols = new Set(Object.keys(ds.rows[0] ?? {}));
@@ -85,8 +97,9 @@ export function testGeneric(ds: Dataset, h: GenericHypothesis, id = 'ai'): Hypot
   const isMoney = h.metric !== 'count' && /sales|revenue|amount|profit|price|total|value/i.test(h.measure);
   const $ = (n: number) => (h.metric === 'count' ? Math.round(n).toLocaleString() : isMoney ? money(n, ds.currency) : (Math.round(n * 10) / 10).toLocaleString());
   const why = small ? ' Too few rows in one group to test (need 20+).' : verdict === 'small-effect' ? ` Real, but under the ${pctStr(h.minEffect ?? 0.05, 0)} that would matter in practice.` : '';
-  return { ...base, verdict, method: r.method, p: small ? null : r.p,
-    summary: `${h.a.label}: ${$(ga)} vs ${h.b.label}: ${$(gb)} (${effect >= 0 ? '+' : ''}${pctStr(effect)}; ${r.method}, ${fmtP(r.p)}, n = ${va.length} vs ${vb.length}).${why}`,
+  const d = decisionP(verdict, r, h.expect === 'a>b');
+  return { ...base, verdict, method: r.method, p: small ? null : round(d.p, 4), pTwoSided: small ? null : round(r.p, 4), alternative: small ? null : d.alternative,
+    summary: `${h.a.label}: ${$(ga)} vs ${h.b.label}: ${$(gb)} (${effect >= 0 ? '+' : ''}${pctStr(effect)}; ${r.method}, ${small ? 'not tested' : `${fmtP(d.p)} ${d.alternative}`}, n = ${va.length} vs ${vb.length}).${why}`,
     stat: { name: r.method, value: r.stat }, evidence: { a: { label: h.a.label, value: round(ga), n: va.length }, b: { label: h.b.label, value: round(gb), n: vb.length }, effect: round(effect, 4), ...(r.df !== null ? { degreesOfFreedom: r.df } : {}), ...('ci' in r ? { differenceCI95: (r as any).ci } : {}) } };
 }
 
@@ -94,8 +107,12 @@ export function testGeneric(ds: Dataset, h: GenericHypothesis, id = 'ai'): Hypot
 export function runHypothesisLibrary(ds: Dataset): HypothesisResult[] {
   const fm = detectFields(ds), rows = ds.rows, $ = (n: number) => money(n, ds.currency), out: HypothesisResult[] = [];
   const tx = rows.length > 0 && 'Order' in rows[0] && 'Customer' in rows[0] && !!fm.date;
-  const lib = (id: string, claim: string, verdict: Verdict, summary: string, test: TestResult | null, evidence: Record<string, unknown>) =>
-    out.push({ id, claim, source: 'library', verdict, summary, basis: test ? 'tested' : 'descriptive', method: test ? test.method : 'Descriptive check (rule of thumb)', p: test ? test.p : null, stat: test ? { name: test.method, value: test.stat } : null, evidence });
+  // Every library claim states its direction up front ("X is bigger than Y"), so the decision p-value is one-sided in that direction.
+  const lib = (id: string, claim: string, verdict: Verdict, summary: string, test: TestResult | null, evidence: Record<string, unknown>) => {
+    const d = test && verdict !== 'inconclusive' ? decisionP(verdict, test, true) : test ? { p: test.pGreater, alternative: 'one-sided: higher, as claimed' } : null;
+    const text = test && d ? summary.replace(fmtP(test.p), `${fmtP(d.p)} ${d.alternative}`) : summary;
+    out.push({ id, claim, source: 'library', verdict, summary: text, basis: test ? 'tested' : 'descriptive', method: test ? test.method : 'Descriptive check (rule of thumb)', p: d ? round(d.p, 4) : null, pTwoSided: test ? round(test.p, 4) : null, alternative: d?.alternative ?? null, stat: test ? { name: test.method, value: test.stat } : null, evidence });
+  };
 
   if (tx) {
     const sales = rows.filter((r) => r.IsReturn !== 1);
@@ -156,8 +173,7 @@ export function runHypothesisLibrary(ds: Dataset): HypothesisResult[] {
     const pts = rows.filter((r) => typeof r[fm.discount!] === 'number' && typeof r.Quantity === 'number');
     const r = pearson(pts.map((p) => p[fm.discount!] as number), pts.map((p) => p.Quantity as number)), n = pts.length;
     // Significance of a correlation: t = r·√(n−2)/√(1−r²) with n−2 degrees of freedom.
-    const tr = n > 2 && Math.abs(r) < 1 ? (r * Math.sqrt(n - 2)) / Math.sqrt(1 - r * r) : 0, c = tCdf(tr, Math.max(1, n - 2));
-    const test: TestResult = { stat: round(tr, 3), df: n - 2, p: Math.min(1, 2 * Math.min(c, 1 - c)), pGreater: 1 - c, pLess: c, method: 'Correlation t-test' };
+    const test = corrTest(r, n);
     lib('h-discount-volume', 'Orders with bigger discounts include more units', judge(r, test, true, 0.1),
       `Correlation between discount and units per order: r = ${r.toFixed(2)} across ${n} orders (${fmtP(test.p)}). This shows association, not cause.`, test, { pearson: round(r, 3), orders: n });
   }

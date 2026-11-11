@@ -8,19 +8,26 @@ import { sum } from './stats';
 import { money } from './money';
 
 /**
- * Yearly baseline for the simulator. Revenue and profit are annualised over the loaded date range, and profit stays
- * null when the data has no profit column (unknown is not zero).
+ * Yearly baseline for the simulator. Profit stays null when the data has no profit column (unknown is not zero).
+ * - a year or more of data: yearly average over the loaded range ("average")
+ * - 1 to 12 months: a run rate, total / years, not seasonally adjusted ("run-rate")
+ * - under 30 days: too short to annualise; the observed total is returned and labelled as such ("observed")
  */
 export const baselineOf = (ds: Dataset) => {
   const fm = detectFields(ds);
   const rows = 'IsReturn' in (ds.rows[0] ?? {}) ? ds.rows.filter((r) => r.IsReturn !== 1) : ds.rows;
-  let years = 1;
+  let years: number | null = null;
   if (fm.date) {
     let lo = Infinity, hi = -Infinity;
     for (const r of ds.rows) { const t = Date.parse(String(r[fm.date])); if (Number.isFinite(t)) { if (t < lo) lo = t; if (t > hi) hi = t; } }
-    if (Number.isFinite(lo) && hi > lo) years = Math.max(1, (hi - lo) / (365.25 * 86400000));
+    if (Number.isFinite(lo) && hi >= lo) years = (hi - lo + 86400000) / (365.25 * 86400000);
   }
-  return { revenue: sum(numeric(rows, fm.measure)) / years, profit: fm.profit ? sum(numeric(rows, fm.profit)) / years : null, years };
+  const basis: 'average' | 'run-rate' | 'observed' = years === null || years < 30 / 365.25 ? 'observed' : years >= 1 ? 'average' : 'run-rate';
+  const div = basis === 'observed' ? 1 : years!;
+  const months = years === null ? null : Math.round(years * 12 * 10) / 10;
+  const revenue = sum(numeric(rows, fm.measure)) / div, profit = fm.profit ? sum(numeric(rows, fm.profit)) / div : null;
+  const period = basis === 'average' ? 'per year' : basis === 'run-rate' ? `per year (run rate from ${months} months of data, not seasonally adjusted)` : years === null ? 'over the file (no dates, so not annualised)' : `over the ${Math.round(years * 365.25)} days in your file (too short to annualise)`;
+  return { revenue, profit, years: years ?? 1, basis, months, period };
 };
 
 export function toStory(f: Finding, currency = 'USD') {
@@ -54,15 +61,30 @@ export function reportTopics(ds: Dataset, findings: Finding[]) {
   let months = 0;
   if (fm.date) { let mn = Infinity, mx = -Infinity; for (const r of rows) { const t = Date.parse(String(r[fm.date]).slice(0, 10)); if (t < mn) mn = t; if (t > mx) mx = t; } months = (mx - mn) / (30.4 * 86400000); }
   // Some checks only run with enough data; say so instead of reporting "no problem found".
+  const cols = Object.keys(rows[0] ?? {});
+  const UNKNOWN_VALUES = new Set(['Unknown', 'Unknown customer', 'Guest checkout', 'Unspecified', '(none)', 'N/A', 'n/a', '-']);
   let knownCustomers = 0;
   if (tx) { const s = new Set<string>(); for (const r of rows) if (r.IsReturn !== 1 && !['Unknown customer', 'Guest checkout', ''].includes(String(r.Customer))) s.add(String(r.Customer)); knownCustomers = s.size; }
   const thin: Record<string, string | null> = {
+    customers: (() => {
+      // Dependence is only judged when there are enough buyers/products to compare; otherwise say it wasn't judged.
+      const col = cols.find((k) => /^(customer|product)$/i.test(k) || /customer|client|buyer|product|item|sku/i.test(k));
+      if (!col || fm.highCardDims.length) return null;
+      const n = new Set(rows.map((r) => String(r[col] ?? '')).filter((v) => v && !UNKNOWN_VALUES.has(v))).size;
+      return `Not judged: only ${n} distinct ${col.toLowerCase()} value${n === 1 ? '' : 's'}, too few to measure dependence.`;
+    })(),
+    markets: (() => {
+      const col = cols.find((k) => /country|region|state|province|market/i.test(k));
+      if (!col) return null;
+      const n = new Set(rows.map((r) => String(r[col] ?? '')).filter((v) => v && !UNKNOWN_VALUES.has(v))).size;
+      return n <= 1 ? (n === 0 ? `The ${col} column is empty or only placeholders.` : `Not judged: every sale is in one ${col.toLowerCase()}.`) : null;
+    })(),
     retention: tx && knownCustomers < 100 ? `Checked, but only ${knownCustomers} known customers; repeat-buyer tests need 100+.` : null,
     trend: fm.date && months >= 6 && months < 15 ? 'Checked against the previous period only; year-over-year needs 15+ months.' : null,
   };
   const missing: Record<string, string | null> = {
-    customers: fm.highCardDims.length ? null : 'Needs a customer or product column.',
-    markets: Object.keys(rows[0] ?? {}).some((k) => /country|region|state|province|city|market/i.test(k)) ? null : 'Needs a country or region column.',
+    customers: fm.highCardDims.length || cols.some((k) => /customer|client|buyer|product|item|sku/i.test(k)) ? null : 'Needs a customer or product column.',
+    markets: cols.some((k) => /country|region|state|province|city|market/i.test(k)) ? null : 'Needs a country or region column.',
     profit: fm.profit ? null : 'Needs a profit or product-cost column.',
     trend: fm.date ? (months >= 6 ? null : 'Needs at least 6 months of dated sales.') : 'Needs a date column.',
     retention: tx && fm.date ? null : 'Needs customer IDs and order IDs.',
@@ -73,7 +95,9 @@ export function reportTopics(ds: Dataset, findings: Finding[]) {
   };
   return REPORT_TOPICS.map((t) => {
     const hits = findings.filter((f) => (t.cats as readonly string[]).includes(f.category) && (t.key === 'markets' ? GEO_ID.test(f.id) : t.key === 'customers' ? !GEO_ID.test(f.id) : true));
-    const status = hits.length ? 'issue' : missing[t.key] ? 'not-in-data' : thin[t.key] ? 'not-enough' : 'clear';
+    // Unconfirmed signals ("Possible: …") count as something to watch, not a confirmed problem.
+    const confirmed = hits.filter((f) => !f.id.startsWith('watch-'));
+    const status = confirmed.length ? 'issue' : hits.length ? 'watch' : missing[t.key] ? 'not-in-data' : thin[t.key] ? 'not-enough' : 'clear';
     return { key: t.key, label: t.label, status, note: hits.length ? hits[0].title : missing[t.key] ?? thin[t.key] ?? 'Checked: no problem found.', count: hits.length, severity: hits[0]?.severity ?? null };
   });
 }
@@ -92,22 +116,23 @@ export function executiveSummary(ds: Dataset, findings: Finding[]) {
   const usd = (n: number | null) => money(n, ds.currency);
   const base = baselineOf(ds);
   // One recommendation per distinct action (several findings can share a fix).
-  const recs = recommend(findings.slice(0, 8)).filter((r, i, a) => a.findIndex((x) => x.intervention === r.intervention) === i);
+  // All findings, not just the first few: an action tied to a lower-ranked finding can still be the best value.
+  const recs = recommend(findings).filter((r, i, a) => a.findIndex((x) => x.intervention === r.intervention) === i);
   const topics = reportTopics(ds, findings), roadmap = roadmapFrom(recs);
   const top = findings.slice(0, 3);
   const sc = simulateScenario(base, { churnReductionPct: 5, opexReductionPct: 8 });
   const md = [
     `# Executive Summary: ${ds.name}`,
     `> Data: ${ds.label}. Figures are computed from ${ds.rows.length.toLocaleString()} rows; scenarios are hypothetical.`,
-    '', `**Revenue per year** ${usd(base.revenue)} | **Profit** ${base.profit === null ? 'not in your data (no cost or profit column)' : `${usd(base.profit)} per year | **Margin** ${base.revenue ? ((base.profit / base.revenue) * 100).toFixed(1) : '0'}%`}`,
+    '', `**Revenue ${base.period}** ${usd(base.revenue)} | **Profit** ${base.profit === null ? 'not in your data (no cost or profit column)' : `${usd(base.profit)} ${base.basis === 'observed' ? 'in total' : 'per year'} | **Margin** ${base.revenue ? ((base.profit / base.revenue) * 100).toFixed(1) : '0'}%`}`,
     '', '## Top 3 findings',
     ...top.map((f, i) => `${i + 1}. **${f.title}** [${f.severity}; ${f.basis === 'tested' && f.pValue !== null ? `statistically tested, ${f.pValue < 0.001 ? 'p < 0.001' : `p = ${f.pValue.toFixed(3)}`}` : f.basis === 'measured' ? 'measured' : 'rule of thumb'}${f.period ? `; ${f.period}` : ''}]. ${f.explanation}`),
     '', '## Priority recommendations',
     ...recs.slice(0, 3).map((r, i) => `${i + 1}. ${r.intervention} (effort: ${r.effort}; ${r.expectedBenefitUsd !== null ? `scenario: ${usd(r.expectedBenefitUsd)} ${r.benefitKind} if ${r.benefitBasis}` : r.benefitBasis}).`),
-    '', '## Financial assumptions (illustrative, per year)',
-    `Scenario (keep 5% more customers, cut running costs 8%) adds **${usd(sc.delta.profit)}** profit per year. ${sc.disclaimer} Formulas: ` + sc.formulas.join('; ') + '.',
+    '', `## Financial assumptions (illustrative, ${base.basis === 'observed' ? 'over the file' : 'per year'})`,
+    `Scenario (keep 5% more customers, cut running costs 8%) adds **${usd(sc.delta.profit)}** profit ${base.basis === 'observed' ? 'over the same period' : 'per year'} (gross profit plus running-cost savings). ${sc.disclaimer} Formulas: ` + sc.formulas.join('; ') + '.',
     '', '## Every topic checked',
-    ...topics.map((t) => `- **${t.label}:** ${t.status === 'issue' ? '⚠ ' + t.note : t.status === 'clear' ? '✓ ' + t.note : t.status === 'not-enough' ? 'Not enough data. ' + t.note : 'Not in your data. ' + t.note}`),
+    ...topics.map((t) => `- **${t.label}:** ${t.status === 'issue' ? '⚠ ' + t.note : t.status === 'watch' ? 'Worth watching (not confirmed). ' + t.note : t.status === 'clear' ? '✓ ' + t.note : t.status === 'not-enough' ? 'Not enough data. ' + t.note : 'Not in your data. ' + t.note}`),
     '', '## Roadmap',
     ...roadmap.map((p) => `- **${p.when} (${p.title}):** ${p.items.length ? p.items.join(' ') : 'Nothing urgent in this phase.'}`),
   ].join('\n');

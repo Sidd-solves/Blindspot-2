@@ -13,6 +13,10 @@ export interface PrepReport {
   /** Orders cancelled within 2 days of being placed (e.g. a mistaken bulk order): removed from both sales and returns. */
   cancelledPairs: number; cancelledPairValue: number;
   feeCodes: string[];
+  /** The sale side of each reversed pair (kept so a filtered view can recount them; capped at 50k rows). */
+  reversed?: Row[];
+  /** 'whole file' unless a filtered view recomputed the figures that can be recomputed (reversed pairs). */
+  scope?: 'whole file' | 'filtered';
 }
 
 const FEE_CODES = new Set(['POST', 'DOT', 'M', 'C2', 'D', 'S', 'BANK CHARGES', 'ADJUST', 'ADJUST2', 'AMAZONFEE', 'CRUK', 'B', 'PADS', 'TEST001', 'TEST002', 'GIFT']);
@@ -97,6 +101,7 @@ export function prepareTransactions(rows: Row[], name: string, opts: PrepOptions
     if (j < 0) return;
     const si = cands.splice(j, 1)[0];
     drop.add(si); drop.add(i);
+    if ((rep.reversed ??= []).length < 50_000) rep.reversed.push(out[si]);
     rep.cancelledPairs++; rep.cancelledPairValue += out[si].Sales as number;
     rep.returnLines--; rep.returnValue -= Math.abs(r.Sales as number);
   });

@@ -22,6 +22,7 @@ const PRESETS: Record<string, Levers> = {
 const ASSUME = [
   { k: 'annualChurnRate', label: 'Customers lost per year', def: 0.2 }, { k: 'baselineConversion', label: 'Visitors who buy today', def: 0.03 },
   { k: 'wasteRateOfCogs', label: 'Stock wasted (% of product cost)', def: 0.04 }, { k: 'opexRateOfRevenue', label: 'Running costs (% of sales)', def: 0.12 },
+  { k: 'assumedMargin', label: 'Gross margin to assume (used only without cost data)', def: 0.35 },
 ];
 
 export default function Simulator() {
@@ -92,16 +93,16 @@ export default function Simulator() {
       <div className="grid gap-3 lg:col-span-7">
         <Card c="var(--fuchsia)" hover={false} className="p-4">
           {!res ? <Loading steps={['Loading baseline…', 'Applying levers…', 'Computing profit…']} /> : (
-            <div className="flex flex-wrap items-center gap-5">
-              <div>
-                <div className="label flex items-center gap-1"><Sparkles size={11} style={{ color: 'var(--fuchsia)' }} />Extra profit per year (estimate)</div>
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="min-w-[260px] flex-[1_1_320px]">
+                <div className="label flex items-center gap-1"><Sparkles size={11} style={{ color: 'var(--fuchsia)' }} />Extra profit {res.baseline.basis === 'observed' ? 'over this period' : 'per year'} (estimate)</div>
                 <div className="flex items-baseline gap-1"><span className="text-[30px] font-semibold" style={{ color: 'var(--emerald)' }}>+</span><CountUp value={res.delta.profit} format={(n) => usd(n)} className="grad-text text-[34px] font-semibold tracking-tight" duration={0.6} /></div>
-                <div className="text-[11px] text-[var(--muted)]">{res.profitChangePct != null ? `${pct(res.profitChangePct)} over yearly profit ${usd(res.baseline.profit, true)}` : `Per year · profit estimated at an assumed ${Math.round(res.baseline.margin * 100)}% margin (no cost data)`}</div>
+                <div className="text-[11px] text-[var(--muted)]">{res.profitChangePct != null ? `${pct(res.profitChangePct)} over ${res.baseline.basis === 'observed' ? '' : 'yearly '}profit ${usd(res.baseline.profit, true)}` : `Profit estimated at an assumed ${Math.round(res.baseline.margin * 100)}% margin (no cost data)`} · gross profit {usd(res.delta.grossProfit, true)} + running-cost savings {usd(res.delta.opexSaving, true)}{res.baseline.basis === 'run-rate' && <> · <span style={{ color: 'var(--amber)' }}>run rate from {res.baseline.years < 1 ? `${Math.round(res.baseline.years * 12)} months` : 'part of a year'}</span></>}</div>
               </div>
-              <div className="grid flex-1 grid-cols-3 gap-2">
-                {[{ l: 'Revenue', v: res.scenario.revenue, d: res.delta.revenue, c: 'var(--violet)' }, { l: 'Profit', v: res.scenario.profit, d: res.delta.profit, c: 'var(--emerald)' }, { l: 'Margin', v: res.scenario.margin, d: res.scenario.margin - res.baseline.margin, c: 'var(--cyan)', p: true }].map((m) => (
+              <div className="grid min-w-[300px] flex-[1_1_340px] grid-cols-3 gap-2">
+                {[{ l: 'Revenue', v: res.scenario.revenue, d: res.delta.revenue, c: 'var(--violet)' }, { l: 'Gross profit', v: res.scenario.grossProfit, d: res.delta.grossProfit, c: 'var(--emerald)' }, { l: 'Gross margin', v: res.scenario.margin, d: res.scenario.margin - res.baseline.margin, c: 'var(--cyan)', p: true }].map((m) => (
                   <div key={m.l} className="tint rounded-lg p-2" style={{ '--c': m.c } as CSSProperties}>
-                    <div className="label">{m.l}</div>
+                    <div className="label truncate">{m.l}</div>
                     <CountUp value={m.v} format={(n) => (m.p ? pct(n) : usd(n, true))} className="text-[15px] font-semibold" duration={0.6} />
                     <div className="mono text-[11.5px]" style={{ color: m.c }}>+{m.p ? `${(m.d * 100).toFixed(2)} pts` : usd(m.d, true)}</div>
                   </div>

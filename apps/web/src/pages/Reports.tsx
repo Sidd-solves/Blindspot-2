@@ -7,7 +7,7 @@ import { Card, CardHead, Chip, CountUp, Loading, Markdown, stagger } from '../co
 
 const download = (name: string, text: string) => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: 'text/markdown' })); a.download = name; a.click(); URL.revokeObjectURL(a.href); };
 const PHASE_STYLE = [{ c: 'var(--rose)', icon: Flag }, { c: 'var(--amber)', icon: Target }, { c: 'var(--emerald)', icon: Rocket }];
-const TOPIC_STYLE: Record<string, { c: string; label: string }> = { issue: { c: 'var(--rose)', label: 'Problem found' }, clear: { c: 'var(--emerald)', label: 'No problem' }, 'not-enough': { c: 'var(--amber)', label: 'Not enough data' }, 'not-in-data': { c: 'var(--faint)', label: 'Not in your data' } };
+const TOPIC_STYLE: Record<string, { c: string; label: string }> = { issue: { c: 'var(--rose)', label: 'Problem found' }, watch: { c: 'var(--amber)', label: 'Worth watching' }, clear: { c: 'var(--emerald)', label: 'No problem' }, 'not-enough': { c: 'var(--amber)', label: 'Not enough data' }, 'not-in-data': { c: 'var(--faint)', label: 'Not in your data' } };
 
 export default function Reports() {
   const { version, dataset, dash } = useStore();

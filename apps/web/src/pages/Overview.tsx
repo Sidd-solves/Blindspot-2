@@ -74,7 +74,9 @@ export default function Overview() {
   useEffect(() => {
     if (!dataset) return;
     const dim = dataset.fields.highCardDims[0];
-    const dim2 = dataset.fields.highCardDims.find((d) => /customer|client|account/i.test(d)) ?? dataset.fields.highCardDims.find((d) => !/^(order|invoice)/i.test(d) && !/country|region|state/i.test(d));
+    // Find customer/product columns by meaning, not by how many distinct values they have (a small shop may have 6 customers).
+    const all = [...dataset.fields.highCardDims, ...dataset.fields.dims];
+    const dim2 = all.find((d) => /customer|client|account|buyer/i.test(d)) ?? all.find((d) => /product|item|sku|title/i.test(d)) ?? dataset.fields.highCardDims.find((d) => !/^(order|invoice)/i.test(d) && !/country|region|state/i.test(d));
     if (dim2) { setConcState('loading'); tool('interpret-concentration', { dimension: dim2, limit: 12 }).then((r) => { setConc(r.ok ? r.data : null); setConcState(r.ok ? 'ok' : 'none'); }); } else { setConc(null); setConcState('none'); }
   }, [version]); // eslint-disable-line react-hooks/exhaustive-deps
 

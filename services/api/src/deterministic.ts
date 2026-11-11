@@ -50,13 +50,13 @@ export async function deterministicAnswer(ctx: ToolContext, q: string) {
     } else answer = 'Not enough history to compare two periods.';
   } else if (/why|decreas|declin|drop|fell|down|lost/.test(s)) {
     const segs = await Promise.all(fm.dims.slice(0, 4).map((d) => run('interpret-segments', { dimension: d })));
-    const drops = segs.flatMap((r) => (r?.segments ?? []).filter((x: any) => x.trendPct !== undefined && x.trendPct < -0.15 && (x.trendT ?? 0) <= -2).map((x: any) => ({ dim: r.dimension, ...x }))).sort((a: any, b: any) => (a.recent - a.prior) - (b.recent - b.prior));
+    const drops = segs.flatMap((r) => (r?.segments ?? []).filter((x: any) => x.trendPct !== undefined && x.trendPct < -0.15 && (x.trendP ?? 1) < 0.05).map((x: any) => ({ dim: r.dimension, ...x }))).sort((a: any, b: any) => (a.recent - a.prior) - (b.recent - b.prior));
     const w = segs[0]?.window;
     answer = drops.length
       ? `The biggest decline is ${drops[0].dim} = ${drops[0].key}: ${usd(drops[0].prior)} to ${usd(drops[0].recent)} (${pct(drops[0].trendPct)}) comparing the 6 months to ${w?.end} with the 6 months before.\n\n` +
-        drops.slice(0, 4).map((d: any) => `- ${d.dim} ${d.key}: ${pct(d.trendPct)} (${usd(d.recent - d.prior)}, t = ${d.trendT})`).join('\n') +
+        drops.slice(0, 4).map((d: any) => `- ${d.dim} ${d.key}: ${pct(d.trendPct)} (${usd(d.recent - d.prior)}, ${d.trendP < 0.001 ? 'p < 0.001' : `p = ${d.trendP}`})`).join('\n') +
         `\n\nNext step: check whether ${drops[0].key} lost customers, stock or sales coverage in that window. The data shows where revenue fell, not why.`
-      : 'No segment shows a statistically significant decline (t <= -2) versus the prior 6 months.';
+      : 'No segment shows a statistically significant decline (Welch t-test, p < 0.05) versus the prior 6 months.';
   } else if (/roi|recommend|action|should|priorit|fix/.test(s)) {
     const a = (await run('recommend-actions')).actions;
     const best = a[0];
@@ -68,13 +68,28 @@ export async function deterministicAnswer(ctx: ToolContext, q: string) {
   } else if (/concentrat|depend|customer|pareto|top/.test(s)) {
     const c = await run('interpret-concentration', {});
     answer = `${c.interpretation}\n\n` + c.groups.slice(0, 5).map((g: any) => `- ${g.key}: ${usd(g.value)} (${pct(g.share)})`).join('\n');
+  } else if (/\b(total|overall|how much)\b/.test(s) && /sales|revenue|sold|made/.test(s)) {
+    // Same definitions as Source Data: sales = every sale line before returns; returns counted separately.
+    const v = ctx.state.view(), tx = 'IsReturn' in (v.rows[0] ?? {}), cur = v.currency ?? 'USD';
+    let sales = 0, returns = 0; const orders = new Set<string>(), customers = new Set<string>();
+    for (const r of v.rows) {
+      const m = typeof r[fm.measure] === 'number' ? (r[fm.measure] as number) : 0;
+      if (tx && r.IsReturn === 1) { returns += Math.abs(m); continue; }
+      sales += m; if ('Order' in r) orders.add(String(r.Order));
+      if ('Customer' in r && !['Unknown customer', 'Guest checkout', ''].includes(String(r.Customer))) customers.add(String(r.Customer));
+    }
+    answer = `Total ${fm.measure.toLowerCase()}: ${money(sales, cur)} across ${orders.size.toLocaleString() || v.rows.length.toLocaleString()} orders.\n\n` +
+      (tx ? `- Returns (counted separately, not subtracted above): ${money(returns, cur)}\n- Net of returns: ${money(sales - returns, cur)}\n` : '') +
+      (customers.size ? `- Known customers: ${customers.size.toLocaleString()} (sales with no customer ID are included in the total but not in this count)\n` : '') +
+      `\nThese match the totals on the Source Data page, where every row can be checked.`;
   } else if (/what if|scenario|simulat|churn|opex/.test(s)) {
     const r = await run('run-scenario', { levers: { churnReductionPct: 5, opexReductionPct: 8 } });
     answer = `Illustrative scenario (churn -5%, opex -8%): profit ${usd(r.baseline.profit)} to ${usd(r.scenario.profit)} (+${usd(r.delta.profit)}).\n\n${r.formulas.map((f: string) => `- ${f}`).join('\n')}\n\n${r.disclaimer}`;
   } else {
     const r = await run('analyze-dashboard-smart', { top: 5 });
-    const top = r.findings[0];
-    answer = top ? `Biggest risk: ${top.title} (${top.severity}, ${Math.round(top.confidence * 100)}% confidence).\n\n${top.explanation}\n\n` + r.findings.slice(1, 4).map((f: any) => `- ${f.title}`).join('\n') + `\n\nNext step: ${top.nextAction}` : 'No significant issues detected.';
+    // The biggest risk is the top problem that actually puts money at stake, not a data-cleaning note.
+    const top = r.findings.find((f: any) => f.exposure === 'lost' || f.exposure === 'at-risk') ?? r.findings[0];
+    answer = top ? `Biggest risk: ${top.title} (${top.severity}; ${top.basis === 'tested' ? `statistically tested, p ${top.pValue < 0.001 ? '< 0.001' : `= ${top.pValue}`}` : top.basis === 'measured' ? 'measured directly' : 'rule of thumb'}).\n\n${top.explanation}\n\n` + r.findings.filter((f: any) => f !== top).slice(0, 3).map((f: any) => `- ${f.title}`).join('\n') + `\n\nNext step: ${top.nextAction}` : 'No significant issues detected.';
   }
   return { answer, evidence: ev, mode: 'deterministic' as const, note: `Deterministic mode (no AI key). Data: ${ctx.state.view().label}.` };
 }

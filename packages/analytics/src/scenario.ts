@@ -1,6 +1,6 @@
 import { round } from './stats';
 
-export interface ScenarioBaseline { revenue: number; profit: number | null; years?: number }
+export interface ScenarioBaseline { revenue: number; profit: number | null; years?: number; basis?: 'average' | 'run-rate' | 'observed'; period?: string }
 export interface ScenarioAssumptions {
   annualChurnRate: number;     // share of revenue lost to churn per year (hypothetical)
   baselineConversion: number;  // visitor->order conversion (hypothetical)
@@ -30,23 +30,26 @@ export function simulateScenario(base: ScenarioBaseline, levers: Partial<Scenari
   const opexSaving = base.revenue * as.opexRateOfRevenue * (l.opexReductionPct / 100);
   const revenueDelta = churnRevenue + convRevenue;
   const profitDelta = revenueDelta * margin + wasteSaving + opexSaving;
-  const rev = base.revenue + revenueDelta, prof = baseProfit + profitDelta;
+  const grossDelta = revenueDelta * margin + wasteSaving;
+  const rev = base.revenue + revenueDelta, gross = baseProfit + grossDelta, prof = baseProfit + profitDelta;
+  const per = base.basis === 'observed' ? (base.period ?? 'over the file') : 'per year';
   return {
     hypothetical: true as const,
-    baseline: { revenue: round(base.revenue), profit: round(baseProfit), margin: round(margin, 4), profitKnown, years: round(base.years ?? 1, 2) },
+    baseline: { revenue: round(base.revenue), profit: round(baseProfit), margin: round(margin, 4), profitKnown, years: round(base.years ?? 1, 2), basis: base.basis ?? 'average', period: base.period ?? 'per year' },
     /** Percent change is only meaningful against a measured, positive profit baseline. */
     profitChangePct: profitKnown && baseProfit > 0 ? round(profitDelta / baseProfit, 4) : null,
     assumptions: as, levers: l,
     contributions: { churn: round(churnRevenue * margin), conversion: round(convRevenue * margin), waste: round(wasteSaving), opex: round(opexSaving) },
-    scenario: { revenue: round(rev), profit: round(prof), margin: round(rev ? prof / rev : 0, 4) },
-    delta: { revenue: round(revenueDelta), profit: round(profitDelta) },
+    /** grossProfit and margin exclude running costs; profit = gross profit + running-cost savings. */
+    scenario: { revenue: round(rev), grossProfit: round(gross), profit: round(prof), margin: round(rev ? gross / rev : 0, 4) },
+    delta: { revenue: round(revenueDelta), grossProfit: round(grossDelta), opexSaving: round(opexSaving), profit: round(profitDelta) },
     formulas: [
       'churn revenue = revenue x churnRate x churnReduction%; profit = x baseline margin',
       'conversion revenue = revenue x (liftPts / baselineConversion); profit = x baseline margin',
       'waste saving = COGS x wasteRate x wasteReduction%',
       'opex saving = revenue x opexRate x opexReduction%',
-      'profit here means gross profit (sales minus product cost); running-cost savings are added on top',
+      'gross profit = sales minus product cost; margin shown is gross margin; extra profit = extra gross profit + running-cost savings',
     ],
-    disclaimer: profitKnown ? 'Hypothetical what-if, per year. Rates are editable assumptions, not measured company figures.' : `Hypothetical what-if, per year. Your data has no profit or cost column, so a ${Math.round(as.assumedMargin * 100)}% gross margin is assumed; add a costs file for real margins.`,
+    disclaimer: profitKnown ? `Hypothetical what-if, ${per}. Rates are editable assumptions, not measured company figures.${base.basis === 'run-rate' ? ` Baseline is a run rate from ${base.period?.match(/[\d.]+ months/)?.[0] ?? 'part of a year'}, not seasonally adjusted.` : ''}` : `Hypothetical what-if, ${per}.${base.basis === 'run-rate' ? ' Baseline is a run rate from part of a year, not seasonally adjusted.' : ''} Your data has no profit or cost column, so a ${Math.round(as.assumedMargin * 100)}% gross margin is assumed; add a costs file for real margins.`,
   };
 }

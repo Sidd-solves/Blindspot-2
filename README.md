@@ -8,8 +8,8 @@ Small business owners make big decisions on gut feeling, because analysts and BI
 
 - **Cleans** the data: duplicates, returns, fees, orders reversed within 2 days, sales with no customer
 - **Finds** what's costing money: customer dependence, loss-making products, returns, lost best customers, products that stopped selling, shrinking orders, seasonality
-- **Scans everything else**: every product, customer and country compared with the business as a whole, year over year, with a significance test
-- **Tests ideas**: business hypotheses (built-in or proposed by AI) labeled true, false or not enough evidence by real statistics
+- **Scans the rest**: each sizeable product and country compared with the business as a whole, year over year, testing weekly revenue share and adjusting for many comparisons
+- **Tests ideas**: business hypotheses (built-in or proposed by AI) labeled supported, not supported, small effect or not enough evidence, with the one-sided p-value each verdict was decided on
 - **Plans the fix**: what each problem costs, what fixing it could be worth (labeled estimates), a roadmap and a one-page report
 
 Every number comes from deterministic code. The AI (Claude) explains results and suggests ideas; the code checks them.
@@ -36,7 +36,7 @@ UCI **Online Retail II**: a real UK online gift shop, 1,067,371 sales lines (Dec
 ```bash
 npm install
 npm run dev     # API on :8787, web on :5173
-npm test        # 164 tests: statistics, file reading (incl. real PDFs), analytics, all 34 tools, sessions, API + MCP
+npm test        # 171 tests: statistics, file reading (incl. real PDFs), analytics, all 34 tools, sessions, API + MCP
 ```
 Add `ANTHROPIC_API_KEY=` to `.env` for Claude answers (optional; without it the analyst answers common questions with real queries). Production: see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
