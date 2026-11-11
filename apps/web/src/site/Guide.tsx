@@ -126,10 +126,10 @@ export const GUIDES: Record<string, Guide> = {
     title: 'Use Excel, Google Sheets or any CSV', c: 'var(--blue)', icon: <Database size={18} />, time: 'About 1 minute',
     steps: [
       { t: 'One row per sale', d: 'Each row is a sale or an order line. It needs at least one money column (amount, total, price). A date column unlocks trends; product, customer and country columns unlock more checks.', mock: 'table' },
-      { t: 'Export it as CSV or Excel', d: 'Most store and payment tools have a download button. PDFs and screenshots won\'t work: Blindspot needs real rows and columns.', mock: 'exportfrom' },
+      { t: 'Download it', d: 'Most store and payment tools have a download or export button. CSV or Excel is best; a PDF report works too as long as it has real text (not a scanned photo).', mock: 'exportfrom' },
       { t: 'Drop it in', d: 'Drag the file onto the box below. Column names don\'t need to match anything: Blindspot works out which is which.', mock: 'drop' },
     ],
-    tips: ['Works with .csv, .xlsx and .xls up to 15 MB (about 150,000 rows).', 'For Excel files, the first sheet is used.', 'Your file is analysed privately and is not stored.'],
+    tips: ['Works with CSV, Excel, Numbers, Google Sheets and PDF files up to 25 MB (about 150,000 rows).', 'Excel workbooks with several sheets: Blindspot picks the sheet with the sales and tells you which.', 'Missing a detail like customers or costs? Add a second file and Blindspot matches it in by order number, SKU or product.', 'Your file is analysed privately and is not stored.'],
     action: 'upload-any',
   },
 };

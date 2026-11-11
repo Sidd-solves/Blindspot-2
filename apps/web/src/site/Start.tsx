@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
-import { ArrowRight, BarChart3, BookOpen, CreditCard, Download, Eye, FileSpreadsheet, FileX2, Lock, Package, PlugZap, ShieldCheck, ShoppingBag, ShoppingCart, Sparkles, Square as SquareIcon, Store, Table2, Upload, Zap } from 'lucide-react';
+import { ArrowRight, BarChart3, BookOpen, CreditCard, Download, Eye, FileSpreadsheet, FileText, Lock, Package, PlugZap, ShieldCheck, ShoppingBag, ShoppingCart, Sparkles, Square as SquareIcon, Store, Table2, Upload, Zap } from 'lucide-react';
 import { post } from '../api';
 import { useStore } from '../store';
 import { UploadZone } from '../components/Upload';
@@ -95,7 +95,7 @@ export default function Start() {
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, type: 'spring', stiffness: 220, damping: 26 }}>
             <BeamCard c="var(--emerald)" className="p-4">
               <div className="flex flex-wrap items-center gap-1.5"><Upload size={16} style={{ color: 'var(--emerald)' }} /><span className="text-[15px] font-extrabold">Upload an export</span><span className="chip !py-0.5 !text-[10px]" style={{ '--c': 'var(--emerald)' } as CSSProperties}>Any store · no setup</span></div>
-              <div className="mt-3"><UploadZone c="var(--emerald)" title="Drop your export here" hint="Export from Shopify, Tableau, Etsy, WooCommerce, Square, Amazon, Excel and more" onDone={toApp} /></div>
+              <div className="mt-3"><UploadZone c="var(--emerald)" title="Drop your export here" hint="CSV, Excel or PDF · from Shopify, Tableau, Etsy, WooCommerce, Square, Amazon and more" onDone={toApp} /></div>
               <div className="label mb-2 mt-2">How to export from</div>
               <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4">
                 {PLATFORMS.map((p, i) => (
@@ -129,8 +129,8 @@ export default function Start() {
           </motion.div>
 
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="flex items-center gap-2.5 rounded-xl border px-3 py-2 text-[11.5px] text-[var(--muted)]" style={{ borderColor: 'var(--line)' }}>
-            <FileX2 size={15} className="flex-none" style={{ color: 'var(--amber)' }} />
-            <span><b className="text-[var(--text)]">Only have a PDF or screenshot?</b> Those can't be read as data. Every store above can download a CSV or Excel file instead.</span>
+            <FileText size={15} className="flex-none" style={{ color: 'var(--sky)' }} />
+            <span><b className="text-[var(--text)]">PDF reports work too.</b> Only scanned photos and screenshots can't be read: they're pictures, not text. After every upload you'll see exactly how each column was read.</span>
           </motion.div>
         </div>
 

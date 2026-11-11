@@ -1,4 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import type { IngestReport, Role, DateOrder } from '@blindspot/analytics';
+import { fileToText, type FileText } from './lib/fileText';
 import { baseCurrency, display, get, setCurrency, setDisplay, tool, SID } from './api';
 
 export interface Finding { id: string; category: string; title: string; severity: string; confidence: number; metric: string; explanation: string; evidence: any; impactUsd: number | null; impactBasis: string | null; nextAction: string; score: number }
@@ -10,16 +12,22 @@ export interface FxInfo { base: string; to: string; live: boolean; date: string;
 const fxCache = new Map<string, Promise<Omit<FxInfo, 'to'>>>();
 const ratesFor = (base: string) => { let p = fxCache.get(base); if (!p) { p = get('/api/fx?base=' + base); fxCache.set(base, p); p.catch(() => fxCache.delete(base)); } return p; };
 
+export interface UploadState { files: FileText[]; report: IngestReport | null; error: string | null; busy: string | null; open: boolean; overrides: Partial<Record<Role, string | null>>; dateOrder?: DateOrder }
+
 interface Store {
   dataset: DatasetMeta | null; findings: Finding[]; bySeverity: Record<string, number>; actions: Action[]; dash: Dash | null; health: any; conn: any;
   loading: boolean; version: number; extension: boolean; events: { name: string; payload: any; at: string }[]; fx: FxInfo | null;
+  upload: UploadState;
+  uploadFiles: (files: File[], mode?: 'replace' | 'add') => Promise<'ok' | 'fixable' | 'failed'>;
+  fixUpload: (overrides: Partial<Record<Role, string | null>>, dateOrder?: DateOrder) => Promise<void>;
+  setReviewOpen: (open: boolean) => void;
   refresh: () => Promise<void>; setDisplayCurrency: (code: string) => Promise<void>; setFilter: (field: string, values: string[]) => Promise<void>; clearFilters: () => Promise<void>;
 }
 const Ctx = createContext<Store>(null as any);
 export const useStore = () => useContext(Ctx);
 
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const [s, setS] = useState<Omit<Store, 'refresh' | 'setFilter' | 'clearFilters' | 'setDisplayCurrency'>>({ fx: null, dataset: null, findings: [], bySeverity: {}, actions: [], dash: null, health: null, conn: null, loading: true, version: 0, extension: false, events: [] });
+  const [s, setS] = useState<Omit<Store, 'refresh' | 'setFilter' | 'clearFilters' | 'setDisplayCurrency' | 'uploadFiles' | 'fixUpload' | 'setReviewOpen'>>({ upload: { files: [], report: null, error: null, busy: null, open: false, overrides: {} }, fx: null, dataset: null, findings: [], bySeverity: {}, actions: [], dash: null, health: null, conn: null, loading: true, version: 0, extension: false, events: [] });
   const busy = useRef(false);
   const retries = useRef(0);
   const refreshRef = useRef<() => Promise<void>>(async () => {});
@@ -48,6 +56,35 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     try { const t = await ratesFor(base); setDisplay(code === base ? '' : code, t.rates[code] ?? 1); } catch { return; }
     await refresh();
   }, [refresh]);
+  // ---- uploads: files are kept in the browser so a column fix or an extra file re-reads everything instantly
+  const uploadRef = useRef<UploadState>(s.upload);
+  const setUpload = (u: Partial<UploadState>) => setS((p) => { const next = { ...p.upload, ...u }; uploadRef.current = next; return { ...p, upload: next }; });
+  const send = useCallback(async (files: FileText[], overrides: Partial<Record<Role, string | null>>, dateOrder?: DateOrder) => {
+    setUpload({ busy: 'Reading every row…', error: null, open: true });
+    try {
+      const r = await fetch('/api/dataset/files', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Session-Id': SID }, body: JSON.stringify({ files: files.map(({ name, text }) => ({ name, text })), overrides, dateOrder }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) { setUpload({ files, overrides, dateOrder, busy: null, report: j.report ?? null, error: j.error?.message ?? 'This file couldn\'t be read.' }); return j.report?.columns ? 'fixable' as const : 'failed' as const; }
+      setUpload({ files, overrides, dateOrder, busy: null, report: j.report, error: null });
+      await refresh();
+      return 'ok' as const;
+    } catch { setUpload({ busy: null, error: 'Couldn\'t reach the server. Try again in a moment.' }); return 'failed' as const; }
+  }, [refresh]);
+  const uploadFiles = useCallback(async (list: File[], mode: 'replace' | 'add' = 'replace') => {
+    setUpload({ busy: list.length > 1 ? `Opening ${list.length} files…` : `Opening ${list[0]?.name}…`, error: null, open: true });
+    let read: FileText[];
+    try { read = await Promise.all(list.map(fileToText)); }
+    catch (e: any) { setUpload({ busy: null, error: e?.message ?? 'This file couldn\'t be opened.', report: null, files: list.map((f) => ({ name: f.name, text: '', kind: /\.pdf$/i.test(f.name) ? 'pdf' as const : 'csv' as const })) }); return 'failed' as const; }
+    const prev = uploadRef.current;
+    const files = mode === 'add' ? [...prev.files, ...read].slice(0, 5) : read;
+    return send(files, mode === 'add' ? prev.overrides : {}, mode === 'add' ? prev.dateOrder : undefined);
+  }, [send]);
+  const fixUpload = useCallback(async (overrides: Partial<Record<Role, string | null>>, dateOrder?: DateOrder) => {
+    const u = uploadRef.current;
+    if (u.files.length) await send(u.files, overrides, dateOrder ?? u.dateOrder);
+  }, [send]);
+  const setReviewOpen = useCallback((open: boolean) => setUpload({ open }), []);
+
   const setFilter = useCallback(async (field: string, values: string[]) => {
     await tool('apply-filter', { field, values, mode: values.length ? 'replace' : 'clear', target: 'session' });
     await refresh();
@@ -73,6 +110,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return () => es?.close();
   }, [refresh]);
 
-  const value = useMemo(() => ({ ...s, refresh, setFilter, clearFilters, setDisplayCurrency }), [s, refresh, setFilter, clearFilters, setDisplayCurrency]);
+  const value = useMemo(() => ({ ...s, refresh, setFilter, clearFilters, setDisplayCurrency, uploadFiles, fixUpload, setReviewOpen }), [s, refresh, setFilter, clearFilters, setDisplayCurrency, uploadFiles, fixUpload, setReviewOpen]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

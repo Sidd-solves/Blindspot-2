@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
 import { callTool, listTools, SessionState, screenUserInput, redactSecrets, type ToolContext } from '@blindspot/tool-contracts';
-import { parseCsv, generateSampleDataset, profileData, detectFields, crosstab } from '@blindspot/analytics';
+import { parseCsv, generateSampleDataset, profileData, detectFields, crosstab, ingest, IngestError, ROLES } from '@blindspot/analytics';
 import { BridgeHub } from './bridge';
 import { makeLlm, claudeChat, MODELS, getModel, setModel, type ModelId } from './llm';
 import { deterministicAnswer } from './deterministic';
@@ -25,6 +25,8 @@ if (existsSync(rootEnv)) process.loadEnvFile(rootEnv);
 const env = process.env;
 const PROD = env.NODE_ENV === 'production';
 const PORT = Number(env.PORT ?? 8787);
+/** Rows read per upload. 100k keeps the free 512 MB server safe with the case study loaded; raise on a bigger plan. */
+const UPLOAD_MAX_ROWS = Number(env.UPLOAD_MAX_ROWS ?? 100_000);
 const ORIGINS = (env.ALLOWED_ORIGINS ?? 'http://127.0.0.1:5173,http://localhost:5173,http://127.0.0.1:8765,http://localhost:8765').split(',').map((s) => s.trim());
 const SENSITIVE = new Set(['get-worksheet-data', 'set-parameter', 'get-dashboard-screenshot']);
 const log = (m: string) => console.log(`[api] ${new Date().toISOString()} ${redactSecrets(m)}`);
@@ -140,6 +142,31 @@ app.get('/api/rows.csv', (req, res) => {
   res.write(cols.join(',') + '\n');
   for (let i = 0; i < v.rows.length; i += 5000) res.write(v.rows.slice(i, i + 5000).map((r) => cols.map((c) => esc(r[c])).join(',')).join('\n') + '\n');
   res.end();
+});
+
+/**
+ * Universal upload: one or more files (CSV text; the browser turns Excel and PDF into text first), optional
+ * column fixes. Returns the reading report either way, so the person can see and fix how the file was read.
+ */
+app.post('/api/dataset/files', express.json({ limit: '40mb' }), (req, res) => {
+  const p = z.object({
+    files: z.array(z.object({ name: z.string().max(160).transform((x) => x.replace(/[^\w .()\-]/g, '').trim() || 'Uploaded file'), text: z.string().min(1).max(30_000_000) })).min(1).max(5),
+    overrides: z.partialRecord(z.enum(ROLES), z.string().max(200).nullable()).optional(),
+    dateOrder: z.enum(['ymd', 'mdy', 'dmy']).optional(),
+  }).safeParse(req.body);
+  if (!p.success) return res.status(400).json({ error: { code: 'INVALID_INPUT', message: 'Send up to 5 files as { name, text }.' } });
+  try {
+    const { dataset, report } = ingest(p.data.files, { overrides: p.data.overrides, dateOrder: p.data.dateOrder, maxRows: UPLOAD_MAX_ROWS });
+    if (dataset.rows.length < 1) return res.status(400).json({ error: { code: 'NO_ROWS', message: 'No usable rows were found.' }, report });
+    sessions.setDataset(sid(req), dataset, true);
+    broadcastTo(sid(req), 'state', { dataset: dataset.name, rows: dataset.rows.length });
+    log(`files loaded: ${p.data.files.length} file(s), ${dataset.rows.length} rows, format=${report.format}`);
+    res.json({ ok: true, name: dataset.name, rows: dataset.rows.length, report });
+  } catch (e: any) {
+    if (e instanceof IngestError) return res.status(400).json({ error: { code: e.code, message: e.message }, report: e.report ?? null });
+    log(`ingest failed: ${e?.message}`);
+    res.status(400).json({ error: { code: 'READ_FAILED', message: 'This file couldn\'t be read. Check that it\'s a sales export (CSV, Excel or a PDF with a table).' } });
+  }
 });
 
 app.post('/api/dataset/csv', express.text({ type: ['text/csv', 'text/plain'], limit: '15mb' }), (req, res) => {

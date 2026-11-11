@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useState, type CSSProperties } from 'react';
-import { BookOpen, Brush, Check, ChevronDown, Database, Download, ExternalLink, FileSpreadsheet, Globe2, KeyRound, Lock, PlugZap, RotateCcw, ShoppingBag, Sparkles, Store } from 'lucide-react';
+import { ListChecks, BookOpen, Brush, Check, ChevronDown, Database, Download, ExternalLink, FileSpreadsheet, Globe2, KeyRound, Lock, PlugZap, RotateCcw, ShoppingBag, Sparkles, Store } from 'lucide-react';
 import { post } from '../api';
 import { useStore } from '../store';
 import { Card, CardHead, Chip, Dropdown, Loading, Tabs, stagger } from '../components/ui';
@@ -86,7 +86,7 @@ function ShopifyConnect() {
 }
 
 export default function DataSources() {
-  const { dataset, refresh } = useStore();
+  const { dataset, refresh, upload, setReviewOpen } = useStore();
   const [adv, setAdv] = useState(false);
   return (
     <motion.div variants={stagger} initial="hidden" animate="show" className="grid grid-cols-1 gap-3 lg:grid-cols-12">
@@ -112,7 +112,7 @@ export default function DataSources() {
         </Card>
         <Card c="var(--blue)" hover={false}>
           <CardHead icon={<Database size={13} />} title="Any spreadsheet" c="var(--blue)" />
-          <div className="px-3.5 pb-1.5"><UploadZone c="var(--blue)" compact title="Drop a CSV or Excel file" hint="Sales, orders or invoices · needs one money column" /></div>
+          <div className="px-3.5 pb-1.5"><UploadZone c="var(--blue)" compact title="Drop any sales file" hint="CSV, Excel, Numbers, Google Sheets or PDF · several files at once is fine" /></div>
         </Card>
       </div>
 
@@ -143,6 +143,7 @@ export default function DataSources() {
         <div className="flex flex-wrap items-center gap-3">
           <span className="grid h-8 w-8 place-items-center rounded-lg tint" style={{ '--c': 'var(--violet)', color: 'var(--violet)' } as CSSProperties}><Sparkles size={15} /></span>
           <div className="min-w-0 flex-1"><div className="text-[12.5px] font-extrabold">Currently analysing: {dataset?.name}</div><div className="text-[11px] text-[var(--muted)]">{dataset?.label} · {dataset?.rows.toLocaleString()} rows</div>{dataset?.citation && <div className="mt-0.5 text-[10px] text-[var(--faint)]">Source: {dataset.citation}</div>}</div>
+          {upload.report && dataset?.source === 'csv' && <button className="btn" onClick={() => setReviewOpen(true)}><ListChecks size={13} style={{ color: 'var(--emerald)' }} />How we read your file</button>}
           {dataset?.source !== 'sample' && <button className="btn" onClick={async () => { await post('/api/dataset/sample', {}); refresh(); }}><RotateCcw size={13} />Switch to fake demo shop</button>}
           <button className="btn btn-primary" onClick={() => go('overview')}>See insights</button>
         </div>

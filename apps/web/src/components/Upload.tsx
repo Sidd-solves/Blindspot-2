@@ -1,49 +1,39 @@
 import { motion } from 'framer-motion';
 import { useState, type CSSProperties, type ReactNode } from 'react';
 import { Check, UploadCloud } from 'lucide-react';
-import { post } from '../api';
 import { useStore } from '../store';
 import { Loading } from './ui';
 
-/** Turns a CSV or Excel file into CSV text in the browser. Excel parsing loads on demand. */
-async function fileToCsv(f: File): Promise<string> {
-  if (/\.(xlsx|xls|xlsm|ods|numbers|tsv|txt)$/i.test(f.name)) {
-    const XLSX = await import('xlsx');
-    const wb = XLSX.read(await f.arrayBuffer(), { type: 'array', cellDates: true });
-    return XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]], { dateNF: 'yyyy-mm-dd' });
-  }
-  return f.text();
-}
+export const ACCEPT = '.csv,.tsv,.txt,.tab,.xlsx,.xlsm,.xls,.ods,.numbers,.pdf,text/csv,application/pdf';
 
-export function UploadZone({ c = 'var(--blue)', title, hint, icon, compact, onDone }: { c?: string; title: string; hint: string; icon?: ReactNode; compact?: boolean; onDone?: () => void }) {
-  const { refresh } = useStore();
-  const [drag, setDrag] = useState(false), [st, setSt] = useState<{ busy?: boolean; msg?: string; err?: string }>({});
-  const upload = async (f?: File) => {
-    if (!f) return;
-    if (/\.pdf$/i.test(f.name)) return setSt({ err: 'PDFs can\'t be read as data. Download a CSV or Excel export from your store instead (see the guides below).' });
-    if (/\.(png|jpe?g|gif|webp|heic)$/i.test(f.name)) return setSt({ err: 'Screenshots can\'t be read as data. Download a CSV or Excel export from your store instead.' });
-    if (!/\.(csv|xlsx|xls|xlsm|ods|numbers|tsv|txt)$/i.test(f.name)) return setSt({ err: 'Use a CSV, Excel, Numbers or Google Sheets file.' });
-    if (f.size > 15e6) return setSt({ err: 'Files up to 15 MB (about 150,000 rows).' });
-    setSt({ busy: true });
-    try {
-      const r = await post<any>(`/api/dataset/csv?name=${encodeURIComponent(f.name.replace(/[^\w .()-]/g, ''))}`, await fileToCsv(f), 'text/csv');
-      setSt({ msg: `Loaded ${r.rows.toLocaleString()} rows from ${r.name}` });
-      await refresh();
-      onDone?.();
-    } catch (e: any) { setSt({ err: e.message }); }
+/** Drop zone for any sales file. "add" mode merges the file into what's already loaded (to fill in missing details). */
+export function UploadZone({ c = 'var(--blue)', title, hint, icon, compact, onDone, mode = 'replace' }: { c?: string; title: string; hint: string; icon?: ReactNode; compact?: boolean; onDone?: () => void; mode?: 'replace' | 'add' }) {
+  const { upload, uploadFiles } = useStore();
+  const [drag, setDrag] = useState(false), [mine, setMine] = useState(false), [err, setErr] = useState('');
+  const go = async (list?: FileList | null) => {
+    const files = [...(list ?? [])].slice(0, 5);
+    if (!files.length) return;
+    setErr('');
+    if (files.some((f) => f.size > 25e6)) return setErr('Files up to 25 MB. Export a shorter date range, or split it into two files and add both.');
+    setMine(true);
+    const r = await uploadFiles(files, mode);
+    if (r !== 'failed') onDone?.(); // fixable problems open the review screen, where columns can be picked
   };
+  const busy = mine && !!upload.busy;
   return (
     <div>
-      <label onDragOver={(e) => { e.preventDefault(); setDrag(true); }} onDragLeave={() => setDrag(false)} onDrop={(e) => { e.preventDefault(); setDrag(false); upload(e.dataTransfer.files[0]); }}
-        className={`grid cursor-pointer place-items-center rounded-xl border-2 border-dashed px-3 text-center transition-colors ${compact ? 'py-3' : 'py-5'} ${st.busy ? 'scan' : ''}`}
+      <label onDragOver={(e) => { e.preventDefault(); setDrag(true); }} onDragLeave={() => setDrag(false)} onDrop={(e) => { e.preventDefault(); setDrag(false); go(e.dataTransfer.files); }}
+        className={`grid cursor-pointer place-items-center rounded-xl border-2 border-dashed px-3 text-center transition-colors ${compact ? 'py-3' : 'py-5'} ${busy ? 'scan' : ''}`}
         style={{ borderColor: drag ? c : 'var(--line-strong)', background: drag ? `color-mix(in srgb, ${c} 8%, transparent)` : 'transparent' } as CSSProperties}>
-        <input type="file" accept=".csv,.tsv,.txt,.xlsx,.xls,.xlsm,.ods,.numbers,.pdf,text/csv" className="hidden" onChange={(e) => upload(e.target.files?.[0])} />
+        <input type="file" multiple accept={ACCEPT} className="hidden" onChange={(e) => { go(e.target.files); e.target.value = ''; }} />
         <motion.div animate={{ y: drag ? -5 : [0, -3, 0] }} transition={{ duration: 2, repeat: drag ? 0 : Infinity }} style={{ color: c }}>{icon ?? <UploadCloud size={22} />}</motion.div>
         <div className="mt-1 text-[12.5px] font-bold">{title}</div>
         <div className="text-[10.5px] text-[var(--faint)]">{hint}</div>
       </label>
       <div className="mt-1.5 min-h-[18px] text-[11.5px]">
-        {st.busy ? <Loading steps={['Reading file…', 'Detecting columns…', 'Re-running analysis…']} /> : st.err ? <span className="text-[var(--rose)]">{st.err}</span> : st.msg ? <span className="flex items-center gap-1 text-[var(--emerald)]"><Check size={12} />{st.msg}</span> : null}
+        {err ? <span className="text-[var(--rose)]">{err}</span> : busy ? <Loading steps={[upload.busy!, 'Finding the columns…', 'Checking every row…']} />
+          : mine && upload.error ? <span className="text-[var(--rose)]">{upload.error}</span>
+          : mine && upload.report ? <span className="flex items-center gap-1 text-[var(--emerald)]"><Check size={12} />Read {upload.report.rowsUsed.toLocaleString()} rows</span> : null}
       </div>
     </div>
   );

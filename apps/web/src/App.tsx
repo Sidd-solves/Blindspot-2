@@ -13,6 +13,7 @@ import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import SourceData from './pages/SourceData';
 import { CurrencyPicker } from './components/Currency';
+import { ReadReview } from './components/ReadReview';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import SiteLayout, { type SiteId } from './site/SiteLayout';
 import SiteHome from './site/Home';
@@ -89,6 +90,7 @@ export default function App() {
       <div className="orb" style={{ width: 360, height: 360, right: -100, top: 120, background: 'var(--cyan)', animationDelay: '-7s' }} />
       <div className="orb" style={{ width: 300, height: 300, left: '40%', bottom: -160, background: 'var(--fuchsia)', animationDelay: '-13s' }} />
 
+      <ReadReview />
       <div className="relative z-10 flex min-h-full flex-col md:flex-row">
         <aside className="no-print flex-none md:sticky md:top-0 md:h-screen md:w-[208px] md:border-r" style={{ borderColor: 'var(--line)' }}>
           <button onClick={() => { location.hash = '/'; }} title="Back to the Blindspot site" className="flex w-full items-center gap-2 px-4 py-3.5 text-left">

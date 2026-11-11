@@ -46,7 +46,7 @@ describe('Shopify connector', () => {
       '#1002,b@x.com,paid,2026-02-03 09:00:00 -0600,1,Foot Spa,100,0,Sam Demo,CA,Demo Shop,'].join('\n');
     const ds = parseCsv(csv, 'orders_export.csv');
     expect(ds.rows).toHaveLength(3);
-    expect(ds.rows[1]).toMatchObject({ Order: '#1001', Customer: 'Alex Demo', Region: 'TX', Product: 'Foot Spa', Sales: 90, Discount: 0.1 });
+    expect(ds.rows[1]).toMatchObject({ Order: '#1001', Customer: 'a@x.com', Region: 'TX', Product: 'Foot Spa', Sales: 90, IsReturn: 0 });
     expect(ds.rows[0].Sales).toBe(90);
   });
   it('normalizes and validates store addresses', () => {

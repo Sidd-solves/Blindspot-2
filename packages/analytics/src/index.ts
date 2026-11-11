@@ -18,3 +18,4 @@ export * from './query';
 export * from './money';
 export * from './insights';
 export * from './hypotheses';
+export * from './ingest';

@@ -35,7 +35,7 @@ function Pipeline() {
 }
 
 const STEPS = [
-  { c: 'var(--emerald)', icon: PlugZap, t: 'Connect your sales', d: 'Link Shopify (read-only), drop in Shopify\'s order export, or upload any CSV or Excel file with a money column. No setup, no account.', ex: 'A store with 50,000 orders is ready in seconds.' },
+  { c: 'var(--emerald)', icon: PlugZap, t: 'Connect your sales', d: 'Link Shopify (read-only), drop in Shopify\'s order export, or upload any CSV, Excel or PDF sales report. No setup, no account.', ex: 'A store with 50,000 orders is ready in seconds.' },
   { c: 'var(--cyan)', icon: Search, t: 'Blindspot hunts for problems', d: 'It cleans the data, runs every check, scans every product, customer and country, and tests business ideas, all with real calculations.', ex: '1 million real sales analysed in about 6 seconds.' },
   { c: 'var(--violet)', icon: Wrench, t: 'You get a plan', d: 'Each problem comes with what it costs, how sure Blindspot is, what fixing it could be worth, and a roadmap ordered from easy to hard.', ex: 'Plus a one-page report to send a partner or investor.' },
 ];

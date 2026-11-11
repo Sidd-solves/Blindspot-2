@@ -107,7 +107,7 @@ export function Tabs<T extends string>({ tabs, value, onChange, layoutId }: { ta
   );
 }
 
-export function Dropdown({ value, options, onChange, placeholder = 'Select...', multi = false, width = 150, c = 'var(--violet)' }: { value: string[]; options: string[]; onChange: (v: string[]) => void; placeholder?: string; multi?: boolean; width?: number; c?: string }) {
+export function Dropdown({ value, options, onChange, placeholder = 'Select...', multi = false, width = 150, c = 'var(--violet)' }: { value: string[]; options: string[]; onChange: (v: string[]) => void; placeholder?: string; multi?: boolean; width?: number | string; c?: string }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => { const h = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); }; document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h); }, []);

@@ -17,6 +17,8 @@ export interface PrepReport {
 
 const FEE_CODES = new Set(['POST', 'DOT', 'M', 'C2', 'D', 'S', 'BANK CHARGES', 'ADJUST', 'ADJUST2', 'AMAZONFEE', 'CRUK', 'B', 'PADS', 'TEST001', 'TEST002', 'GIFT']);
 const FEE_DESC = /postage|carriage|manual|discount|bank charges|amazon fee|adjust|samples|cruk|commission/i;
+/** For files that aren't this kind of transaction log: only lines that are clearly fees, never products that merely mention them. */
+const FEE_DESC_STRICT = /^(postage|carriage|shipping|delivery( charge)?|bank charges?|amazon fees?|adjust(ment)?|manual|samples?|tip|gratuity|service charge|transaction fee|processing fee)$/i;
 
 type Map = { order: string; product: string; qty: string; price: string; date: string; customer?: string; country?: string; code?: string };
 const find = (cols: string[], ...res: RegExp[]) => cols.find((c) => res.some((re) => re.test(c)));
@@ -32,37 +34,60 @@ export function detectTransactionColumns(rows: Row[]): Map | null {
   return { order, qty, price, date, product, customer: find(cols, /^customer[ _]?id$/i, /^customer$/i, /^client(_?id)?$/i), country: find(cols, /^country$/i, /^region$/i), code: find(cols, /^stock_?code$/i, /^sku$/i) };
 }
 
-export function prepareTransactions(rows: Row[], name: string, opts: { currency?: string; label?: string } = {}): Dataset | null {
+export interface PrepOptions {
+  currency?: string; label?: string;
+  /** Rows carry their exact line value in __sales and return flag in __ret (set by the universal reader). */
+  exactSales?: boolean;
+  /** 'uci': the case-study store's stock-code conventions; 'strict': only unmistakable fee lines. */
+  feeRule?: 'uci' | 'strict';
+  /** Extra columns copied onto each output row (e.g. Region, Category). */
+  keep?: string[];
+  /** Remove exact duplicate lines (default true; the universal reader does its own, stricter check). */
+  dedupe?: boolean;
+  /** Remove a sale + its mirror-image cancellation within 2 days (the case-study store's mistaken orders). Default true. */
+  pairReversals?: boolean;
+}
+
+export function prepareTransactions(rows: Row[], name: string, opts: PrepOptions = {}): Dataset | null {
   const m = detectTransactionColumns(rows);
   if (!m) return null;
   const rep: PrepReport = { inputRows: rows.length, keptRows: 0, returnLines: 0, returnValue: 0, duplicateRows: 0, feeLines: 0, feeValue: 0, zeroPriceRows: 0, missingCustomerRows: 0, missingCustomerSales: 0, cancelledPairs: 0, cancelledPairValue: 0, feeCodes: [] };
   const seen = new Set<string>(), fees = new Set<string>(), out: Row[] = [];
   for (const r of rows) {
-    const key = JSON.stringify(Object.values(r));
-    if (seen.has(key)) { rep.duplicateRows++; continue; }
-    seen.add(key);
+    if (opts.dedupe !== false) {
+      const key = JSON.stringify(Object.values(r));
+      if (seen.has(key)) { rep.duplicateRows++; continue; }
+      seen.add(key);
+    }
     const qty = Number(r[m.qty]), price = Number(r[m.price]);
     if (!Number.isFinite(qty) || !Number.isFinite(price)) continue;
     const code = m.code ? String(r[m.code] ?? '').trim() : '';
     const desc = String(r[m.product] ?? '').trim();
-    const value = qty * price;
-    if ((code && (FEE_CODES.has(code.toUpperCase()) || !/^\d/.test(code))) || (!code && FEE_DESC.test(desc))) { rep.feeLines++; rep.feeValue += value; fees.add(code || desc); continue; }
-    if (price === 0) { rep.zeroPriceRows++; continue; }
-    const isReturn = qty < 0 || String(r[m.order]).toUpperCase().startsWith('C');
+    const value = opts.exactSales ? Number(r.__sales) : qty * price;
+    const isFee = (opts.feeRule ?? 'uci') === 'uci'
+      ? (code && (FEE_CODES.has(code.toUpperCase()) || !/^\d/.test(code))) || (!code && FEE_DESC.test(desc))
+      : (code && FEE_CODES.has(code.toUpperCase()) && FEE_DESC_STRICT.test(desc)) || FEE_DESC_STRICT.test(desc);
+    if (isFee) { rep.feeLines++; rep.feeValue += Math.abs(value); fees.add(code || desc); continue; }
+    if (price === 0 || value === 0) { rep.zeroPriceRows++; continue; }
+    const isReturn = opts.exactSales ? r.__ret === 1 : qty < 0 || /^C\d/i.test(String(r[m.order]));
     const customer = m.customer && r[m.customer] !== null && r[m.customer] !== '' ? String(r[m.customer]).replace(/\.0$/, '') : null;
     if (isReturn) { rep.returnLines++; rep.returnValue += Math.abs(value); }
     else if (!customer) { rep.missingCustomerRows++; rep.missingCustomerSales += value; }
-    out.push({
+    const o: Row = {
       OrderDate: String(r[m.date]).slice(0, 10), Order: String(r[m.order]),
-      Customer: customer ?? 'Unknown customer', Country: m.country ? String(r[m.country] ?? 'Unknown') : 'All',
+      Customer: customer ?? 'Unknown customer', Country: m.country ? String(r[m.country] || 'Unknown') : 'All',
       Product: desc || code || 'Unknown product', Quantity: qty,
       Sales: Math.round(value * 100) / 100, IsReturn: isReturn ? 1 : 0,
-    });
+    };
+    for (const k of opts.keep ?? []) if (k in r) o[k] = r[k] === '' || r[k] == null ? 'Unknown' : r[k];
+    if (typeof r.__profit === 'number') o.Profit = r.__profit;
+    else if (typeof r.__cost === 'number') o.Profit = Math.round((value - (isReturn ? -r.__cost : r.__cost)) * 100) / 100;
+    out.push(o);
   }
   // A cancellation that exactly mirrors a sale (same customer, product, quantity and price) within 2 days
   // is a reversed order, not a sale plus a return. Remove both so neither inflates the analysis.
   const DAYMS = 86400000, open = new Map<string, number[]>(), drop = new Set<number>();
-  out.forEach((r, i) => { if (r.IsReturn !== 1 && r.Customer !== 'Unknown customer') { const k = `${r.Customer}|${r.Product}|${r.Quantity}|${(r.Sales as number) / (r.Quantity as number)}`; (open.get(k) ?? open.set(k, []).get(k)!).push(i); } });
+  if (opts.pairReversals !== false) out.forEach((r, i) => { if (r.IsReturn !== 1 && r.Customer !== 'Unknown customer') { const k = `${r.Customer}|${r.Product}|${r.Quantity}|${(r.Sales as number) / (r.Quantity as number)}`; (open.get(k) ?? open.set(k, []).get(k)!).push(i); } });
   out.forEach((r, i) => {
     if (r.IsReturn !== 1 || r.Customer === 'Unknown customer') return;
     const q = -(r.Quantity as number), k = `${r.Customer}|${r.Product}|${q}|${(r.Sales as number) / (r.Quantity as number)}`;
