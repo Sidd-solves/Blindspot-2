@@ -23,7 +23,7 @@ UCI **Online Retail II**: a real UK online gift shop, 1,067,371 sales lines (Dec
 
 ## How it works
 ```mermaid
-flowchart LR
+flowchart TD
   subgraph Browser["Browser (React + TypeScript)"]
     F["CSV · Excel · PDF"] --> X["Excel via SheetJS<br/>PDF via pdf.js:<br/>rows rebuilt from word positions"]
   end
