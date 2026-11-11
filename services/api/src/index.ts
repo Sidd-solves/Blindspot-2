@@ -171,20 +171,25 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
 });
 
 const HOST = env.HOST ?? (PROD ? '0.0.0.0' : '127.0.0.1');
-server.listen(PORT, HOST, () => {
-  log(`Blindspot API on http://${HOST}:${PORT} | tools=${listTools().length} | ai=${llm.configured ? llm.model : 'deterministic'} | bridge ws://127.0.0.1:${PORT}/bridge${env.BRIDGE_TOKEN ? ' (token required)' : ' (no token, dev only)'}`);
+
+/**
+ * Production opens on the real-data case study. Everything is loaded and pre-computed BEFORE the
+ * port opens, so no visitor ever reaches a server that is still busy warming up (on restart or
+ * after the free plan wakes from sleep, the platform holds the request until we're ready).
+ */
+async function warmUp() {
+  if ((env.DEFAULT_DATASET ?? (PROD ? 'case-study' : 'demo')) !== 'case-study' || !caseStudyAvailable()) return;
+  const t = Date.now();
+  try {
+    state.setDataset(loadCaseStudy()); profile(state.view()); analyzeSmart(state.view());
+    for (const [name, input] of [['build-dashboard', { title: 'Overview' }], ['explain-change', {}], ['test-hypotheses', { useAI: false }], ['recommend-actions', { top: 10 }]] as const) await callTool(ctx, name, input);
+    state.canvas = [];
+    log(`case study ready: ${state.dataset.rows.length} rows, caches warm in ${Date.now() - t}ms`);
+  } catch (e: any) { log(`case study failed to load: ${e?.message}`); }
+}
+
+void warmUp().then(() => server.listen(PORT, HOST, () => {
+  log(`Blindspot API on http://${HOST}:${PORT} | tools=${listTools().length} | ai=${llm.configured ? llm.model : 'deterministic'} | bridge ws://${HOST}:${PORT}/bridge${env.BRIDGE_TOKEN ? ' (token required)' : ' (no token, dev only)'}`);
   if (PROD && !env.BRIDGE_TOKEN) log('WARNING: BRIDGE_TOKEN not set in production');
-  // Production opens on the real-data case study, analysed once at boot so the first visitor doesn't wait.
-  if ((env.DEFAULT_DATASET ?? (PROD ? 'case-study' : 'demo')) === 'case-study' && caseStudyAvailable()) {
-    setImmediate(() => {
-      const t = Date.now();
-      try {
-        state.setDataset(loadCaseStudy()); profile(state.view()); analyzeSmart(state.view());
-        // Warm the per-dataset caches every page uses, then leave the canvas empty.
-        void (async () => { for (const [name, input] of [['build-dashboard', { title: 'Overview' }], ['explain-change', {}], ['test-hypotheses', { useAI: false }], ['recommend-actions', { top: 10 }]] as const) await callTool(ctx, name, input); state.canvas = []; log(`case study ready: ${state.dataset.rows.length} rows, caches warm in ${Date.now() - t}ms`); })();
-      }
-      catch (e: any) { log(`case study failed to load: ${e?.message}`); }
-    });
-  }
-});
+}));
 export { app, server, state, bridge };
