@@ -9,7 +9,7 @@ import { useStore } from '../store';
 export function SampleNotice({ className = '' }: { className?: string }) {
   const { dataset, refresh } = useStore();
   const [busy, setBusy] = useState(false);
-  if (!dataset || dataset.source === 'case-study') return null;
+  if (!dataset || (dataset.source !== 'csv' && dataset.source !== 'shopify')) return null;
   return (
     <motion.div
       initial={{ opacity: 0, y: -6 }}

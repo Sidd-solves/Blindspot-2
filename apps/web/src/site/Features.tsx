@@ -180,7 +180,9 @@ export default function Features() {
         >
           {dataset?.source === 'case-study'
             ? "Every card below is live, running on a real shop's data right now."
-            : 'Every card below is live, running on your file right now.'}
+            : dataset?.source === 'csv' || dataset?.source === 'shopify'
+              ? 'Every card below is live, running on your file right now.'
+              : 'Every card below is live, running on a demo shop right now.'}
         </motion.p>
         <SampleNotice className="mt-3" />
       </section>

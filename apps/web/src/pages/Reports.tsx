@@ -185,7 +185,7 @@ export default function Reports() {
               <thead>
                 <tr className="text-left text-[11.5px] uppercase tracking-wider text-[var(--faint)]">
                   <th className="pb-1.5 font-bold">Action</th>
-                  <th className="pb-1.5 font-bold">Effort</th>
+                  <th className="hidden pb-1.5 font-bold sm:table-cell">Effort</th>
                   <th className="pb-1.5 text-right font-bold">Benefit</th>
                   <th className="hidden pb-1.5 pl-3 font-bold md:table-cell">Risk</th>
                 </tr>
@@ -200,8 +200,23 @@ export default function Reports() {
                     className="border-t"
                     style={{ borderColor: 'var(--line)' }}
                   >
-                    <td className="min-w-[150px] py-2 pr-3 font-bold">{r.intervention}</td>
-                    <td>
+                    <td className="min-w-[150px] py-2 pr-3 font-bold">
+                      {r.intervention}
+                      <div className="mt-1 sm:hidden">
+                        <Chip
+                          c={
+                            r.effort === 'low'
+                              ? 'var(--cyan)'
+                              : r.effort === 'medium'
+                                ? 'var(--amber)'
+                                : 'var(--rose)'
+                          }
+                        >
+                          {r.effort}
+                        </Chip>
+                      </div>
+                    </td>
+                    <td className="hidden sm:table-cell">
                       <Chip
                         c={
                           r.effort === 'low'
