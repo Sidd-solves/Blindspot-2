@@ -41,6 +41,8 @@ export const CHAT_TOOLS = [
   'recommend-actions',
   'run-scenario',
   'forecast-sales',
+  'early-warning',
+  'win-back-list',
   'suggest-annotations',
   'generate-executive-summary',
 ];

@@ -80,12 +80,12 @@ beforeEach(() => {
 });
 
 describe('registry', () => {
-  it('registers exactly the 26 reference tools plus 9 Blindspot tools', () => {
+  it('registers exactly the 26 reference tools plus 11 Blindspot tools', () => {
     const core = listTools()
       .filter((t) => t.core)
       .map((t) => t.name);
     expect(core.sort()).toEqual([...CORE].sort());
-    expect(ALL_TOOLS.length).toBe(35);
+    expect(ALL_TOOLS.length).toBe(37);
     for (const t of ALL_TOOLS) {
       expect(t.description.length).toBeGreaterThan(20);
       expect(t.input).toBeTruthy();

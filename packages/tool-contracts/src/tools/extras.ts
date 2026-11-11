@@ -9,6 +9,8 @@ import {
   analyzeColors,
   forecastSales,
   detectFields,
+  earlyWarning,
+  winBackList,
 } from '@blindspot/analytics';
 import { defineTool, memo } from '../core';
 import { DashboardSpecSchema } from './design';
@@ -204,10 +206,95 @@ export const forecastSalesTool = defineTool({
     return memo(v.rows, `forecast:${horizon}`, () => forecastSales(v.rows, fm.date, fm.measure, { horizon }));
   },
 });
+export const earlyWarningTool = defineTool({
+  name: 'early-warning',
+  category: 'Business Intelligence',
+  core: false,
+  description:
+    'Customers slipping away before they are lost: repeat customers silent 45-90 days, ranked by their last-year spend. The rule is replayed 90 days in the past using only earlier orders, and the result says how often flagged customers really stayed away versus everyone else (two-proportion z-test).',
+  input: z.object({ top: z.number().int().min(1).max(500).default(50) }),
+  output: z.object({
+    ok: z.boolean(),
+    reason: z.string().optional(),
+    asOf: z.string(),
+    rule: z.string(),
+    backtest: z
+      .object({
+        asOf: z.string(),
+        windowDays: z.number(),
+        flagged: z.number(),
+        flaggedStayedAway: z.number(),
+        others: z.number(),
+        othersStayedAway: z.number(),
+        p: z.number().nullable(),
+        method: z.string(),
+      })
+      .nullable(),
+    customers: z.array(
+      z.object({
+        customer: z.string(),
+        orders: z.number(),
+        typicalGapDays: z.number(),
+        silentDays: z.number(),
+        lateBy: z.number(),
+        lastOrder: z.string(),
+        expectedBy: z.string(),
+        yearSpend: z.number(),
+      }),
+    ),
+    total: z.number(),
+    valueAtRisk: z.number(),
+    spread: z.array(
+      z.object({
+        silentDays: z.number(),
+        yearSpend: z.number(),
+        zone: z.enum(['active', 'slipping', 'lost']),
+      }),
+    ),
+  }),
+  async handler(ctx, { top }) {
+    const v = ctx.state.view();
+    const r = memo(v.rows, 'early-warning', () => earlyWarning(v));
+    return { ...r, total: r.customers.length, customers: r.customers.slice(0, top) };
+  },
+});
+
+export const winBackTool = defineTool({
+  name: 'win-back-list',
+  category: 'Business Intelligence',
+  core: false,
+  description:
+    'The best customers who went quiet (same definition as the lost-customer finding), each with what they used to buy, their spend and a plain draft message to send. Read-only: nothing is sent.',
+  input: z.object({ shopName: z.string().max(80).default('our shop') }),
+  output: z.object({
+    ok: z.boolean(),
+    reason: z.string().optional(),
+    cutoff: z.string(),
+    customers: z.array(
+      z.object({
+        customer: z.string(),
+        email: z.string().nullable(),
+        orders: z.number(),
+        spend: z.number(),
+        lastOrder: z.string(),
+        daysSilent: z.number(),
+        topProducts: z.array(z.string()),
+        message: z.string(),
+      }),
+    ),
+    total: z.number(),
+  }),
+  async handler(ctx, { shopName }) {
+    return winBackList(ctx.state.view(), shopName);
+  },
+});
+
 export const EXTRA_TOOLS = [
   runScenario,
   recommendActions,
   generateExecutiveSummary,
   auditDashboardQuality,
   forecastSalesTool,
+  earlyWarningTool,
+  winBackTool,
 ];

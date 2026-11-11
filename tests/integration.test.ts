@@ -66,9 +66,9 @@ const post = (p: string, body: unknown) =>
   }).then(async (r) => ({ status: r.status, json: await r.json() }));
 
 describe('API + WebSocket bridge (real server, fake Tableau extension)', () => {
-  it('health reports 35 tools and a connected extension', async () => {
+  it('health reports 37 tools and a connected extension', async () => {
     const h = await fetch(base + '/api/health').then((r) => r.json());
-    expect(h).toMatchObject({ ok: true, tools: 35, extension: true });
+    expect(h).toMatchObject({ ok: true, tools: 37, extension: true });
   });
   it('tool call is relayed over the bridge to the extension and back', async () => {
     const r = await post('/api/tools/get-worksheet-data', {
@@ -164,7 +164,7 @@ describe('API + WebSocket bridge (real server, fake Tableau extension)', () => {
 });
 
 describe('MCP server over stdio', () => {
-  it('lists 34 tools and executes one', async () => {
+  it('lists every tool and executes one', async () => {
     const client = new Client({ name: 'test', version: '1.0.0' });
     await client.connect(
       new StdioClientTransport({
@@ -174,7 +174,7 @@ describe('MCP server over stdio', () => {
       }),
     );
     const { tools } = await client.listTools();
-    expect(tools.length).toBe(35);
+    expect(tools.length).toBe(37);
     const r: any = await client.callTool({
       name: 'interpret-concentration',
       arguments: { dimension: 'Customer' },

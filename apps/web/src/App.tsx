@@ -8,6 +8,7 @@ import {
   ShieldAlert,
   SlidersHorizontal,
   LineChart,
+  Radar,
   ScanEye,
   FileText,
   Settings as Cog,
@@ -26,6 +27,7 @@ const Analyst = lazy(() => import('./pages/Analyst'));
 const Risk = lazy(() => import('./pages/Risk'));
 const Simulator = lazy(() => import('./pages/Simulator'));
 const Forecast = lazy(() => import('./pages/Forecast'));
+const Customers = lazy(() => import('./pages/Customers'));
 const Audit = lazy(() => import('./pages/Audit'));
 const Reports = lazy(() => import('./pages/Reports'));
 const Settings = lazy(() => import('./pages/Settings'));
@@ -70,6 +72,7 @@ export const NAV = [
   { id: 'source', label: 'Source Data', icon: Table2, c: 'var(--sky)', el: SourceData },
   { id: 'analyst', label: 'AI Analyst', icon: Sparkles, c: 'var(--fuchsia)', el: Analyst },
   { id: 'risk', label: 'Risk Intelligence', icon: ShieldAlert, c: 'var(--rose)', el: Risk },
+  { id: 'customers', label: 'Customer Radar', icon: Radar, c: 'var(--blue)', el: Customers },
   {
     id: 'simulator',
     label: 'Scenario Simulator',
