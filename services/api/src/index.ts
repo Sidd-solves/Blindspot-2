@@ -16,7 +16,8 @@ import { zodToJsonSchema } from './zod-json';
 import { fetchShopifyDataset, ShopifyError } from './shopify';
 import { loadCaseStudy, caseStudyAvailable, CASE_STUDY_CITATION } from './case-study';
 import { analyzeSmart, profileData as profile } from '@blindspot/analytics';
-import { CURRENCIES, ratesFor, withDisplayCurrency } from './fx';
+import { CURRENCIES, ratesFor, displayRate } from './fx';
+import { convertMoneyDeep } from '@blindspot/analytics';
 
 // Load the repo-root .env for local runs (hosted platforms inject real env vars, which take precedence).
 const rootEnv = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../.env');
@@ -50,10 +51,14 @@ app.use('/api', cors({ origin: (o, cb) => cb(null, !o || ORIGINS.includes(o)), c
 app.use('/api', rateLimit({ windowMs: 60_000, limit: 300, standardHeaders: true, legacyHeaders: false }));
 const chatLimit = rateLimit({ windowMs: 60_000, limit: 20 });
 // Each visitor can pick a display currency (X-Display-Currency); money in findings and reports is converted for them.
-app.use('/api', (req, _res, next) => {
+app.use('/api', (req, res, next) => {
   const cur = req.headers['x-display-currency'] ?? req.query.cur;
   if (!cur) return next();
-  withDisplayCurrency(sessions.get(sid(req)).view().currency ?? 'USD', cur, () => next()).catch(next);
+  const from = sessions.get(sid(req)).view().currency ?? 'USD';
+  displayRate(from, cur).then((fx) => {
+    if (fx) { const json = res.json.bind(res); res.json = (body: unknown) => json(convertMoneyDeep(body, from, fx.to, fx.rate)); }
+    next();
+  }, () => next());
 });
 
 function requireAdmin(req: Request, res: Response, next: NextFunction) {

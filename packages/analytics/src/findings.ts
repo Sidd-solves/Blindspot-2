@@ -3,7 +3,7 @@ import { detectFields, numeric, profileData } from './profile';
 import { interpretConcentration } from './concentration';
 import { interpretSegments } from './segments';
 import { iqrBounds, pearson, round, sum, quantile } from './stats';
-import { fxKey, money, pctStr, plural } from './money';
+import { money, pctStr, plural } from './money';
 import { explainChange, scanAnomalies, storeFindings, welch } from './insights';
 import { comparisonWindows, inWin, toMs, DAY, pickWindowDays } from './time';
 
@@ -19,7 +19,7 @@ function mk(f: Omit<Finding, 'score'>): Finding {
 const cache = new WeakMap<object, Map<string, Finding[]>>();
 
 export function analyzeSmart(ds: Dataset): Finding[] {
-  const key = `${ds.currency ?? 'USD'}|${fxKey()}`;
+  const key = ds.currency ?? 'USD';
   const hit = cache.get(ds.rows)?.get(key);
   if (hit) return hit;
   const res = analyzeUncached(ds);

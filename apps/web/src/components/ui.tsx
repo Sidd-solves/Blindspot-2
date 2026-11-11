@@ -30,13 +30,14 @@ export function CardHead({ icon, title, c, right }: { icon?: ReactNode; title: s
 
 export function CountUp({ value, format = (n: number) => Math.round(n).toLocaleString(), duration = 1.1, className = '' }: { value: number; format?: (n: number) => string; duration?: number; className?: string }) {
   const ref = useRef<HTMLSpanElement>(null);
-  const prev = useRef(0);
+  const prev = useRef(0), shown = useRef(0);
   useEffect(() => {
-    const ctl = animate(prev.current, value, { duration, ease: [0.16, 1, 0.3, 1], onUpdate: (v) => { if (ref.current) ref.current.textContent = format(v); } });
+    const ctl = animate(prev.current, value, { duration, ease: [0.16, 1, 0.3, 1], onUpdate: (v) => { shown.current = v; if (ref.current) ref.current.textContent = format(v); } });
     prev.current = value;
     return () => ctl.stop();
   }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
-  return <span ref={ref} className={`mono ${className}`}>{format(0)}</span>;
+  // Re-renders (e.g. a currency switch changes `format`) must show the current number, not reset to 0.
+  return <span ref={ref} className={`mono ${className}`}>{format(shown.current)}</span>;
 }
 
 export function Ring({ value, size = 76, stroke = 7, c = 'var(--violet)', children }: { value: number; size?: number; stroke?: number; c?: string; children?: ReactNode }) {

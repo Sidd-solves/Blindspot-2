@@ -38,7 +38,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     } catch {
       // API may be restarting: retry with backoff instead of leaving the app empty.
       setS((p) => ({ ...p, loading: false }));
-      if (retries.current < 6) { const wait = 500 * 2 ** retries.current++; setTimeout(() => refreshRef.current(), wait); }
+      if (retries.current < 25) { const wait = Math.min(8000, 500 * 2 ** retries.current++); setTimeout(() => refreshRef.current(), wait); } // keeps trying ~3 min while a sleeping server wakes
     }
     finally { busy.current = false; }
   }, []);

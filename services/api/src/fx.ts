@@ -1,6 +1,3 @@
-import { AsyncLocalStorage } from 'node:async_hooks';
-import { setFxResolver, type Fx } from '@blindspot/analytics';
-
 /** Currencies the ECB publishes daily rates for (served free by frankfurter.dev). */
 export const CURRENCIES: Record<string, string> = {
   USD: 'US dollar', EUR: 'Euro', GBP: 'British pound', INR: 'Indian rupee', CAD: 'Canadian dollar', AUD: 'Australian dollar',
@@ -43,12 +40,9 @@ export async function ratesFor(base: string): Promise<RateTable> {
   return table;
 }
 
-const als = new AsyncLocalStorage<Fx>();
-setFxResolver(() => als.getStore());
-
-/** Run `fn` with money shown in `to` (no-op when `to` is missing, unknown or the same as the data's currency). */
-export async function withDisplayCurrency<T>(from: string, to: unknown, fn: () => T): Promise<T> {
-  if (typeof to !== 'string' || !(to in CURRENCIES) || to === from || !(from in CURRENCIES)) return fn();
+/** The rate to show `from` amounts in `to`, or null when no conversion applies. */
+export async function displayRate(from: string, to: unknown): Promise<{ to: string; rate: number } | null> {
+  if (typeof to !== 'string' || !(to in CURRENCIES) || to === from || !(from in CURRENCIES)) return null;
   const rate = (await ratesFor(from)).rates[to];
-  return rate ? als.run({ from, to, rate }, fn) : fn();
+  return rate ? { to, rate } : null;
 }
