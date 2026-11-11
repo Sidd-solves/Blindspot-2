@@ -2,35 +2,35 @@ import { motion } from 'framer-motion';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { RotateCcw, TriangleAlert } from 'lucide-react';
 import { tool } from '../api';
+import { LatestRequest, requestKey } from './latestRequest';
 
 /**
- * Calls a tool with explicit loading / error / success states. A response that arrives after the inputs changed is
- * ignored, so a page never shows an answer to an older question. `retry` runs the same call again.
+ * Calls a tool with explicit loading / error / success states. Each answer is stored with the inputs it was asked
+ * for, and only shown while those are still the inputs on screen: a late answer to an older question is dropped, and
+ * a render between "inputs changed" and "new request sent" shows loading, never the old answer. `key` names the
+ * inputs the returned `data` belongs to. `retry` runs the same call again.
  */
 export function useTool<T = any>(name: string, input: unknown, deps: unknown[], enabled = true) {
-  const [state, setState] = useState<{ data: T | null; error: string | null; loading: boolean }>({
-    data: null,
-    error: null,
-    loading: enabled,
-  });
-  const seq = useRef(0);
+  const key = requestKey(name, enabled ? input : null, [enabled, ...deps]);
+  const [, rerender] = useState(0);
+  const req = useRef<LatestRequest<T> | null>(null);
+  if (!req.current) req.current = new LatestRequest<T>(() => rerender((n) => n + 1));
   const run = useCallback(() => {
     if (!enabled) return;
-    const id = ++seq.current;
-    setState({ data: null, error: null, loading: true });
-    tool<T>(name, input).then((r) => {
-      if (id !== seq.current) return; // outdated
-      if (r.ok) setState({ data: r.data as T, error: null, loading: false });
-      else setState({ data: null, error: r.error?.message ?? 'The analysis failed.', loading: false });
-    });
-  }, [name, enabled, ...deps]);
+    void req.current!.start(key, () =>
+      tool<T>(name, input).then((r) =>
+        r.ok
+          ? { ok: true as const, data: r.data as T }
+          : { ok: false as const, error: r.error?.message ?? 'The analysis failed.' },
+      ),
+    );
+  }, [key]);
   useEffect(() => {
     run();
-    return () => {
-      seq.current++; // ignore anything still in flight when the inputs change or the page closes
-    };
+    return () => req.current!.cancel();
   }, [run]);
-  return { ...state, retry: run };
+  const s = enabled ? req.current.view(key) : { key, data: null, error: null, loading: false };
+  return { data: s.data, error: s.error, loading: s.loading, key, retry: run };
 }
 
 /** A failed analysis, with what went wrong and a way to try again. */

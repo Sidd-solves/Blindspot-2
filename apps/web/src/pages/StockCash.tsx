@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { useState, type CSSProperties } from 'react';
+import { Fragment, useState, type CSSProperties } from 'react';
 import { Bar, BarChart, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { CalendarClock, Info, PackageX, Table2, Wallet } from 'lucide-react';
 import { usd } from '../api';
@@ -22,10 +22,15 @@ type SO = {
     tradingDays: number;
     rateBefore: number;
     rateAfter: number;
-    p: number;
-    q: number;
+    score: number;
+    adjusted: number;
     lostSales: number;
   }[];
+  skippedNoOrderIds: number;
+  performance: {
+    falseFlags: { flagged: number; histories: number; note: string };
+    detection: { demand: string; gap15: string; gap25: string; gap40: string }[];
+  };
   found: number;
   totalLost: number;
   range: [string, string] | null;
@@ -47,7 +52,54 @@ const day = (d: string) =>
     year: 'numeric',
     timeZone: 'UTC',
   });
-const fmtQ = (q: number) => (q < 0.001 ? 'q < 0.001' : `q = ${q.toFixed(3)}`);
+
+/** How often the gap score is right, measured on simulated shops it wasn't tuned on: misses and false alarms. */
+function GapPerformance({ perf }: { perf: SO['performance'] }) {
+  const cell = (v: string) => {
+    const [a, b] = v.split('/').map(Number);
+    const r = b ? a / b : 0;
+    const c = r >= 0.8 ? 'var(--emerald)' : r >= 0.3 ? 'var(--amber)' : 'var(--faint)';
+    return (
+      <span className="flex items-center gap-1">
+        <span className="h-1.5 w-8 overflow-hidden rounded-full bg-[var(--line)]">
+          <motion.span
+            className="block h-full rounded-full"
+            style={{ background: c }}
+            initial={{ width: 0 }}
+            whileInView={{ width: `${r * 100}%` }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.7 }}
+          />
+        </span>
+        <span className="mono text-[10.5px]">{v}</span>
+      </span>
+    );
+  };
+  return (
+    <div className="mt-2.5 rounded-lg border p-2" style={{ borderColor: 'var(--line)' }}>
+      <div className="flex flex-wrap items-baseline justify-between gap-1 text-[11.5px]">
+        <span className="font-bold">Real gaps caught in testing</span>
+        <span className="text-[var(--muted)]">
+          false alarms: {perf.falseFlags.flagged} in {perf.falseFlags.histories.toLocaleString()}
+        </span>
+      </div>
+      <div className="mt-1 grid grid-cols-[minmax(0,1fr)_auto_auto_auto] gap-x-3 gap-y-0.5 text-[11px]">
+        <span className="text-[var(--faint)]">demand</span>
+        <span className="text-[var(--faint)]">15 days</span>
+        <span className="text-[var(--faint)]">25 days</span>
+        <span className="text-[var(--faint)]">40 days</span>
+        {perf.detection.map((d) => (
+          <Fragment key={d.demand}>
+            <span className="truncate capitalize">{d.demand}</span>
+            {cell(d.gap15)}
+            {cell(d.gap25)}
+            {cell(d.gap40)}
+          </Fragment>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function StockCash() {
   const { version, dataset } = useStore();
@@ -120,8 +172,8 @@ export default function StockCash() {
                 {so.items.length > 0 && (
                   <Confidence
                     sure={{
-                      kind: 'model',
-                      note: `Largest q among the gaps: ${Math.max(...so.items.map((x) => x.q)).toExponential(1)}`,
+                      kind: 'heuristic',
+                      note: `Held-out simulation: ${so.performance.falseFlags.flagged} false flag in ${so.performance.falseFlags.histories.toLocaleString()} product histories`,
                     }}
                     className="ml-auto"
                   />
@@ -136,6 +188,13 @@ export default function StockCash() {
                 />{' '}
                 of sales not made during those gaps (rough estimate: usual daily sales × days).
               </div>
+              {so.skippedNoOrderIds > 0 && (
+                <div className="mt-1.5 text-[12px] text-[var(--muted)]">
+                  {so.skippedNoOrderIds} product{so.skippedNoOrderIds === 1 ? '' : 's'} skipped: under 95% of
+                  their sales carry an order number, so orders can’t be told from lines.
+                </div>
+              )}
+              <GapPerformance perf={so.performance} />
               <div className="mt-2.5 text-[11.5px] leading-snug text-[var(--faint)]">{so.method}</div>
             </>
           ) : (
@@ -224,7 +283,7 @@ export default function StockCash() {
               onClick={() => go('source', `?drill=${encodeURIComponent(drillFor(i))}`)}
               className="grid w-full grid-cols-[minmax(0,1.3fr)_1fr_auto] items-center gap-3 border-b py-1.5 text-left text-[12px] last:border-0 hover:bg-[var(--line)]"
               style={{ borderColor: 'var(--line)' }}
-              title={`Sold ${i.rateBefore} times a trading day before, ${i.rateAfter} after. Chance of this silence by luck: p = ${i.p.toExponential(1)} (${fmtQ(i.q)}). Click to see the rows.`}
+              title={`Sold ${i.rateBefore} times a trading day before, ${i.rateAfter} after. Gap score ${i.adjusted.toExponential(1)} after adjusting across products (heuristic; flagged below 0.01). Click to see the rows.`}
             >
               <span className="min-w-0">
                 <span className="block truncate font-semibold">{i.product}</span>

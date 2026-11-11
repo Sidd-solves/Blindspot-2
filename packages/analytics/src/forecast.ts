@@ -106,6 +106,8 @@ export interface ForecastResult {
     rangeTested: number;
     /** Average signed error: > 0 means forecasts ran low. */
     bias: number | null;
+    /** Average absolute miss per tested month, in the sales currency. Defined even when sales were zero. */
+    mae: number | null;
   };
   /** low/high are null when the track record can't size a range yet. */
   forecast: { month: string; value: number; low: number | null; high: number | null }[];
@@ -220,7 +222,7 @@ export function forecastSales(
     method: null,
     methods: [],
     backtest: [],
-    accuracy: { wape: null, months: 0, hitRate: null, rangeTested: 0, bias: null },
+    accuracy: { wape: null, months: 0, hitRate: null, rangeTested: 0, bias: null, mae: null },
     forecast: [],
     coverage,
     notes: [],
@@ -349,6 +351,7 @@ export function forecastSales(
         : null,
       rangeTested: ranged.length,
       bias: signed.length ? Math.round((sum(signed) / signed.length) * 10000) / 10000 : null,
+      mae: backtest.length ? round2(absSum / backtest.length) : null,
     },
     forecast,
     coverage,

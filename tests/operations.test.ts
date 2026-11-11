@@ -43,7 +43,7 @@ describe('stock-out detector', () => {
     expect(w.tradingDays).toBe(14);
     expect(w.from).toBe(iso(T0 + 100 * DAY));
     expect(w.lostSales).toBeCloseTo(2 * 20 * 14, 0); // usual daily sales × days silent
-    expect(w.q).toBeLessThan(0.01);
+    expect(w.adjusted).toBeLessThan(0.01);
   });
 
   it('days the whole shop was closed are not counted as silence', () => {
@@ -95,7 +95,7 @@ describe('stock-out detector', () => {
     };
     const one = build(1),
       ten = build(10);
-    expect(ten.p).toBe(one.p);
+    expect(ten.score).toBe(one.score);
     expect(ten.rateBefore).toBe(one.rateBefore);
     expect(ten.lostSales).toBeCloseTo(one.lostSales, 6);
   });
@@ -174,7 +174,65 @@ describe('stock-out detector', () => {
     const rows = shop(240, (d) => (d >= 100 && d < 114 ? 0 : 2)).rows.map(({ Order: _o, ...r }) => r);
     const r = stockOuts(ds(rows));
     expect(r.ok).toBe(false);
-    expect(r.reason).toMatch(/order numbers/);
+    expect(r.reason).toMatch(/None of sales in this file carry an order number/);
+  });
+
+  it('checks order numbers per product: a well-labelled big seller cannot carry a small product without them', () => {
+    // Background: 10 orders a day, all with IDs. Widget: 2 a day, no IDs, with a 14-day gap that would be flagged.
+    const rows: Row[] = [];
+    let o = 0;
+    for (let d = 0; d < 240; d++) {
+      for (let k = 0; k < 10; k++)
+        rows.push({
+          OrderDate: iso(T0 + d * DAY),
+          Order: `b${o++}`,
+          Customer: 'x',
+          Product: 'Big',
+          Sales: 5,
+          IsReturn: 0,
+        });
+      if (d >= 100 && d < 114) continue;
+      for (let k = 0; k < 2; k++)
+        rows.push({ OrderDate: iso(T0 + d * DAY), Customer: 'y', Product: 'Widget', Sales: 20, IsReturn: 0 });
+    }
+    // Overall 83% of sale rows have IDs, so a file-wide check at 95% would decline; at a looser global bar the widget
+    // would slip through. Per product, the big seller is tested and the widget is skipped and counted.
+    const r = stockOuts(ds(rows));
+    expect(r.ok).toBe(true);
+    expect(r.scanned).toBe(1);
+    expect(r.skippedNoOrderIds).toBe(1);
+    expect(r.items.find((i) => i.product === 'Widget')).toBeUndefined();
+    // Same shape with 97% overall IDs (many more big-seller rows) still skips the widget.
+    const more = rows.concat(
+      Array.from({ length: 30000 }, (_, i) => ({
+        OrderDate: iso(T0 + (i % 240) * DAY),
+        Order: `x${i}`,
+        Customer: 'x',
+        Product: 'Big',
+        Sales: 5,
+        IsReturn: 0,
+      })),
+    );
+    const r2 = stockOuts(ds(more));
+    expect(r2.skippedNoOrderIds).toBe(1);
+    expect(r2.items.find((i) => i.product === 'Widget')).toBeUndefined();
+  });
+
+  it('reports a share of order numbers that matches the file, instead of "most sales"', () => {
+    const base = shop(240, () => 2).rows;
+    const rows = base.map((r, i) => (i % 10 < 5 ? (({ Order: _o, ...x }) => x)(r) : r));
+    const r = stockOuts(ds(rows));
+    expect(r.ok).toBe(false);
+    expect(r.reason).toMatch(/Only 50% of sales/);
+  });
+
+  it('publishes its measured false-alarm and detection rates with every result', () => {
+    const r = stockOuts(shop(240, () => 2));
+    expect(r.performance.falseFlags.histories).toBeGreaterThan(1000);
+    expect(r.performance.detection.map((d) => d.demand)).toEqual(
+      expect.arrayContaining(['steady', 'seasonal', 'bursty']),
+    );
+    expect(r.method).toMatch(/not a calibrated p-value/);
   });
 
   it('is calibrated: steady random sales with no stock-outs are not flagged', () => {
@@ -217,11 +275,11 @@ describe('stock-out detector', () => {
     expect(stockOuts(ds(rows)).items).toHaveLength(0);
   });
 
-  it('on the real UK shop every reported gap is significant after correction and resumed afterwards', () => {
+  it('on the real UK shop every reported gap clears the adjusted score threshold and resumed afterwards', () => {
     const r = stockOuts(loadCaseStudy());
     expect(r.items.length).toBeGreaterThan(0);
     for (const i of r.items) {
-      expect(i.q).toBeLessThan(0.01);
+      expect(i.adjusted).toBeLessThan(0.01);
       expect(i.tradingDays).toBeGreaterThanOrEqual(5);
       expect(i.tradingDays).toBeLessThanOrEqual(60);
       expect(i.rateAfter).toBeGreaterThanOrEqual(i.rateBefore * 0.5);

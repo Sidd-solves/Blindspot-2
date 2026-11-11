@@ -174,7 +174,7 @@ export default function Home() {
               className="mt-5 max-w-lg text-[14.5px] leading-relaxed text-[var(--muted)]"
             >
               Connect your Shopify store or drop in a spreadsheet. Blindspot finds what's quietly costing you
-              money, proves it with real numbers, and tells you what to fix first. In seconds.
+              money, shows the evidence behind it, and tells you what to fix first. In seconds.
             </motion.p>
             <motion.div
               initial={{ opacity: 0, y: 12 }}
@@ -389,7 +389,7 @@ export default function Home() {
               </div>
               <span className="chip" style={{ '--c': 'var(--emerald)' } as CSSProperties}>
                 <BadgeCheck size={11} />
-                Every number independently re-checked
+                Headline numbers independently re-checked
               </span>
             </div>
             <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">

@@ -193,14 +193,16 @@ export default function Customers() {
   }, [shop]);
   const ewQ = useTool<EW>('early-warning', { top: 200 }, [version]);
   const wbQ = useTool<WB>('win-back-list', { shopName }, [version, shopName]);
-  // Keep the previous list on screen only while the shop name is being edited on the same data. A list from an
-  // earlier dataset or filter (an older `version`) is never shown next to new results.
+  // Keep the previous list on screen only while the shop name is being edited on the same data. The cached list is
+  // tagged with the dataset version it was *requested* for (useTool only returns data for the current inputs), so a
+  // list from an earlier dataset or filter can never be relabelled as current and shown next to new results.
   const [lastWb, setLastWb] = useState<{ version: number; data: WB } | null>(null);
+  const wbVersion = wbQ.data ? version : null; // data is only non-null when it answers [version, shopName] now
   useEffect(() => {
-    if (wbQ.data) setLastWb({ version, data: wbQ.data });
-  }, [wbQ.data, version]);
+    if (wbQ.data && wbVersion !== null) setLastWb({ version: wbVersion, data: wbQ.data });
+  }, [wbQ.data, wbVersion]);
   const ew = ewQ.data,
-    wb = wbQ.data ?? (lastWb?.version === version ? lastWb.data : null);
+    wb = wbQ.data ?? (lastWb && lastWb.version === version ? lastWb.data : null);
   const err = ewQ.error ?? wbQ.error;
   if (err) return <ToolError message={err} retry={() => (ewQ.error ? ewQ.retry() : wbQ.retry())} />;
   if (!ew || !wb)

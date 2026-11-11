@@ -7,6 +7,7 @@ export * from './segments';
 export * from './findings';
 export * from './scenario';
 export * from './forecast';
+export * from './accuracy';
 export * from './customers';
 export * from './operations';
 export * from './impact';

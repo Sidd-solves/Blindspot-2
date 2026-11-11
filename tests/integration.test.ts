@@ -210,8 +210,11 @@ describe('MCP server over stdio', () => {
     const client = new Client({ name: 'test', version: '1.0.0' });
     await client.connect(
       new StdioClientTransport({
-        command: 'npx',
-        args: ['tsx', 'services/mcp-server/src/index.ts'],
+        // Launch with the same Node that runs the tests and the local tsx loader: no npx lookup, so it works offline
+        // and in sandboxes where npx can't spawn.
+        command: process.execPath,
+        args: ['--import', 'tsx', 'services/mcp-server/src/index.ts'],
+        cwd: process.cwd(),
         stderr: 'ignore',
       }),
     );

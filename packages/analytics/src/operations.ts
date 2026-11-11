@@ -6,8 +6,9 @@
  * silent stretch of 5–60 *trading days* (days the shop sold anything, so closures and weekends don't count) and ask how
  * likely a silence that long is at the product's usual daily *order* rate (distinct orders, so an export that splits an
  * order into many lines changes nothing). Because that stretch was picked as the longest in the whole history, its
- * chance is multiplied by the number of places it could have started (Bonferroni over the scan), then corrected across
- * products (Benjamini–Hochberg). Products ordered in bursts are naturally quiet for long spells, so the expected rate
+ * score is multiplied by the number of places it could have started, then adjusted across products (Benjamini–Hochberg
+ * step). This is a heuristic score, not a derived p-value: its error rates are measured on held-out simulations
+ * (GAP_PERFORMANCE below, from scripts/gap-eval.ts). Products ordered in bursts are naturally quiet for long spells, so the expected rate
  * is slowed by the product's own burstiness (variance ÷ mean of daily and 5-day order counts outside the gap). Tested:
  * no false flags under steady, seasonal, bursty or overdispersed demand; a 25-day gap in a steady seller is caught,
  * but in a bursty seller it usually can't be told from normal quiet. Sales coming back doesn't prove the cause was stock. So these are "unusual gaps worth checking", with
@@ -34,9 +35,14 @@ export interface StockOut {
   /** Orders per trading day in the 40 trading days before the gap. */
   rateBefore: number;
   rateAfter: number;
-  /** Chance of this many silent trading days at the usual rate (Poisson). */
-  p: number;
-  q: number;
+  /**
+   * Gap score: a Poisson-style tail value for a silence this long at the product's usual order rate, slowed by its
+   * burstiness and multiplied by the places the gap could have started. A heuristic ranking, not a calibrated p-value:
+   * its false-flag rate and sensitivity are measured by simulation (see PERFORMANCE), not derived.
+   */
+  score: number;
+  /** Gap score after the Benjamini–Hochberg step across products. Flagged below 0.01. */
+  adjusted: number;
   /** Estimated sales lost: usual daily sales before the gap × trading days silent. */
   lostSales: number;
 }
@@ -45,6 +51,10 @@ export interface StockOutReport {
   ok: boolean;
   reason?: string;
   scanned: number;
+  /** Measured behaviour of the score, from simulations separate from the ones used to set it. */
+  performance: typeof GAP_PERFORMANCE;
+  /** Products that sell often enough to test but were skipped because under 95% of their sales carry an order number. */
+  skippedNoOrderIds: number;
   method: string;
   items: StockOut[];
   totalLost: number;
@@ -52,18 +62,42 @@ export interface StockOutReport {
   range: [string, string] | null;
 }
 
+/**
+ * Measured on held-out simulated shops (scripts/gap-eval.ts: fresh seeds, 50 products × 500 trading days, shapes unlike
+ * the calibration runs in tests/operations.test.ts). Re-run the script after changing the detector and update these.
+ */
+export const GAP_PERFORMANCE: {
+  falseFlags: { flagged: number; histories: number; note: string };
+  detection: { demand: string; gap15: string; gap25: string; gap40: string }[];
+} = {
+  falseFlags: {
+    flagged: 1,
+    histories: 1530,
+    note: 'shops with no stock-outs; steady, seasonal, declining, bursty, overdispersed demand',
+  },
+  detection: [
+    { demand: 'steady', gap15: '6/6', gap25: '6/6', gap40: '6/6' },
+    { demand: 'declining', gap15: '5/6', gap25: '6/6', gap40: '6/6' },
+    { demand: 'overdispersed', gap15: '1/6', gap25: '6/6', gap40: '6/6' },
+    { demand: 'seasonal', gap15: '0/6', gap25: '0/6', gap40: '6/6' },
+    { demand: 'bursty', gap15: '0/6', gap25: '0/6', gap40: '2/6' },
+  ],
+};
+
 export function stockOuts(ds: Dataset): StockOutReport {
   const fm = detectFields(ds);
   const productCol =
     ['Product', 'Description', 'Item', 'Title'].find((c) => ds.rows[0] && c in ds.rows[0]) ??
     [...fm.highCardDims, ...fm.dims].find((c) => /product|item|sku|title|description/i.test(c));
   const method =
-    'Longest run of 5–60 trading days with no orders per product, against its usual daily order rate (Poisson, slowed by how bursty the product is), corrected for searching the whole history for that gap and across products (Benjamini–Hochberg, q < 0.01); orders had to resume at half the usual rate or more. Flags unusual gaps; the file can’t show why sales stopped, and stock-outs in products that sell in bursts are hard to see.';
+    'Heuristic gap score: each product’s longest run of 5–60 trading days with no orders, scored against its usual daily order rate (Poisson-style, slowed by how bursty the product is, scaled for searching its whole history), then adjusted across products (Benjamini–Hochberg step) and flagged below 0.01; orders had to resume at half the usual rate or more. The score ranks how unusual a gap is; it is not a calibrated p-value. Measured on held-out simulated shops: 1 false flag in 1,530 product histories; a 25-day gap is caught in steady, declining and overdispersed sellers but rarely in bursty or strongly seasonal ones. Possible stock-outs; cause unknown.';
   if (!fm.date || !productCol)
     return {
       ok: false,
       reason: 'Needs dates and a product column.',
       scanned: 0,
+      skippedNoOrderIds: 0,
+      performance: GAP_PERFORMANCE,
       method,
       items: [],
       totalLost: 0,
@@ -74,6 +108,9 @@ export function stockOuts(ds: Dataset): StockOutReport {
   // that splits one order into many lines can't make the evidence look stronger.
   const trading = new Set<number>();
   const per = new Map<string, Map<number, { n: number; v: number; orders: Set<string> }>>();
+  // Order-number completeness per product: one well-labelled best seller mustn't let a product without order numbers
+  // through, where lines would be counted as orders.
+  const ids = new Map<string, { rows: number; withId: number }>();
   let rowNo = 0,
     saleRows = 0,
     withOrder = 0;
@@ -87,7 +124,12 @@ export function stockOuts(ds: Dataset): StockOutReport {
     const p = String(r[productCol] ?? '');
     if (!p) continue;
     saleRows++;
-    if (r.Order != null && r.Order !== '') withOrder++;
+    const hasId = r.Order != null && r.Order !== '';
+    if (hasId) withOrder++;
+    const c = ids.get(p) ?? { rows: 0, withId: 0 };
+    c.rows++;
+    if (hasId) c.withId++;
+    ids.set(p, c);
     const m = per.get(p) ?? new Map();
     const e = m.get(d) ?? { n: 0, v: 0, orders: new Set<string>() };
     e.orders.add(r.Order != null && r.Order !== '' ? String(r.Order) : `row${rowNo}`);
@@ -97,24 +139,34 @@ export function stockOuts(ds: Dataset): StockOutReport {
     per.set(p, m);
   }
   // Without order IDs, orders can't be told apart from lines, and line counts would overstate the evidence (one order
-  // split over ten lines looks like ten). So the test needs order IDs on (nearly) every sale.
-  if (saleRows && withOrder / saleRows < 0.95)
+  // split over ten lines looks like ten). So each product is only tested if (nearly) all of its own sales carry one.
+  const MIN_ID_SHARE = 0.95;
+  const eligible = (p: string) => {
+    const c = ids.get(p);
+    return !!c && c.withId / c.rows >= MIN_ID_SHARE;
+  };
+  if (saleRows && ![...per.keys()].some(eligible)) {
+    const share = Math.round((withOrder / saleRows) * 100);
     return {
       ok: false,
-      reason:
-        'This file has no order numbers on most sales, so orders can’t be told apart from lines and the gap test would overstate the evidence. Export with order numbers to use it.',
+      reason: `${share === 0 ? 'None' : `Only ${share}%`} of sales in this file carry an order number, and the gap test needs one on at least ${MIN_ID_SHARE * 100}% of a product’s sales to tell orders from lines. Export with order numbers to use it.`,
       scanned: 0,
+      skippedNoOrderIds: 0,
+      performance: GAP_PERFORMANCE,
       method,
       items: [],
       totalLost: 0,
       range: null,
     };
+  }
   const days = [...trading].sort((a, b) => a - b);
   if (days.length < 120)
     return {
       ok: false,
       reason: `Needs about 6 months of trading days; this data has ${days.length}.`,
       scanned: 0,
+      skippedNoOrderIds: 0,
+      performance: GAP_PERFORMANCE,
       method,
       items: [],
       totalLost: 0,
@@ -124,11 +176,16 @@ export function stockOuts(ds: Dataset): StockOutReport {
   const MIN_GAP = 5,
     MAX_GAP = 60;
 
-  const cands: (Omit<StockOut, 'q'> & { pRaw: number })[] = [];
-  let scanned = 0;
+  const cands: (Omit<StockOut, 'adjusted'> & { pRaw: number })[] = [];
+  let scanned = 0,
+    skippedNoOrderIds = 0;
   for (const [product, m] of per) {
     // Only products sold on at least 15% of trading days can show a meaningful gap.
     if (m.size < days.length * 0.15) continue;
+    if (!eligible(product)) {
+      skippedNoOrderIds++;
+      continue;
+    }
     scanned++;
     // The longest silence that looks like a stock-out: 5–60 trading days (about 1–10 weeks). Longer silences are
     // products taken off sale or sold seasonally, and calling them lost sales would overstate the money.
@@ -179,7 +236,7 @@ export function stockOuts(ds: Dataset): StockOutReport {
       tradingDays: k,
       rateBefore: round2(rateBefore),
       rateAfter: round2(rateAfter),
-      p: pRaw,
+      score: pRaw,
       pRaw,
       lostSales: round2(dailySales * k),
     });
@@ -188,13 +245,19 @@ export function stockOuts(ds: Dataset): StockOutReport {
   const ps = [...cands.map((c) => c.pRaw), ...Array(Math.max(0, scanned - cands.length)).fill(1)];
   const qs = bhAdjust(ps);
   const items = cands
-    .map((c, i) => ({ ...c, q: qs[i] }))
-    .filter((c) => c.q < 0.01)
+    .map((c, i) => ({ ...c, adjusted: qs[i] }))
+    .filter((c) => c.adjusted < 0.01)
     .sort((a, b) => b.lostSales - a.lostSales)
-    .map(({ pRaw: _pRaw, ...c }) => ({ ...c, p: Number(c.p.toPrecision(3)), q: Number(c.q.toPrecision(3)) }));
+    .map(({ pRaw: _pRaw, ...c }) => ({
+      ...c,
+      score: Number(c.score.toPrecision(3)),
+      adjusted: Number(c.adjusted.toPrecision(3)),
+    }));
   return {
     ok: true,
     scanned,
+    skippedNoOrderIds,
+    performance: GAP_PERFORMANCE,
     method,
     items,
     totalLost: round2(items.reduce((s, c) => s + c.lostSales, 0)),

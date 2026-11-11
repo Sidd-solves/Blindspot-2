@@ -12,6 +12,7 @@ import {
   YAxis,
 } from 'recharts';
 import { Check, CircleDashed, History, LineChart, Minus, ShieldCheck, Target, Trophy, X } from 'lucide-react';
+import { describeAccuracy } from '@blindspot/analytics';
 import { usd } from '../api';
 import { ToolError, useTool } from '../components/useTool';
 import { useStore } from '../store';
@@ -44,6 +45,7 @@ type F = {
     hitRate: number | null;
     rangeTested: number;
     bias: number | null;
+    mae: number | null;
   };
   forecast: { month: string; value: number; low: number | null; high: number | null }[];
   coverage: number;
@@ -102,6 +104,7 @@ export default function Forecast() {
 
   const next = f.forecast[0];
   const acc = f.accuracy;
+  const said = describeAccuracy(acc, (n) => usd(n, true));
   const hits = acc.rangeTested ? Math.round((acc.hitRate ?? 0) * acc.rangeTested) : 0;
   const best = Math.min(...f.methods.filter((m) => m.wape !== null).map((m) => m.wape as number));
   const worst = Math.max(...f.methods.filter((m) => m.wape !== null).map((m) => m.wape as number));
@@ -160,7 +163,7 @@ export default function Forecast() {
             <Confidence
               sure={{
                 kind: 'forecast',
-                note: `Replayed on ${acc.months} past months: ${((acc.wape ?? 0) * 100).toFixed(1)}% average miss`,
+                note: `Replayed on ${acc.months} past months: ${said.short}`,
               }}
             />
           </div>
@@ -217,9 +220,15 @@ export default function Forecast() {
         <CardHead icon={<ShieldCheck size={13} />} title="Track record" c="var(--emerald)" />
         <div className="flex items-center gap-3 px-3.5 pb-2">
           <div className="flex-none">
-            <Ring value={1 - (acc.wape ?? 1)} size={84} c="var(--emerald)">
+            <Ring
+              value={said.percent === null ? 0 : Math.max(0, 1 - said.percent)}
+              size={84}
+              c="var(--emerald)"
+            >
               <div>
-                <div className="mono text-[15px] font-semibold">{pct1(acc.wape ?? 0)}</div>
+                <div className="mono text-[15px] font-semibold">
+                  {said.percent === null ? (acc.mae === null ? '—' : usd(acc.mae, true)) : pct1(said.percent)}
+                </div>
                 <div className="text-[9.5px] font-bold uppercase tracking-wider text-[var(--faint)]">
                   avg miss
                 </div>
@@ -232,6 +241,14 @@ export default function Forecast() {
           </div>
         </div>
         <div className="px-3.5 pb-3.5">
+          {said.percent === null && acc.mae !== null && (
+            <div
+              className="mb-2 rounded-md border px-2 py-1 text-[11.5px] text-[var(--muted)]"
+              style={{ borderColor: 'var(--line)' }}
+            >
+              Percentage error unavailable: actual sales in the tested months totalled zero.
+            </div>
+          )}
           <div className="mb-1 flex items-center justify-between text-[11.5px]">
             <span className="font-bold">Inside its nominal 80% range</span>
             <span className="mono text-[var(--muted)]">
@@ -281,7 +298,11 @@ export default function Forecast() {
                     {used && <Chip c={c}>Used now</Chip>}
                   </span>
                   <span className="mono text-[var(--muted)]">
-                    {m.wape === null ? 'needs more history' : `${pct1(m.wape)} miss`}
+                    {m.wape !== null
+                      ? `${pct1(m.wape)} miss`
+                      : m.months
+                        ? 'no % (zero sales)'
+                        : 'needs more history'}
                   </span>
                 </div>
                 <div className="h-1.5 rounded-full bg-[var(--line)]">

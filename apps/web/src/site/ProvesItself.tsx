@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { useEffect, useState, type CSSProperties } from 'react';
 import { ArrowRight, BadgeCheck, BellRing, CircleSlash, Gavel, LineChart, PackageX } from 'lucide-react';
+import { describeAccuracy } from '@blindspot/analytics';
 import { tool, usd } from '../api';
 import { useStore } from '../store';
 import { CountUp, Reveal } from '../components/ui';
@@ -43,7 +44,7 @@ export function ProvesItself() {
     <section className="mx-auto max-w-6xl px-4 pb-16 md:px-6">
       <Reveal>
         <div className="label" style={{ color: 'var(--cyan)' }}>
-          Predictions that prove themselves
+          Predictions with a track record
         </div>
         <h2 className="mt-1.5 max-w-3xl text-[26px] font-extrabold leading-tight tracking-tight md:text-[34px]">
           Every prediction is tested on the past <span className="grad-text">before you see it.</span>
@@ -68,11 +69,17 @@ export function ProvesItself() {
                   <div className="text-[12px] text-[var(--muted)]">
                     Replayed on the last {fc.accuracy.months} months, it missed by
                   </div>
-                  <CountUp
-                    value={(fc.accuracy.wape ?? 0) * 100}
-                    format={(n) => `${n.toFixed(1)}%`}
-                    className="grad-text text-[34px] font-semibold"
-                  />
+                  {fc.accuracy.wape !== null ? (
+                    <CountUp
+                      value={fc.accuracy.wape * 100}
+                      format={(n) => `${n.toFixed(1)}%`}
+                      className="grad-text text-[34px] font-semibold"
+                    />
+                  ) : (
+                    <div className="grad-text text-[22px] font-semibold">
+                      {describeAccuracy(fc.accuracy, (n) => usd(n, true)).short}
+                    </div>
+                  )}
                   <div className="text-[12px] text-[var(--muted)]">
                     on average, using only the data it had at the time.
                   </div>

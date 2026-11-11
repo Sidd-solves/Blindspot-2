@@ -16,7 +16,8 @@ export type Sure =
   | { kind: 'rule' }
   | { kind: 'estimate'; note?: string }
   | { kind: 'forecast'; note?: string }
-  | { kind: 'model'; note?: string };
+  | { kind: 'model'; note?: string }
+  | { kind: 'heuristic'; note?: string };
 
 const LOOK = {
   measured: {
@@ -38,6 +39,11 @@ const LOOK = {
     c: 'var(--sky)',
     label: 'Unusual under a model',
     hint: 'Unlikely if the usual pattern had held. It shows that something changed, not why.',
+  },
+  heuristic: {
+    c: 'var(--sky)',
+    label: 'Heuristic score',
+    hint: 'Ranks how unusual a pattern is. Not a significance test: its false-alarm and miss rates are measured on simulations.',
   },
   rule: {
     c: 'var(--amber)',
@@ -78,7 +84,7 @@ export function Confidence({ sure, className = '' }: { sure: Sure; className?: s
           : sure.p !== null && sure.p < 0.05
             ? 2
             : 1
-        : sure.kind === 'forecast' || sure.kind === 'model'
+        : sure.kind === 'forecast' || sure.kind === 'model' || sure.kind === 'heuristic'
           ? 2
           : 1;
   const detail =

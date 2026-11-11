@@ -21,7 +21,7 @@
 | Optional | Tableau extension + WebSocket bridge (hidden in the app) | Bridge tested with a simulated extension; **unverified** in Tableau |
 | Analysis | Sales forecast: 4 methods replayed on past months, chosen from past errors only, 80% range from real misses | Done, tested (incl. no look-ahead) |
 | Analysis | Customer Radar: early warning (validated on past data) and win-back list matching the lost-customer finding to the penny | Done, tested on the real data |
-| Analysis | Stock & Cash: unusual sales gaps / possible stock-outs (orders, Poisson, scan + BH corrected, calibration-tested) and seasonal sales dips | Done, tested |
+| Analysis | Stock & Cash: unusual sales gaps / possible stock-outs (heuristic gap score on orders, per-product order-ID check, false alarms and misses measured on held-out simulations) and seasonal sales dips | Done, tested |
 | Analysis | Prove It: promo test vs the same weeks last year with a placebo check; fact-check builder | Done, tested |
 | Output | Proof replay animation, confidence meter, guided tour | Done, checked in the browser |
 | Output | Screenshot audit: chart colors read from any image, contrast and color-blind checks, color-blind preview | Done, palette extraction tested |

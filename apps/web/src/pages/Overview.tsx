@@ -37,6 +37,7 @@ import { Card, CardHead, Chip, CountUp, Meter, Ring, Sparkline, stagger, Loading
 import { ChartTip, axis, glowDefs } from '../components/charts';
 import { go } from '../App';
 import { Confidence, sureOf } from '../components/Confidence';
+import { describeAccuracy } from '@blindspot/analytics';
 
 const KPI_STYLE = [
   { c: 'var(--violet)', icon: DollarSign },
@@ -383,11 +384,11 @@ export default function Overview() {
                   onClick={() => go('forecast')}
                   className="chip cursor-pointer"
                   style={{ '--c': 'var(--cyan)' } as CSSProperties}
-                  title={`Forecast replayed on ${fc.accuracy.months} past months: off by ${(fc.accuracy.wape * 100).toFixed(1)}% on average`}
+                  title={`Forecast replayed on ${fc.accuracy.months} past months: ${describeAccuracy(fc.accuracy, (n) => usd(n)).sentence}`}
                 >
                   <LineChart size={11} />
-                  Next month ≈ {usd(fc.forecast[0].value, true)} · {(fc.accuracy.wape * 100).toFixed(0)}% avg
-                  miss
+                  Next month ≈ {usd(fc.forecast[0].value, true)} ·{' '}
+                  {describeAccuracy(fc.accuracy, (n) => usd(n, true)).short}
                 </motion.button>
               )}
             </div>

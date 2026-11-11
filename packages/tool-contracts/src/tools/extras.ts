@@ -198,6 +198,7 @@ export const forecastSalesTool = defineTool({
       hitRate: z.number().nullable(),
       rangeTested: z.number(),
       bias: z.number().nullable(),
+      mae: z.number().nullable(),
     }),
     forecast: z.array(
       z.object({ month: Month, value: z.number(), low: z.number().nullable(), high: z.number().nullable() }),
@@ -299,12 +300,19 @@ export const stockOutsTool = defineTool({
   category: 'Business Intelligence',
   core: false,
   description:
-    "Unusual sales gaps (possible stock-outs): products ordered most trading days that got no orders for 5-60 trading days, then sold again. Counts distinct orders; each gap is tested against the product's usual daily order rate (Poisson, slowed by the product's own burstiness), corrected for searching its whole history and across products (Benjamini-Hochberg). Needs order IDs. Shows that something changed, not why (no stock data). Sales not made is a rough estimate.",
+    "Unusual sales gaps (possible stock-outs): products ordered most trading days that got no orders for 5-60 trading days, then sold again. Counts distinct orders; each gap gets a heuristic score against the product's usual daily order rate (Poisson-style, slowed by the product's own burstiness, scaled for searching its whole history, adjusted across products). Not a calibrated p-value: false flags and detection rates are measured on held-out simulations and returned in `performance`. Products with order IDs on under 95% of their sales are skipped and counted. Shows that something changed, not why (no stock data). Sales not made is a rough estimate.",
   input: z.object({ top: z.number().int().min(1).max(200).default(30) }),
   output: z.object({
     ok: z.boolean(),
     reason: z.string().optional(),
     scanned: z.number(),
+    skippedNoOrderIds: z.number(),
+    performance: z.object({
+      falseFlags: z.object({ flagged: z.number(), histories: z.number(), note: z.string() }),
+      detection: z.array(
+        z.object({ demand: z.string(), gap15: z.string(), gap25: z.string(), gap40: z.string() }),
+      ),
+    }),
     method: z.string(),
     items: z.array(
       z.object({
@@ -314,8 +322,8 @@ export const stockOutsTool = defineTool({
         tradingDays: z.number(),
         rateBefore: z.number(),
         rateAfter: z.number(),
-        p: z.number(),
-        q: z.number(),
+        score: z.number(),
+        adjusted: z.number(),
         lostSales: z.number(),
       }),
     ),

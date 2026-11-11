@@ -5,7 +5,7 @@ Each choice below has a cost. This page says what we chose, why, and what we gav
 ## 1. The math is separate from the AI
 **Choice.** All numbers come from deterministic TypeScript: cleaning, statistics, findings, scenarios and reports. Claude only picks tools, explains their results and proposes ideas.
 
-**Why.** A store owner acts on these numbers. Code gives the same answer every time, runs in seconds, costs nothing per run and can be tested (232 tests, 82% line coverage on the engine and API). A language model gives none of those guarantees for arithmetic.
+**Why.** A store owner acts on these numbers. Code gives the same answer every time, runs in seconds, costs nothing per run and can be tested (244 tests, 82% line coverage on the engine and API). A language model gives none of those guarantees for arithmetic.
 
 **Trade-off.** Every new kind of analysis has to be written as code, and the AI can't answer questions that no tool covers. It says so instead of guessing.
 
@@ -86,10 +86,19 @@ Each choice below has a cost. This page says what we chose, why, and what we gav
 
 **Trade-off.** The wording is less exciting. It's also defensible to anyone who checks.
 
-## 12. A detector is judged on shops where nothing happened
-**Choice.** The sales-gap detector is tested on simulated shops with *no* stock-outs under steady, seasonal, declining, bursty and overdispersed demand, and on whether it still catches a real gap. It counts orders, not lines; it declines files without order numbers; and it slows each product's expected rate by that product's own burstiness.
+## 12. A detector is judged on shops where nothing happened, and called a score, not a test
+**Choice.** The sales-gap detector produces a *heuristic gap score*, not a p-value. The burstiness adjustment and the 0.01 flag threshold were set on calibration simulations (30 products × 400 days, five demand patterns, seeds in `tests/operations.test.ts`). They were then measured on a separate evaluation set (`scripts/gap-eval.ts`: fresh seeds, 50 products × 500 trading days, different rates and burst shapes) for both false alarms and missed real gaps. Those numbers ship with every result (`performance`) and are drawn on the page. It counts orders, not lines, and checks order-number completeness **per product**: a product with order numbers on under 95% of its own sales is skipped and counted.
 
-**Why.** The first version flagged 72 of 300 bursty products that never ran out. A detector that cries wolf on lumpy demand would send owners chasing problems that aren't there.
+**Held-out results.** 1 false flag in 1,530 product histories with no stock-outs. Planted gaps caught (of 6):
 
-**Trade-off.** Real stock-outs in bursty products are rarely detectable from sales alone (1 of 10 in the simulation, vs 10 of 10 for steady sellers). The page says the cause is unknown either way.
+| Demand | 15 days | 25 days | 40 days |
+|---|---|---|---|
+| Steady | 6 | 6 | 6 |
+| Declining | 5 | 6 | 6 |
+| Overdispersed | 1 | 6 | 6 |
+| Seasonal | 0 | 0 | 6 |
+| Bursty | 0 | 0 | 2 |
 
+**Why.** The first version flagged 72 of 300 bursty products that never ran out. The adjustment that fixed it is a heuristic: dividing the rate by a dispersion index and applying a Benjamini–Hochberg step does not by itself produce calibrated p-values, so the product doesn't call the result "significant". It reports what was measured.
+
+**Trade-off.** Short gaps in bursty or strongly seasonal products are usually missed. Every card, the chat tool description and the method text say "possible stock-outs; cause unknown". A merchant's inventory records are the only way to confirm one.

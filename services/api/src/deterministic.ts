@@ -1,5 +1,5 @@
 import { callTool, type ToolContext } from '@blindspot/tool-contracts';
-import { detectFields, profileData, money, type FieldMap } from '@blindspot/analytics';
+import { describeAccuracy, detectFields, profileData, money, type FieldMap } from '@blindspot/analytics';
 
 /** Without an AI key, common question shapes are still answered with real queries (e.g. "top 5 products by sales", "sales by month", "average order value by country"). */
 function parseSimpleQuery(
@@ -95,7 +95,7 @@ export async function deterministicAnswer(ctx: ToolContext, q: string) {
               `- ${x.month}: ${money(x.value, cur)}${x.low !== null ? ` (nominal 80% range ${money(x.low, cur)} to ${money(x.high, cur)})` : ''}`,
           )
           .join('\n') +
-        `\n\nTrack record: replayed on the last ${a.months} months using only the data available at the time, it was off by ${pct(a.wape)} on average` +
+        `\n\nTrack record: replayed on the last ${a.months} months using only the data available at the time, it was ${describeAccuracy(a, (n) => money(n, cur)).sentence}` +
         (a.rangeTested
           ? `, and ${Math.round(a.hitRate * a.rangeTested)} of ${a.rangeTested} months landed inside the nominal 80% range it would have shown (few months, so limited calibration evidence).`
           : '.') +

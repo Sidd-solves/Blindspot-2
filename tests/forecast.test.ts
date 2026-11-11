@@ -165,3 +165,31 @@ describe('forecast fixes from review', () => {
     expect(r.notes.join(' ')).toMatch(/starts mid-month/);
   });
 });
+
+describe('undefined accuracy is never shown as perfect', () => {
+  it('eight months of zero sales: no percentage, and the phrase says why instead of "0.0%"', async () => {
+    const { describeAccuracy } = await import('@blindspot/analytics');
+    const r = forecastSales(rows(Array(8).fill(0)), 'OrderDate', 'Sales');
+    expect(r.accuracy.wape).toBeNull();
+    expect(r.accuracy.months).toBeGreaterThan(0);
+    expect(r.accuracy.mae).toBe(0);
+    const said = describeAccuracy(r.accuracy, (n) => `£${n}`);
+    expect(said.percent).toBeNull();
+    expect(said.sentence).not.toMatch(/0\.0%/);
+    expect(said.sentence).toMatch(/percentage error is unavailable because actual sales .* totalled zero/);
+  });
+
+  it('the money miss is the plain average of the monthly misses listed', () => {
+    const noisy = seasonal(3).map((v, i) => v * (1 + 0.15 * Math.sin(i * 7.3)));
+    const r = forecastSales(rows(noisy), 'OrderDate', 'Sales');
+    const abs = r.backtest.reduce((s, b) => s + Math.abs(b.actual - b.predicted), 0);
+    expect(r.accuracy.mae!).toBeCloseTo(abs / r.backtest.length, 1);
+  });
+
+  it('the executive report and the no-AI analyst never print a percentage for zero sales', async () => {
+    const { executiveSummary, analyzeSmart } = await import('@blindspot/analytics');
+    const ds = { name: 'z', source: 'csv', label: 'z', currency: 'GBP', rows: rows(Array(8).fill(0)) } as any;
+    const rep = executiveSummary(ds, analyzeSmart(ds));
+    if (rep.forecast.ok) expect(rep.markdown).not.toMatch(/off by 0\.0%/);
+  });
+});

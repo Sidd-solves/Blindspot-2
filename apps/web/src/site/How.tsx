@@ -92,7 +92,7 @@ const STEPS = [
     c: 'var(--violet)',
     icon: Wrench,
     t: 'You get a plan',
-    d: 'Each problem comes with what it costs, how it was proven, what fixing it could be worth, and a roadmap ordered from easy to hard.',
+    d: 'Each problem comes with what it costs, how strong the evidence is, what fixing it could be worth, and a roadmap ordered from easy to hard.',
     ex: 'Plus a one-page report to send a partner or investor.',
   },
 ];
@@ -233,7 +233,7 @@ export default function How() {
             The math
           </div>
           <h2 className="mt-1.5 text-[26px] font-extrabold tracking-tight md:text-[34px]">
-            Four rules that keep every number honest.
+            Four rules behind every number.
           </h2>
         </Reveal>
         <div className="mt-6 grid gap-3 md:grid-cols-[1fr_1fr_1.1fr]">
@@ -251,7 +251,7 @@ export default function How() {
               <Bot size={18} style={{ color: 'var(--fuchsia)' }} />
               <div className="mt-2 text-[14px] font-extrabold">Where the AI fits</div>
               <p className="mt-1 text-[12.5px] text-[var(--muted)]">
-                The analysis itself is pure math: free, instant, and the same every time. The AI does the
+                The analysis itself is plain calculation: free, fast, and the same every time. The AI does the
                 human part:
               </p>
               <ul className="mt-3 space-y-2 text-[12.5px]">

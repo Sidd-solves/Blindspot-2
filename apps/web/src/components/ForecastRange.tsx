@@ -1,3 +1,4 @@
+import { describeAccuracy } from '@blindspot/analytics';
 import { usd } from '../api';
 
 /** One way to describe a forecast range everywhere: nominal, with its real track record, or honestly absent. */
@@ -24,14 +25,20 @@ export function RangeCoverage({
   accuracy,
   horizon,
 }: {
-  accuracy: { wape: number | null; months: number; hitRate: number | null; rangeTested: number };
+  accuracy: {
+    wape: number | null;
+    mae: number | null;
+    months: number;
+    hitRate: number | null;
+    rangeTested: number;
+  };
   horizon: number;
 }) {
   const hits = accuracy.rangeTested ? Math.round((accuracy.hitRate ?? 0) * accuracy.rangeTested) : 0;
   return (
     <>
-      Replayed on the last {accuracy.months} months using only the data available at the time: off by{' '}
-      {((accuracy.wape ?? 0) * 100).toFixed(1)}% on average
+      Replayed on the last {accuracy.months} months using only the data available at the time:{' '}
+      {describeAccuracy(accuracy, (n) => usd(n)).sentence}
       {accuracy.rangeTested > 0 && (
         <>
           , and the nominal 80% range held in {hits} of {accuracy.rangeTested} months (limited calibration

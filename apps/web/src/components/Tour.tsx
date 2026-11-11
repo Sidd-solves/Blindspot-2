@@ -35,7 +35,7 @@ const STEPS: Step[] = [
     find: 'Fix this first',
     box: 'parent',
     title: 'One problem to fix first',
-    body: 'Every problem is ranked by the money involved. This is the biggest one, and every finding says how it was proven.',
+    body: 'Every problem is ranked by the money involved. This is the biggest one, and every finding says how strong its evidence is.',
   },
   {
     page: 'risk',
@@ -48,13 +48,13 @@ const STEPS: Step[] = [
     page: 'risk',
     before: () => byText('See the affected rows')?.click(),
     find: 'Replay',
-    title: 'Proof, to the penny',
+    title: 'Rows that add up, to the penny',
     body: 'The rows behind the finding are added up in whole pennies and compared with the finding. They match exactly.',
   },
   {
     page: 'forecast',
     find: 'Track record',
-    title: 'A forecast that proves itself first',
+    title: 'A forecast with a track record',
     body: 'Before forecasting, it replays itself on past months using only the data it had then, and shows how far off it was.',
   },
   {
@@ -80,7 +80,7 @@ const STEPS: Step[] = [
     find: 'What will sales be next month?',
     box: 'self',
     title: 'Ask in plain English',
-    body: 'Claude answers using 21 read-only tools. It never does the math itself, and every answer lists the tools behind its numbers.',
+    body: 'Claude answers using 21 read-only tools. The calculations come from the analysis engine, not the model, and every answer lists the tools behind its numbers.',
   },
   {
     page: 'reports',
