@@ -107,7 +107,7 @@ function Heatmap() {
                 ))}</tr>
             ))}</tbody>
           </table>
-          <div className="mt-2 flex items-center gap-2 text-[11.5px] text-[var(--faint)]"><span className="h-2 w-6 rounded" style={{ background: 'var(--rose)' }} />loss<span className="h-2 w-6 rounded" style={{ background: 'var(--emerald)' }} />profit</div>
+          <div className="mt-2 flex items-center gap-2 text-[11.5px] text-[var(--faint)]">{isRatio ? <><span className="h-2 w-6 rounded" style={{ background: 'var(--rose)' }} />loss-making<span className="h-2 w-6 rounded" style={{ background: 'var(--emerald)' }} />profitable (margin)</> : <><span className="h-2 w-6 rounded" style={{ background: 'color-mix(in srgb, var(--emerald) 20%, transparent)' }} />less<span className="h-2 w-6 rounded" style={{ background: 'var(--emerald)' }} />more {data.measure ? String(data.measure).toLowerCase() : 'sales'}</>}</div>
         </div>
       ) : <div className="p-4"><div className="skeleton h-40" /></div>}
     </Card>

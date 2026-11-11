@@ -29,7 +29,7 @@ A live site (showcase pages + the app), private per-visitor sessions, Shopify co
 - Found that growth came from existing customers while new-customer revenue fell, and that international orders are twice the size of UK orders (t = 13.1).
 - **Fact check:** seven headline numbers recomputed by an independent Python script, all match exactly.
 - **AI cross-check:** during testing, Claude flagged two inconsistencies in our own pipeline (returns counted differently in two views, and a mistaken 80,995-unit order inflating both sales and returns). Both were fixed and re-verified.
-- 171 automated tests; 0 npm vulnerabilities; the full 1.07M-row dataset reads and cleans in about 34 s and analyses in about 5 s on a 2020 Intel laptop (public uploads are capped at 100K rows).
+- 183 automated tests; 0 npm vulnerabilities; the full 1.07M-row dataset reads and cleans in about 34 s and analyses in about 5 s on a 2020 Intel laptop (public uploads are capped at 100K rows).
 
 ## Potential impact
 Any small online store can get an analyst's view for free in seconds. It runs on one small server (about $7–25/month at scale), and the analysis itself needs no AI spend. Next steps: more connectors (WooCommerce, Square, Stripe), scheduled weekly alerts, and multi-store benchmarks.

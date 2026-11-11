@@ -18,7 +18,7 @@ export const recommendActions = defineTool({
   name: 'recommend-actions', category: 'Business Intelligence', core: false,
   description: 'Translate findings into actions with intervention, expected benefit (labeled hypothetical), effort, risks and evidence, ranked by benefit-to-effort.',
   input: z.object({ top: z.number().int().min(1).max(20).default(6) }),
-  output: z.object({ actions: z.array(z.object({ findingId: z.string(), problem: z.string(), intervention: z.string(), expectedBenefitUsd: z.number().nullable(), benefitKind: z.enum(['profit', 'revenue']), benefitBasis: z.string(), recoveryPct: z.number().nullable().optional(), benefitPeriod: z.string().nullable().optional(), findingIds: z.array(z.string()).optional(), effort: z.enum(['low', 'medium', 'high']), risks: z.string(), severity: z.string(), benefitToEffort: z.number().nullable(), evidence: z.record(z.string(), z.unknown()) })) }),
+  output: z.object({ actions: z.array(z.object({ findingId: z.string(), problem: z.string(), intervention: z.string(), expectedBenefitUsd: z.number().nullable(), benefitKind: z.enum(['profit', 'revenue']), benefitBasis: z.string(), recoveryPct: z.number().nullable().optional(), benefitPeriod: z.string().nullable().optional(), findingIds: z.array(z.string()).optional(), parts: z.array(z.object({ findingId: z.string(), problem: z.string(), benefit: z.number().nullable(), period: z.string().nullable(), recoveryPct: z.number().nullable() })).optional(), effort: z.enum(['low', 'medium', 'high']), risks: z.string(), severity: z.string(), benefitToEffort: z.number().nullable(), evidence: z.record(z.string(), z.unknown()) })) }),
   async handler(ctx, { top }) { return { actions: recommend(analyzeSmart(ctx.state.view()).slice(0, top)) }; },
 });
 

@@ -1,0 +1,200 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Blindspot deck</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<style>
+@page { size: 1920px 1080px; margin: 0 }
+* { box-sizing: border-box; margin: 0; padding: 0 }
+:root { --bg:#05060f; --panel:rgba(18,20,40,.72); --line:rgba(160,150,255,.16); --text:#f3f2ff; --muted:#a7aad0; --faint:#6e72a0;
+  --violet:#a78bfa; --cyan:#22d3ee; --emerald:#34d399; --amber:#fbbf24; --fuchsia:#e879f9; --sky:#38bdf8; --rose:#fb7185; --lime:#a3e635; --blue:#60a5fa; --orange:#fb923c }
+body { background:#000; font-family: Manrope, sans-serif; color: var(--text) }
+.slide { width:1920px; height:1080px; position:relative; overflow:hidden; background: var(--bg); page-break-after: always; padding: 90px 110px }
+.slide::before { content:""; position:absolute; inset:0; background-image: linear-gradient(rgba(160,150,255,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(160,150,255,.05) 1px, transparent 1px); background-size: 64px 64px; mask-image: radial-gradient(ellipse at 50% 40%, black 30%, transparent 80%) }
+.orb { position:absolute; border-radius:50%; filter: blur(120px); opacity:.55; pointer-events:none }
+.z { position:relative; z-index:2 }
+.kicker { font: 700 22px/1 Manrope; letter-spacing:.22em; text-transform:uppercase }
+h1 { font-size: 92px; font-weight: 800; letter-spacing: -.035em; line-height: 1.02 }
+h2 { font-size: 76px; font-weight: 800; letter-spacing: -.03em; line-height: 1.04 }
+.grad { background: linear-gradient(100deg, var(--violet), var(--fuchsia) 45%, var(--cyan)); -webkit-background-clip:text; color: transparent }
+.grad2 { background: linear-gradient(100deg, var(--emerald), var(--cyan)); -webkit-background-clip:text; color: transparent }
+.grad3 { background: linear-gradient(100deg, var(--amber), var(--rose)); -webkit-background-clip:text; color: transparent }
+.card { background: var(--panel); border: 1.5px solid var(--line); border-radius: 28px; backdrop-filter: blur(10px); position:relative; overflow:hidden }
+.card.glow { box-shadow: 0 30px 80px -30px var(--c, var(--violet)) }
+.tint { background: color-mix(in srgb, var(--c) 12%, rgba(14,16,32,.85)); border-color: color-mix(in srgb, var(--c) 45%, transparent) }
+.icon { width: 76px; height: 76px; border-radius: 22px; display:grid; place-items:center; background: color-mix(in srgb, var(--c) 20%, transparent); color: var(--c); box-shadow: 0 0 40px -8px var(--c) }
+.icon svg { width: 38px; height: 38px; stroke-width: 2.2 }
+.chip { display:inline-flex; align-items:center; gap:10px; padding: 12px 22px; border-radius: 999px; font: 700 24px Manrope; border: 1.5px solid color-mix(in srgb, var(--c) 50%, transparent); background: color-mix(in srgb, var(--c) 14%, transparent); color: var(--c) }
+.chip svg { width: 24px; height: 24px }
+.mono { font-family: 'JetBrains Mono', monospace }
+.shot { border-radius: 22px; border: 2px solid rgba(160,150,255,.28); box-shadow: 0 40px 120px -30px rgba(167,139,250,.6), 0 0 0 10px rgba(167,139,250,.06); display:block }
+.num { font-weight: 800; letter-spacing: -.04em; line-height: .95 }
+.lab { font-size: 26px; color: var(--muted); font-weight: 600; line-height: 1.3 }
+.foot { position:absolute; left:110px; right:110px; bottom:44px; display:flex; justify-content:space-between; font: 600 20px Manrope; color: var(--faint); z-index:3 }
+.logo { display:inline-flex; align-items:center; gap:14px; font: 800 28px Manrope }
+.logo i { width: 44px; height: 44px; border-radius: 13px; background: linear-gradient(135deg, var(--violet), var(--fuchsia) 55%, var(--cyan)); display:grid; place-items:center; box-shadow: 0 0 30px -4px var(--violet) }
+.row { display:flex; gap: 32px }
+.callout { position:absolute; z-index:4; display:flex; align-items:center; gap:12px; padding: 14px 22px; border-radius: 18px; background: rgba(8,10,22,.92); border: 2px solid var(--c); box-shadow: 0 0 40px -6px var(--c); font: 800 26px Manrope; color: var(--text) }
+.callout b { color: var(--c) }
+.dot { width: 14px; height: 14px; border-radius: 50%; background: var(--c); box-shadow: 0 0 16px var(--c) }
+</style></head><body>
+
+<!-- 1 TITLE -->
+<section class="slide">
+  <div class="orb" style="width:900px;height:900px;left:-300px;top:-300px;background:var(--violet)"></div>
+  <div class="orb" style="width:700px;height:700px;right:-200px;bottom:-250px;background:var(--cyan)"></div>
+  <div class="orb" style="width:500px;height:500px;left:600px;bottom:-300px;background:var(--fuchsia);opacity:.35"></div>
+  <div class="z" style="display:flex;align-items:center;height:100%;gap:60px">
+    <div style="width:820px">
+      <div class="logo" style="font-size:34px"><i><svg width="26" height="26" viewBox="0 0 32 32"><path d="M7 21l6-7 5 4 7-9" stroke="white" stroke-width="3.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></i><span>Blind<span class="grad">spot</span></span></div>
+      <h1 style="font-size:118px;margin-top:46px">See what your<br>sales data is <span class="grad">hiding.</span></h1>
+      <div style="font-size:36px;color:var(--muted);font-weight:600;margin-top:34px">The AI analyst for small online stores</div>
+      <div class="row" style="margin-top:50px;gap:16px;flex-wrap:wrap">
+        <span class="chip" style="--c:var(--emerald)"><i data-lucide="radio"></i>Live demo</span>
+        <span class="chip" style="--c:var(--cyan)"><i data-lucide="file-spreadsheet"></i>Your store's export</span>
+        <span class="chip" style="--c:var(--fuchsia)"><i data-lucide="sparkles"></i>Claude AI</span>
+      </div>
+      <div class="mono" style="margin-top:44px;font-size:28px;color:var(--violet)">blindspot-8lr1.onrender.com</div>
+    </div>
+    <div style="flex:1;position:relative;height:760px">
+      <img class="shot" src="../deck/04_overview.jpg" style="position:absolute;width:1100px;left:40px;top:60px;transform:perspective(2000px) rotateY(-14deg) rotateX(4deg)">
+    </div>
+  </div>
+</section>
+<section class="slide">
+  <div class="orb" style="width:900px;height:900px;left:-300px;top:-300px;background:var(--emerald);opacity:.35"></div>
+  <div class="orb" style="width:800px;height:800px;right:-250px;bottom:-300px;background:var(--violet);opacity:.45"></div>
+  <div class="z" style="display:grid;grid-template-columns:1fr 760px;gap:70px;align-items:center;height:100%">
+    <div>
+      <div class="kicker" style="color:var(--emerald)">Inspiration</div>
+      <h2 style="margin-top:24px;font-size:84px">I run a <span class="grad2">Shopify store.</span></h2>
+      <div style="font-size:40px;font-weight:700;color:var(--muted);margin-top:34px;line-height:1.35">I could see <span style="color:var(--text)">how much</span> I sold.<br>I could never see <span style="color:var(--emerald)">why.</span></div>
+      <div class="row" style="gap:16px;margin-top:46px;flex-wrap:wrap">
+        <span class="chip" style="--c:var(--amber)"><i data-lucide="help-circle"></i>Which customers stopped coming back?</span>
+        <span class="chip" style="--c:var(--rose)"><i data-lucide="help-circle"></i>Which product is quietly dying?</span>
+        <span class="chip" style="--c:var(--cyan)"><i data-lucide="help-circle"></i>What do I fix first?</span>
+      </div>
+    </div>
+    <div class="card tint glow" style="--c:var(--violet);padding:64px 58px">
+      <i data-lucide="quote" style="width:80px;height:80px;color:var(--violet)"></i>
+      <div style="font-size:56px;font-weight:800;letter-spacing:-.025em;line-height:1.15;margin-top:24px">I didn't need <span class="grad">more data.</span><br>I needed someone to <span class="grad2">read it.</span></div>
+      <div class="lab" style="margin-top:30px;font-size:28px">So I built Blindspot.</div>
+    </div>
+  </div>
+</section>
+<section class="slide">
+  <div class="orb" style="width:900px;height:900px;right:-300px;top:-350px;background:var(--rose);opacity:.35"></div>
+  <div class="orb" style="width:700px;height:700px;left:-250px;bottom:-300px;background:var(--violet);opacity:.4"></div>
+  <div class="z">
+    <div class="kicker" style="color:var(--rose)">The real problem</div>
+    <h2 style="margin-top:22px">What you can't see <span class="grad3">can sink you.</span></h2>
+  </div>
+  <div class="z" style="display:grid;grid-template-columns:repeat(3,1fr);gap:32px;margin-top:64px">
+    <div class="card tint glow" style="--c:var(--rose);padding:48px 44px"><div class="num" style="font-size:132px;color:var(--rose)">1 in 5</div><div style="font-size:34px;font-weight:800;margin-top:18px">new businesses close in year one</div><div class="lab" style="margin-top:10px">About half are gone by year five</div><div style="font-size:19px;color:var(--faint);margin-top:28px;font-weight:600">U.S. Bureau of Labor Statistics</div></div>
+    <div class="card tint glow" style="--c:var(--amber);padding:48px 44px"><div class="num" style="font-size:132px;color:var(--amber)">5–25×</div><div style="font-size:34px;font-weight:800;margin-top:18px">more to win a customer than keep one</div><div class="lab" style="margin-top:10px">Losing loyal buyers is the costliest leak</div><div style="font-size:19px;color:var(--faint);margin-top:28px;font-weight:600">Harvard Business Review</div></div>
+    <div class="card tint glow" style="--c:var(--emerald);padding:48px 44px"><div class="num" style="font-size:132px;color:var(--emerald)">+5%</div><div style="font-size:34px;font-weight:800;margin-top:18px">customers kept → 25–95% more profit</div><div class="lab" style="margin-top:10px">Small fixes, huge payoff</div><div style="font-size:19px;color:var(--faint);margin-top:28px;font-weight:600">Bain &amp; Company</div></div>
+  </div>
+  <div class="z" style="text-align:center;margin-top:56px;font-size:44px;font-weight:800;letter-spacing:-.02em">The warning signs are <span class="grad">already in your sales.</span> <span style="color:var(--muted)">Nobody is reading them.</span></div>
+</section>
+<section class="slide">
+  <div class="orb" style="width:800px;height:800px;left:-200px;top:-250px;background:var(--emerald);opacity:.35"></div>
+  <div class="orb" style="width:800px;height:800px;right:-250px;bottom:-300px;background:var(--rose);opacity:.4"></div>
+  <div class="z">
+    <div class="kicker" style="color:var(--amber)">Real UK online shop · full 2-year dataset · 1M+ sales lines</div>
+    <h2 style="margin-top:22px">Totals <span class="grad3">lie.</span></h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:36px;margin-top:64px">
+      <div class="card tint glow" style="--c:var(--emerald);padding:46px 52px;display:flex;align-items:center;gap:40px">
+        <i data-lucide="trending-up" style="width:110px;height:110px;color:var(--emerald)"></i>
+        <div><div class="num" style="font-size:130px;color:var(--emerald)">+5%</div><div class="lab" style="font-size:32px">Total sales, last 90 days vs a year earlier</div></div>
+      </div>
+      <div class="card tint glow" style="--c:var(--rose);padding:46px 52px;display:flex;align-items:center;gap:40px">
+        <i data-lucide="trending-down" style="width:110px;height:110px;color:var(--rose)"></i>
+        <div><div class="num" style="font-size:130px;color:var(--rose)">−51%</div><div class="lab" style="font-size:32px">A best-seller, same 90 days (measured)</div></div>
+      </div>
+      <div class="card tint glow" style="--c:var(--amber);padding:46px 52px;display:flex;align-items:center;gap:40px">
+        <i data-lucide="user-x" style="width:110px;height:110px;color:var(--amber)"></i>
+        <div><div class="num" style="font-size:110px;color:var(--amber)">42</div><div class="lab" style="font-size:32px">best customers went quiet<br><b style="color:var(--text)">≈ £300K a year</b> <span style="font-size:22px">(3+ orders, none in 90 days)</span></div></div>
+      </div>
+      <div class="card tint glow" style="--c:var(--fuchsia);padding:46px 52px;display:flex;align-items:center;gap:40px">
+        <i data-lucide="repeat" style="width:110px;height:110px;color:var(--fuchsia)"></i>
+        <div><div class="num" style="font-size:110px;color:var(--fuchsia)">49→40%</div><div class="lab" style="font-size:32px">New customers reordering within 90 days</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>Source: UCI Online Retail II (CC BY 4.0), full dataset; re-checked in Python, 7/7 match</span><span>The live demo uses a 25% customer sample, so its figures differ</span></div>
+</section>
+<section class="slide">
+  <div class="orb" style="width:900px;height:900px;right:-300px;top:-300px;background:var(--fuchsia);opacity:.45"></div>
+  <div class="orb" style="width:600px;height:600px;left:-200px;bottom:-250px;background:var(--cyan);opacity:.35"></div>
+  <div class="z" style="display:grid;grid-template-columns:820px 1fr;gap:60px">
+    <div>
+      <div class="kicker" style="color:var(--fuchsia)">How it uses AI</div>
+      <h2 style="margin-top:22px">AI suggests.<br><span class="grad">Math checks.</span></h2>
+      <div style="margin-top:56px;display:grid;gap:18px">
+        <div class="card" style="padding:24px 30px;display:flex;align-items:center;gap:24px"><div class="icon" style="--c:var(--fuchsia);width:64px;height:64px"><i data-lucide="message-circle"></i></div><div style="font-size:32px;font-weight:800">Ask in plain English</div></div>
+        <div class="card" style="padding:24px 30px;display:flex;align-items:center;gap:24px"><div class="icon" style="--c:var(--violet);width:64px;height:64px"><i data-lucide="wrench"></i></div><div style="font-size:32px;font-weight:800">Claude calls <span style="color:var(--violet)">15 read-only tools in chat</span></div></div>
+        <div class="card" style="padding:24px 30px;display:flex;align-items:center;gap:24px"><div class="icon" style="--c:var(--amber);width:64px;height:64px"><i data-lucide="lightbulb"></i></div><div style="font-size:32px;font-weight:800">Proposes new business ideas</div></div>
+        <div class="card" style="padding:24px 30px;display:flex;align-items:center;gap:24px"><div class="icon" style="--c:var(--emerald);width:64px;height:64px"><i data-lucide="flask-conical"></i></div><div style="font-size:32px;font-weight:800">Every idea <span style="color:var(--emerald)">tested with statistics</span></div></div>
+        <div class="card tint" style="--c:var(--cyan);padding:24px 30px;display:flex;align-items:center;gap:24px"><div class="icon" style="--c:var(--cyan);width:64px;height:64px"><i data-lucide="shield-check"></i></div><div style="font-size:32px;font-weight:800">Numbers come from tools, not the model</div></div>
+      </div>
+    </div>
+    <div style="position:relative">
+      <img class="shot" src="../deck/08_analyst.jpg" style="position:absolute;width:1080px;left:0;top:150px;box-shadow:0 40px 120px -30px rgba(232,121,249,.7),0 0 0 10px rgba(232,121,249,.06);border-color:rgba(232,121,249,.4)">
+    </div>
+  </div>
+</section>
+<section class="slide">
+  <div class="orb" style="width:800px;height:800px;left:-250px;top:-250px;background:var(--emerald);opacity:.4"></div>
+  <div class="orb" style="width:800px;height:800px;right:-250px;bottom:-300px;background:var(--violet);opacity:.4"></div>
+  <div class="z" style="text-align:center">
+    <div class="kicker" style="color:var(--emerald)">Evidence</div>
+    <h2 style="margin-top:18px">Proof, <span class="grad2">not promises.</span></h2>
+  </div>
+  <div class="z" style="display:grid;grid-template-columns:repeat(3,1fr);gap:30px;margin-top:64px">
+    <div class="card tint glow" style="--c:var(--emerald);padding:44px;text-align:center"><div class="num" style="font-size:150px;color:var(--emerald)">7/7</div><div style="font-size:32px;font-weight:800;margin-top:14px">numbers match</div><div class="lab">an independent Python check</div></div>
+    <div class="card tint glow" style="--c:var(--violet);padding:44px;text-align:center"><div class="num" style="font-size:150px;color:var(--violet)">183</div><div style="font-size:32px;font-weight:800;margin-top:14px">automated tests</div><div class="lab">all passing</div></div>
+    <div class="card tint glow" style="--c:var(--cyan);padding:44px;text-align:center"><div class="num" style="font-size:150px;color:var(--cyan)">≤5¢</div><div style="font-size:32px;font-weight:800;margin-top:14px">from true totals</div><div class="lab">1,500-order files in 5 platform layouts</div></div>
+    <div class="card tint glow" style="--c:var(--amber);padding:36px 44px;display:flex;align-items:center;gap:30px;grid-column:span 2"><i data-lucide="zap" style="width:90px;height:90px;color:var(--amber)"></i><div><div class="num" style="font-size:96px;color:var(--amber)">1.07M rows</div><div class="lab">Read + clean 34 s, analysis 5 s (2020 Intel i5 laptop). An 800-row store export: 0.1 s. Public site: up to 100K rows per upload.</div></div></div>
+    <div class="card tint glow" style="--c:var(--fuchsia);padding:36px 40px;display:flex;align-items:center;gap:24px"><i data-lucide="database" style="width:80px;height:80px;color:var(--fuchsia)"></i><div><div style="font-size:36px;font-weight:800">Real data</div><div class="lab">UCI Online Retail II</div></div></div>
+  </div>
+</section>
+<section class="slide" style="display:grid;place-items:center">
+  <div class="orb" style="width:1000px;height:1000px;left:460px;top:40px;background:var(--emerald);opacity:.35"></div>
+  <div class="orb" style="width:700px;height:700px;left:-250px;top:-300px;background:var(--violet);opacity:.45"></div>
+  <div class="orb" style="width:700px;height:700px;right:-250px;bottom:-300px;background:var(--fuchsia);opacity:.4"></div>
+  <div class="z" style="text-align:center">
+    <div style="font-size:150px;font-weight:800;letter-spacing:-.045em;line-height:1">Stop guessing.<br><span class="grad">Start knowing.</span></div>
+    <div style="display:flex;justify-content:center;gap:28px;margin-top:70px">
+      <div class="card tint" style="--c:var(--cyan);padding:26px 44px;display:flex;align-items:center;gap:18px"><i data-lucide="eye" style="width:44px;height:44px;color:var(--cyan)"></i><span style="font-size:44px;font-weight:800">See it.</span></div>
+      <div class="card tint" style="--c:var(--fuchsia);padding:26px 44px;display:flex;align-items:center;gap:18px"><i data-lucide="flask-conical" style="width:44px;height:44px;color:var(--fuchsia)"></i><span style="font-size:44px;font-weight:800">Prove it.</span></div>
+      <div class="card tint" style="--c:var(--emerald);padding:26px 44px;display:flex;align-items:center;gap:18px"><i data-lucide="wrench" style="width:44px;height:44px;color:var(--emerald)"></i><span style="font-size:44px;font-weight:800">Fix it.</span></div>
+    </div>
+    <div class="lab" style="margin-top:50px;font-size:34px">Every sale tells a story. <b style="color:var(--text)">Blindspot reads them all.</b></div>
+  </div>
+</section>
+<section class="slide">
+  <div class="orb" style="width:1000px;height:1000px;left:450px;top:-400px;background:var(--violet);opacity:.5"></div>
+  <div class="orb" style="width:700px;height:700px;left:-250px;bottom:-300px;background:var(--cyan);opacity:.35"></div>
+  <div class="orb" style="width:700px;height:700px;right:-250px;bottom:-300px;background:var(--fuchsia);opacity:.35"></div>
+  <div class="z">
+    <div class="kicker" style="color:var(--emerald)">Ready today</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:28px;margin-top:40px">
+      <div class="card tint" style="--c:var(--emerald);padding:34px;display:flex;gap:22px;align-items:center"><div class="icon"><i data-lucide="plug-zap"></i></div><div><div style="font-size:32px;font-weight:800">Shopify, live</div><div class="lab">Connect read-only in a minute</div></div></div>
+      <div class="card tint" style="--c:var(--cyan);padding:34px;display:flex;gap:22px;align-items:center"><div class="icon"><i data-lucide="files"></i></div><div><div style="font-size:32px;font-weight:800">Store exports</div><div class="lab">CSV · Excel · text PDFs · 8 languages tested</div></div></div>
+      <div class="card tint" style="--c:var(--amber);padding:34px;display:flex;gap:22px;align-items:center"><div class="icon"><i data-lucide="coins"></i></div><div><div style="font-size:32px;font-weight:800">30 currencies</div><div class="lab">Every amount, today's rate</div></div></div>
+    </div>
+  </div>
+  <div class="z" style="display:grid;grid-template-columns:1fr 340px;gap:60px;align-items:center;margin-top:90px"><div style="text-align:center">
+    <div class="logo" style="font-size:40px"><i style="width:56px;height:56px"><svg width="32" height="32" viewBox="0 0 32 32"><path d="M7 21l6-7 5 4 7-9" stroke="white" stroke-width="3.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></i><span>Blind<span class="grad">spot</span></span></div>
+    <h1 style="font-size:150px;margin-top:30px">Try it <span class="grad">live.</span></h1>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:18px;margin-top:40px">
+      <span class="chip mono" style="--c:var(--violet);font-size:30px;padding:16px 32px;white-space:nowrap"><i data-lucide="globe"></i>blindspot-8lr1.onrender.com</span>
+      <span class="chip mono" style="--c:var(--emerald);font-size:30px;padding:16px 32px;white-space:nowrap"><i data-lucide="github"></i>github.com/Sidd-solves/BlindSpot</span>
+    </div>
+  </div>
+  <div class="card tint glow" style="--c:var(--violet);padding:26px;text-align:center"><div id="qr" style="background:#fff;border-radius:18px;padding:18px;display:inline-block"></div><div class="lab" style="margin-top:14px;font-size:22px">Scan to try it</div></div>
+  </div>
+</section>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>lucide.createIcons(); new QRCode(document.getElementById("qr"), { text: "https://blindspot-8lr1.onrender.com", width: 240, height: 240, colorDark: "#0b0d1f", colorLight: "#ffffff" }); document.fonts.ready.then(() => document.body.dataset.ready = '1');</script>
+</body></html>

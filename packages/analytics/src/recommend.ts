@@ -17,18 +17,31 @@ const PLAYBOOK: Record<Finding['category'], { intervention: string; recovery: nu
 const COST = { low: 1, medium: 2, high: 3 } as const;
 
 export function recommend(findings: Finding[]) {
-  // One row per action: findings that call for the same intervention are merged (their benefits add up).
-  const rows = recommendEach(findings), byAction = new Map<string, (typeof rows)[number]>();
+  // One row per action. When several findings call for the same action their estimates are NOT added: they can
+  // describe the same sales (e.g. customer and product concentration over the same orders) or cover different
+  // periods. The row carries the largest single estimate (with its own period and assumption) and lists every
+  // contributing estimate in `parts`, so nothing is double-counted.
+  const rows = recommendEach(findings), byAction = new Map<string, Rec>();
   for (const r of rows) {
+    const part = { findingId: r.findingId, problem: r.problem, benefit: r.expectedBenefitUsd, period: r.benefitPeriod ?? null, recoveryPct: r.recoveryPct };
     const prev = byAction.get(r.intervention);
-    if (!prev) { byAction.set(r.intervention, { ...r, findingIds: [r.findingId] }); continue; }
-    const benefit = prev.expectedBenefitUsd === null && r.expectedBenefitUsd === null ? null : round((prev.expectedBenefitUsd ?? 0) + (r.expectedBenefitUsd ?? 0));
-    byAction.set(r.intervention, { ...prev, findingIds: [...(prev.findingIds ?? [prev.findingId]), r.findingId], problem: `${prev.problem}; ${r.problem}`,
-      expectedBenefitUsd: benefit, benefitBasis: prev.expectedBenefitUsd !== null ? prev.benefitBasis : r.benefitBasis, benefitPeriod: prev.benefitPeriod ?? r.benefitPeriod,
-      benefitToEffort: benefit === null ? null : round(benefit / COST[r.effort] ** 2, 0) });
+    if (!prev) { byAction.set(r.intervention, { ...r, findingIds: [r.findingId], parts: [part] }); continue; }
+    const parts = [...prev.parts, part];
+    const best = parts.filter((p) => p.benefit !== null).sort((a, b) => b.benefit! - a.benefit!)[0];
+    const counted = parts.filter((p) => p.benefit !== null).length;
+    const lead = best ? rows.find((x) => x.findingId === best.findingId)! : prev;
+    byAction.set(r.intervention, {
+      ...prev, findingIds: parts.map((p) => p.findingId), parts, problem: parts.map((p) => p.problem).join('; '),
+      expectedBenefitUsd: best?.benefit ?? null, benefitPeriod: best?.period ?? prev.benefitPeriod, recoveryPct: best?.recoveryPct ?? null,
+      benefitBasis: best ? `${lead.benefitBasis}${counted > 1 ? `. Largest of ${counted} estimates for this action; they are not added because they may cover the same sales or different periods` : ''}` : prev.benefitBasis,
+      benefitToEffort: best ? round(best.benefit! / COST[r.effort] ** 2, 0) : null,
+    });
   }
   return [...byAction.values()].sort((a, b) => (b.benefitToEffort ?? -1) - (a.benefitToEffort ?? -1));
 }
+
+type Part = { findingId: string; problem: string; benefit: number | null; period: string | null; recoveryPct: number | null };
+type Rec = ReturnType<typeof recommendEach>[number] & { parts: Part[] };
 
 function recommendEach(findings: Finding[]) {
   // Unconfirmed signals ("Possible: …") are for watching, not for acting on or putting a money figure on.

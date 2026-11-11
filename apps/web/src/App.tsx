@@ -1,29 +1,31 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { useEffect, useState, type CSSProperties } from 'react';
+import { lazy, Suspense, useEffect, useState, type CSSProperties } from 'react';
 import { Table2, LayoutDashboard, Database, Sparkles, ShieldAlert, SlidersHorizontal, ScanEye, FileText, Settings as Cog, Moon, Sun, RefreshCw, Filter, X } from 'lucide-react';
 import { useStore } from './store';
 import { Chip, Dropdown } from './components/ui';
-import Overview from './pages/Overview';
-import DataSources from './pages/DataSources';
-import Analyst from './pages/Analyst';
-import Risk from './pages/Risk';
-import Simulator from './pages/Simulator';
-import Audit from './pages/Audit';
-import Reports from './pages/Reports';
-import Settings from './pages/Settings';
-import SourceData from './pages/SourceData';
+// Each page loads when first opened (route-level code splitting keeps the first download small).
+const Overview = lazy(() => import('./pages/Overview'));
+const DataSources = lazy(() => import('./pages/DataSources'));
+const Analyst = lazy(() => import('./pages/Analyst'));
+const Risk = lazy(() => import('./pages/Risk'));
+const Simulator = lazy(() => import('./pages/Simulator'));
+const Audit = lazy(() => import('./pages/Audit'));
+const Reports = lazy(() => import('./pages/Reports'));
+const Settings = lazy(() => import('./pages/Settings'));
+const SourceData = lazy(() => import('./pages/SourceData'));
 import { CurrencyPicker } from './components/Currency';
 import { ReadReview } from './components/ReadReview';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import SiteLayout, { type SiteId } from './site/SiteLayout';
 import SiteHome from './site/Home';
-import SiteHow from './site/How';
-import SiteFeatures from './site/Features';
-import SiteResults from './site/Results';
-import SiteStart from './site/Start';
-import SiteGuide from './site/Guide';
+const SiteHow = lazy(() => import('./site/How'));
+const SiteFeatures = lazy(() => import('./site/Features'));
+const SiteResults = lazy(() => import('./site/Results'));
+const SiteStart = lazy(() => import('./site/Start'));
+const SiteGuide = lazy(() => import('./site/Guide'));
+const PageLoading = () => <div className="grid min-h-[40vh] place-items-center"><div className="flex items-center gap-2 text-[12.5px] text-[var(--muted)]"><span className="h-2 w-2 animate-ping rounded-full" style={{ background: 'var(--violet)' }} />Opening the page…</div></div>;
 
-const SITE_PAGES: Record<SiteId | 'start', () => JSX.Element> = { home: SiteHome, how: SiteHow, features: SiteFeatures, results: SiteResults, start: SiteStart };
+const SITE_PAGES: Record<SiteId | 'start', React.ComponentType> = { home: SiteHome, how: SiteHow, features: SiteFeatures, results: SiteResults, start: SiteStart };
 /** Marketing site lives at #/, #/how, #/features, #/results, the start page at #/start and guides at #/guide/<id>; everything else is the app. */
 const siteRoute = (): string | null => {
   const h = location.hash.replace(/^#/, '').split('?')[0];
@@ -79,8 +81,8 @@ export default function App() {
   const [site, setSite] = useState<string | null>(siteRoute());
   const { dataset, extension, health, loading, refresh } = useStore();
   useEffect(() => { const h = () => { setPage(current()); setSite(siteRoute()); }; window.addEventListener('hashchange', h); return () => window.removeEventListener('hashchange', h); }, []);
-  if (site?.startsWith('guide/')) return <SiteLayout page={site}><ErrorBoundary resetKey={site}><SiteGuide id={site.slice(6)} /></ErrorBoundary></SiteLayout>;
-  if (site) { const SitePage = SITE_PAGES[site as SiteId | 'start']; return <SiteLayout page={site}><ErrorBoundary resetKey={site}><SitePage /></ErrorBoundary></SiteLayout>; }
+  if (site?.startsWith('guide/')) return <SiteLayout page={site}><ErrorBoundary resetKey={site}><Suspense fallback={<PageLoading />}><SiteGuide id={site.slice(6)} /></Suspense></ErrorBoundary></SiteLayout>;
+  if (site) { const SitePage = SITE_PAGES[site as SiteId | 'start']; return <SiteLayout page={site}><ErrorBoundary resetKey={site}><Suspense fallback={<PageLoading />}><SitePage /></Suspense></ErrorBoundary></SiteLayout>; }
   const nav = NAV.find((n) => n.id === page)!;
   const Page = nav.el;
   return (
@@ -135,7 +137,7 @@ export default function App() {
           </header>
           {/* Enter-only transition: an exit animation would block navigation whenever the browser throttles frames. */}
           <motion.div key={page} initial={{ opacity: 0, y: 10, filter: 'blur(4px)' }} animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }} transition={{ duration: 0.22 }} className="p-4 md:p-5">
-            <ErrorBoundary resetKey={page}><Page /></ErrorBoundary>
+            <ErrorBoundary resetKey={page}><Suspense fallback={<PageLoading />}><Page /></Suspense></ErrorBoundary>
           </motion.div>
         </main>
       </div>

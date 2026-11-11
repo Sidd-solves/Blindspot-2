@@ -40,6 +40,8 @@ export const setCurrency = (c: string) => { currency = c || 'USD'; };
 export const baseCurrency = () => currency;
 export const shownCurrency = () => (display.to && display.to !== currency ? display.to : currency);
 export const usd = (n: number | null | undefined, compact = false) => n == null ? '—' : currency === 'XXX' ? new Intl.NumberFormat('en-US', { maximumFractionDigits: compact ? 1 : 0, ...(compact ? { notation: 'compact' as const } : {}) }).format(n) : new Intl.NumberFormat('en-US', { style: 'currency', currency: shownCurrency(), maximumFractionDigits: compact ? 1 : 0, ...(compact ? { notation: 'compact' as const } : {}) }).format(shownCurrency() === currency ? n : n * display.rate);
+/** Exact amount with pennies, in the data's own currency (reconciliation is done before any conversion). */
+export const usdExact = (n: number) => new Intl.NumberFormat('en-US', currency === 'XXX' ? { minimumFractionDigits: 2, maximumFractionDigits: 2 } : { style: 'currency', currency, minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
 export const pct = (n: number, d = 1) => `${(n * 100).toFixed(d)}%`;
 export const ago = (iso: string, now = Date.now()) => { const s = Math.max(0, Math.round((now - Date.parse(iso)) / 1000)); return s < 60 ? `${s}s ago` : s < 3600 ? `${Math.floor(s / 60)}m ago` : `${Math.floor(s / 3600)}h ago`; };
 

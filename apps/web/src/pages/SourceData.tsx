@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import { BadgeCheck, ChevronLeft, ChevronRight, Download, ExternalLink, Search, Table2, TriangleAlert , X } from 'lucide-react';
-import { get, SID, usd } from '../api';
+import { get, SID, usd, usdExact } from '../api';
 import { useStore, type Drill } from '../store';
 import { Card, CardHead, Chip, CountUp, Loading, stagger, fadeUp } from '../components/ui';
 import { go } from '../App';
@@ -28,7 +28,7 @@ function CheckTile({ label, mine, shown, money, c, i, search, scopeLabel }: { la
 
 function Recon({ label, actualCents, expectCents }: { label: string; actualCents: number; expectCents: number | null }) {
   const ok = expectCents == null || actualCents === expectCents, diff = expectCents == null ? 0 : (actualCents - expectCents) / 100;
-  return <Chip c={ok ? 'var(--emerald)' : 'var(--amber)'}>{ok ? <BadgeCheck size={11} /> : <TriangleAlert size={11} />}{label}: <span className="mono">{usd(actualCents / 100)}</span>{expectCents != null && (ok ? ' matches to the penny' : <> differs from the finding by <span className="mono">{usd(diff)}</span></>)}</Chip>;
+  return <Chip c={ok ? 'var(--emerald)' : 'var(--amber)'}>{ok ? <BadgeCheck size={11} /> : <TriangleAlert size={11} />}{label}: <span className="mono">{usdExact(actualCents / 100)}</span>{expectCents != null && (ok ? ' matches to the penny' : <> differs from the finding by <span className="mono">{usdExact(diff)}</span></>)}</Chip>;
 }
 
 export default function SourceData() {

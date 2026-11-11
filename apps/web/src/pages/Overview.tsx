@@ -47,7 +47,7 @@ function DriversCard() {
 /** Layer 3 on the front page: the strongest ideas the math supports (built-in library only, so it's free). */
 function IdeasCard() {
   const { version } = useStore();
-  const [res, setRes] = useState<any[] | null>(null);
+  const [res, setRes] = useState<any[] | null>(null), [openIdea, setOpenIdea] = useState<string | null>(null);
   useEffect(() => { setRes(null); tool('test-hypotheses', { useAI: false }).then((r) => setRes(r.ok ? r.data.results : [])); }, [version]);
   const shown = (res ?? []).filter((h) => h.verdict !== 'inconclusive').slice(0, 4);
   return (
@@ -57,10 +57,11 @@ function IdeasCard() {
         {!res && <div className="space-y-2">{[0, 1, 2].map((i) => <div key={i} className="skeleton h-9" />)}</div>}
         {res && shown.length === 0 && <div className="text-[12px] text-[var(--muted)]">None of the built-in ideas apply to this data.</div>}
         {shown.map((h, i) => (
-          <motion.div key={h.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }} className="rounded-lg px-2 py-1.5" style={{ background: 'var(--line)', borderLeft: `3px solid ${VERDICT[h.verdict]?.c}` }}>
+          <motion.div key={h.id} layout onClick={() => setOpenIdea(openIdea === h.id ? null : h.id)} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }} className="cursor-pointer rounded-lg px-2 py-1.5" style={{ background: 'var(--line)', borderLeft: `3px solid ${VERDICT[h.verdict]?.c}` }}>
             <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider" style={{ color: VERDICT[h.verdict]?.c }}>{h.verdict === 'supported' ? <Check size={11} /> : <X size={11} />}{VERDICT[h.verdict]?.label}</div>
             <div className="text-[11.5px] font-bold leading-snug">{h.claim}</div>
-            <div className="line-clamp-2 text-[12px] leading-snug text-[var(--muted)]" title={h.summary}>{h.summary}</div>
+            <div className={`${openIdea === h.id ? '' : 'line-clamp-2'} text-[12px] leading-snug text-[var(--muted)]`}>{h.summary}</div>
+            {openIdea !== h.id && h.summary.length > 110 && <div className="mt-0.5 text-[11px] font-bold" style={{ color: VERDICT[h.verdict]?.c }}>Show all</div>}
           </motion.div>
         ))}
       </div>
@@ -168,7 +169,7 @@ export default function Overview() {
               <motion.button key={k} onClick={() => go('risk', `?f=${encodeURIComponent(f.id)}`)} initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 + i * 0.06 }} className="row-hover flex w-full items-start gap-2 rounded-md px-1 py-1 text-left text-[12px]">
                 <span className="mt-0.5 h-4 w-1 flex-none rounded-full" style={{ background: c.c }} />
                 <span className="w-24 flex-none font-bold" style={{ color: c.c }}>{c.label}</span>
-                <span className="line-clamp-2 leading-snug text-[var(--muted)]" title={f.title}>{f.title}</span>
+                <span className="leading-snug text-[var(--muted)]">{f.title}</span>
               </motion.button>
             );
           })}
@@ -181,7 +182,7 @@ export default function Overview() {
           {loading && !findings.length ? <div className="space-y-2 p-2">{[0, 1, 2, 3].map((i) => <div key={i} className="skeleton h-7" />)}</div> : findings.length === 0 ? <div className="px-2 pb-2 text-[12px] text-[var(--muted)]">No problems found in this data.</div> : findings.slice(0, 6).map((f, i) => (
             <motion.button key={f.id} onClick={() => go('risk', `?f=${encodeURIComponent(f.id)}`)} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.05 * i }} className="row-hover flex w-full items-center gap-2.5 rounded-lg px-2 py-[7px] text-left">
               <span className="h-6 w-1 flex-none rounded-full" style={{ background: SEV[f.severity].c, boxShadow: `0 0 8px ${SEV[f.severity].c}` }} />
-              <span className="min-w-0 flex-1"><span className="line-clamp-2 block text-[12.5px] font-bold leading-snug" title={f.title}>{f.title}</span><span className="block truncate text-[11.5px] text-[var(--faint)]">{CAT[f.category]?.label} · {evidenceText(f)}{exposureText(f) ? ` · ${exposureText(f)}` : ''}</span></span>
+              <span className="min-w-0 flex-1"><span className="block text-[12.5px] font-bold leading-snug">{f.title}</span><span className="block truncate text-[11.5px] text-[var(--faint)]">{CAT[f.category]?.label} · {evidenceText(f)}{exposureText(f) ? ` · ${exposureText(f)}` : ''}</span></span>
               <span className="mono text-[11.5px] font-semibold" style={{ color: SEV[f.severity].c }}>{f.impactUsd ? usd(f.impactUsd, true) : '—'}</span>
             </motion.button>
           ))}
@@ -216,7 +217,7 @@ export default function Overview() {
           {actions.slice(0, 3).map((a, i) => (
             <motion.div key={a.findingId} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 * i }} className="tint rounded-lg p-2" style={{ '--c': 'var(--emerald)' } as CSSProperties}>
               <div className="flex items-center justify-between gap-2"><span className="mono grid h-5 w-5 flex-none place-items-center rounded-md text-[11.5px] font-bold" style={{ background: 'var(--emerald)', color: 'white' }}>{i + 1}</span><span className="flex-1 text-[12px] font-bold leading-snug">{a.intervention}</span></div>
-              <div className="mt-1 flex flex-wrap items-center gap-1.5 pl-7 text-[11.5px]">{a.expectedBenefitUsd ? <Chip c="var(--emerald)">could win back {usd(a.expectedBenefitUsd, true)}</Chip> : null}<Chip c={a.effort === 'low' ? 'var(--cyan)' : a.effort === 'medium' ? 'var(--amber)' : 'var(--rose)'}>{a.effort === 'low' ? 'easy' : a.effort === 'medium' ? 'moderate' : 'hard'}</Chip><span className="text-[var(--faint)]">{a.recoveryPct != null ? `planning scenario: ${a.recoveryPct}% recovered${a.benefitPeriod ? `, ${a.benefitPeriod}` : ''}` : 'estimate'}</span></div>
+              <div className="mt-1 flex flex-wrap items-center gap-1.5 pl-7 text-[11.5px]">{a.expectedBenefitUsd ? <Chip c="var(--emerald)">could win back {usd(a.expectedBenefitUsd, true)}</Chip> : null}<Chip c={a.effort === 'low' ? 'var(--cyan)' : a.effort === 'medium' ? 'var(--amber)' : 'var(--rose)'}>{a.effort === 'low' ? 'easy' : a.effort === 'medium' ? 'moderate' : 'hard'}</Chip><span className="text-[var(--faint)]">{a.recoveryPct != null ? `planning scenario: ${a.recoveryPct}% recovered${a.benefitPeriod ? `, ${a.benefitPeriod}` : ''}${(a.parts?.filter((x) => x.benefit !== null).length ?? 0) > 1 ? ` · largest of ${a.parts!.filter((x) => x.benefit !== null).length} estimates, not added` : ''}` : 'estimate'}</span></div>
             </motion.div>
           ))}
         </div>

@@ -84,7 +84,7 @@ export default function Home() {
 
       {/* Marquee */}
       <section className="mx-auto max-w-6xl px-4 md:px-6">
-        <div className="label mb-2 text-center">Nine kinds of blind spots, checked every time</div>
+        <div className="label mb-2 text-center">Ten areas checked whenever your data allows</div>
         <Marquee items={CATCHES.map((c) => ({ t: c.t, c: CAT[c.k].c }))} />
       </section>
 

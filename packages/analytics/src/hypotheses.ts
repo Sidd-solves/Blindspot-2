@@ -90,7 +90,11 @@ export function testGeneric(ds: Dataset, h: GenericHypothesis, id = 'ai'): Hypot
   // Relative change is undefined from a zero baseline: any non-zero difference from zero counts as material,
   // and the summary reports the absolute difference instead of a percentage.
   const effect: number | null = gb ? diff / Math.abs(gb) : diff === 0 ? 0 : null;
-  const effectForJudge = effect ?? Math.sign(diff) * Infinity;
+  // From a zero baseline, "material" needs an absolute threshold: the same minimum effect applied to the typical
+  // size of this measure across the whole file (and never below one cent / one unit of display precision).
+  const typical = (() => { let t = 0, n = 0; for (const r of ds.rows) { const v = r[h.measure]; if (typeof v === 'number' && r.IsReturn !== 1) { t += Math.abs(v); n++; } } return n ? t / n : 0; })();
+  const absThreshold = Math.max((h.minEffect ?? 0.05) * (h.metric === 'count' ? 1 : typical * (h.metric === 'sum' ? Math.max(va.length, vb.length) : 1)), h.metric === 'count' ? 1 : 0.01);
+  const effectForJudge = effect ?? (Math.abs(diff) >= absThreshold ? Math.sign(diff) * Infinity : 0);
   let r: TestResult;
   if (h.metric === 'avg') r = welchTest(va, vb);
   else if (h.metric === 'sum') r = bootstrapTest(va, vb, sum);
@@ -102,8 +106,9 @@ export function testGeneric(ds: Dataset, h: GenericHypothesis, id = 'ai'): Hypot
   const small = h.metric !== 'count' && (va.length < 20 || vb.length < 20);
   const verdict: Verdict = small ? 'inconclusive' : judge(effectForJudge, r, h.expect === 'a>b', h.minEffect ?? 0.05);
   const isMoney = h.metric !== 'count' && /sales|revenue|amount|profit|price|total|value/i.test(h.measure);
-  const $ = (n: number) => (h.metric === 'count' ? Math.round(n).toLocaleString() : isMoney ? money(n, ds.currency) : (Math.round(n * 10) / 10).toLocaleString());
-  const why = small ? ' Too few rows in one group to test (need 20+).' : verdict === 'small-effect' ? ` Real, but under the ${pctStr(h.minEffect ?? 0.05, 0)} that would matter in practice.` : '';
+  // Small amounts keep two decimals so a summary never reads "£0 vs £0".
+  const $ = (n: number) => (h.metric === 'count' ? Math.round(n).toLocaleString() : Math.abs(n) < 100 && n !== 0 ? (isMoney ? new Intl.NumberFormat('en-US', ds.currency && ds.currency !== 'XXX' ? { style: 'currency', currency: ds.currency, maximumFractionDigits: 4 } : { maximumFractionDigits: 4 }).format(n) : n.toPrecision(3)) : isMoney ? money(n, ds.currency) : (Math.round(n * 10) / 10).toLocaleString());
+  const why = small ? ' Too few rows in one group to test (need 20+).' : verdict === 'small-effect' ? (effect === null ? ` Real, but under ${$(absThreshold)}, the smallest difference that would matter for this measure.` : ` Real, but under the ${pctStr(h.minEffect ?? 0.05, 0)} that would matter in practice.`) : '';
   const d = decisionP(verdict, r, h.expect === 'a>b');
   return { ...base, verdict, method: r.method, p: small ? null : round(d.p, 4), pTwoSided: small ? null : round(r.p, 4), alternative: small ? null : d.alternative,
     summary: `${h.a.label}: ${$(ga)} vs ${h.b.label}: ${$(gb)} (${effect === null ? `difference ${diff >= 0 ? '+' : '−'}${$(Math.abs(diff))}, percentage change undefined from zero` : `${effect >= 0 ? '+' : ''}${pctStr(effect)}`}; ${r.method}, ${small ? 'not tested' : `${fmtP(d.p)} ${d.alternative}`}, n = ${va.length} vs ${vb.length}).${why}`,

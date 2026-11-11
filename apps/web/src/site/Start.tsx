@@ -33,11 +33,12 @@ const PLATFORMS = [
   { id: 'spreadsheet', t: 'Excel / Sheets', icon: FileSpreadsheet, c: 'var(--blue)' },
 ];
 
+// The sample store's actual top findings (kept in step with what the app shows for it).
 const PREVIEW_FINDINGS = [
-  { t: 'Best-seller down 51% while the shop grew', c: 'var(--rose)' },
-  { t: '42 best customers stopped ordering', c: 'var(--amber)' },
-  { t: 'Repeat buyers fell from 49% to 40%', c: 'var(--fuchsia)' },
-  { t: 'Growth came from old customers, not new', c: 'var(--cyan)' },
+  { t: '10 best customers stopped ordering (£93.5K a year)', c: 'var(--amber)' },
+  { t: 'New customers reorder less: 51% → 42% (tested)', c: 'var(--fuchsia)' },
+  { t: '23 products went from selling to zero (£36.3K)', c: 'var(--lime)' },
+  { t: '509 reversed order lines cleaned out first', c: 'var(--cyan)' },
 ];
 const SPARK = [18, 22, 19, 26, 24, 31, 28, 36, 33, 41, 38, 47, 52, 44, 58];
 
@@ -51,7 +52,7 @@ function SamplePreview() {
     <div className="relative overflow-hidden rounded-xl border p-3" style={{ borderColor: 'var(--line)', background: 'linear-gradient(160deg, color-mix(in srgb, var(--violet) 10%, transparent), transparent 60%)' }}>
       <div className="mb-2 flex items-center gap-1.5">{['var(--rose)', 'var(--amber)', 'var(--emerald)'].map((c) => <span key={c} className="h-2 w-2 rounded-full" style={{ background: c, opacity: 0.7 }} />)}<span className="ml-1 text-[11px] font-bold text-[var(--faint)]">UK gift shop · Overview</span></div>
       <div className="grid grid-cols-3 gap-1.5">
-        {[{ l: 'Sales lines', v: 261658, c: 'var(--violet)' }, { l: 'Orders', v: 9964, c: 'var(--cyan)' }, { l: 'Customers', v: 1465, c: 'var(--emerald)' }].map((s) => (
+        {[{ l: 'Sales lines', v: 261658, c: 'var(--violet)' }, { l: 'Orders', v: 9964, c: 'var(--cyan)' }, { l: 'Customers', v: 1458, c: 'var(--emerald)' }].map((s) => (
           <div key={s.l} className="rounded-lg px-2 py-1.5" style={{ background: 'var(--line)' }}>
             <div className="text-[11px] font-bold uppercase tracking-wider text-[var(--faint)]">{s.l}</div>
             <CountUp value={s.v} className="mono block text-[13px] font-semibold" />
@@ -78,7 +79,18 @@ function SamplePreview() {
 
 export default function Start() {
   const { open, busy } = useOpenSample();
+  const { stageFiles } = useStore();
   const toApp = () => openApp('overview');
+  // One click: put the sample PDF in the upload list, exactly as if it had been dropped there.
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const tryPdf = async () => {
+    setPdfBusy(true);
+    try {
+      const blob = await (await fetch('/samples/harbor_coffee_order_report.pdf')).blob();
+      stageFiles([new File([blob], 'harbor_coffee_order_report.pdf', { type: 'application/pdf' })]);
+      document.getElementById('upload-card')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } finally { setPdfBusy(false); }
+  };
   return (
     <section className="mx-auto max-w-6xl px-4 pb-16 pt-8 md:px-6">
       <div className="text-center">
@@ -92,7 +104,7 @@ export default function Start() {
       <div className="mt-8 grid gap-4 lg:grid-cols-[1.55fr_1fr]">
         <div className="space-y-3">
           <div className="label">Use your own data</div>
-          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, type: 'spring', stiffness: 220, damping: 26 }}>
+          <motion.div id="upload-card" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, type: 'spring', stiffness: 220, damping: 26 }}>
             <BeamCard c="var(--emerald)" className="p-4">
               <div className="flex flex-wrap items-center gap-1.5"><Upload size={16} style={{ color: 'var(--emerald)' }} /><span className="text-[15px] font-extrabold">Upload an export</span><span className="chip !py-0.5 !text-[11px]" style={{ '--c': 'var(--emerald)' } as CSSProperties}>Any store · no setup</span></div>
               <div className="mt-3"><UploadZone c="var(--emerald)" title="Drop your export here" hint="CSV, Excel or PDF · from Shopify, Tableau, Etsy, WooCommerce, Square, Amazon and more" onDone={toApp} /></div>
@@ -148,9 +160,18 @@ export default function Start() {
                 {busy === 'source' ? <Loading steps={['Loading rows…']} /> : <><Table2 size={13} style={{ color: 'var(--sky)' }} />See the source data</>}
               </motion.button>
             </div>
-            <div className="mt-3 flex items-center justify-between gap-2 border-t pt-2.5 text-[11.5px] text-[var(--faint)]" style={{ borderColor: 'var(--line)' }}>
-              <span>Want to test an upload? Grab a real file.</span>
-              <a href="/samples/real-shop-sales-sample.csv" download className="flex flex-none items-center gap-1 font-bold" style={{ color: 'var(--violet)' }}><Download size={11} />Sample CSV</a>
+            <div className="mt-3 border-t pt-3" style={{ borderColor: 'var(--line)' }}>
+              <div className="label mb-1.5">Or test an upload</div>
+              <motion.button whileTap={{ scale: 0.97 }} whileHover={{ scale: 1.02 }} onClick={tryPdf} disabled={pdfBusy} className="btn !h-9 w-full justify-center" style={{ borderColor: 'color-mix(in srgb, var(--sky) 45%, var(--line))' }}>
+                {pdfBusy ? <Loading steps={['Fetching the sample PDF…']} /> : <><FileText size={13} style={{ color: 'var(--sky)' }} />Try a 68-page PDF sales report</>}
+              </motion.button>
+              <div className="mt-2 flex items-center justify-between gap-2 text-[11.5px] text-[var(--faint)]">
+                <span>Or download a file to drop in yourself</span>
+                <span className="flex flex-none gap-2.5">
+                  <a href="/samples/harbor_coffee_order_report.pdf" download className="flex items-center gap-1 font-bold" style={{ color: 'var(--sky)' }}><Download size={11} />PDF</a>
+                  <a href="/samples/real-shop-sales-sample.csv" download className="flex items-center gap-1 font-bold" style={{ color: 'var(--violet)' }}><Download size={11} />CSV</a>
+                </span>
+              </div>
             </div>
           </BeamCard>
         </motion.div>

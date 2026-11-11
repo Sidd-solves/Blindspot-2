@@ -155,3 +155,38 @@ describe('review fixes, round 3', () => {
     for (const a of acts.filter((x) => x.expectedBenefitUsd)) expect(a.recoveryPct).toBeGreaterThan(0);
   });
 });
+
+describe('review fixes, round 4', () => {
+  const mk = (rows: Row[]): Dataset => ({ name: 't', label: 't', source: 'upload', rows } as unknown as Dataset);
+  const f = (id: string, category: string, impact: number, period: string): Finding => ({ id, category, title: id, severity: 'high', confidence: 1, basis: 'measured', pValue: null, period, exposure: 'at-risk', metric: '', explanation: '', evidence: {}, impactUsd: impact, impactBasis: 'x', nextAction: '', score: 1 } as Finding);
+
+  it('two findings over the same exposed sales are not added together', () => {
+    const [a] = recommend([f('conc-Customer', 'concentration', 8200, 'whole file'), f('conc-Product', 'concentration', 8200, 'whole file')]);
+    expect(a.expectedBenefitUsd).toBe(1230);                  // 15% of £8,200 once, not £2,460
+    expect(a.parts).toHaveLength(2);
+    expect(a.benefitBasis).toMatch(/not added/);
+  });
+  it('partial overlap and different periods: largest single estimate, with its own period', () => {
+    const [a] = recommend([f('store-lapsed', 'retention', 10000, 'per year'), f('store-retention', 'retention', 4000, 'last 90 days')]);
+    expect(a.expectedBenefitUsd).toBe(2000);
+    expect(a.benefitPeriod).toBe('per year');
+    expect(a.parts!.map((p) => p.period)).toEqual(['per year', 'last 90 days']);
+  });
+
+  it('a tiny difference from a zero baseline is real but not material, and stays readable', () => {
+    const rows: Row[] = [];
+    for (let i = 0; i < 40; i++) rows.push({ Group: 'A', Sales: 0.001 + (i % 5) * 1e-5 }, { Group: 'B', Sales: 0 }, { Group: 'C', Sales: 100 });
+    const r = testGeneric(mk(rows), { claim: 'A > B', level: 'row', metric: 'avg', measure: 'Sales', a: { label: 'A', filters: [{ field: 'Group', op: 'eq', value: 'A' }] }, b: { label: 'B', filters: [{ field: 'Group', op: 'eq', value: 'B' }] }, expect: 'a>b' });
+    expect(r.verdict).toBe('small-effect');
+    expect(r.summary).not.toMatch(/\$0 vs \$0|difference \+\$0\b/);
+  });
+
+  it('each topic records which individual checks ran', () => {
+    const rows: Row[] = [];
+    for (let i = 0; i < 40; i++) rows.push({ Order: `o${i}`, Customer: `c${i % 6}`, Product: 'Mug', OrderDate: `2025-0${1 + (i % 9)}-01`, Sales: 10 + i, Quantity: 1, IsReturn: 0 });
+    const ds = mk(rows), rep = reportTopics(ds, analyzeSmart(ds)).find((t) => t.key === 'retention')!;
+    const c = (rep as any).check;
+    expect(c.checks.find((x: any) => x.id === 'repeat-rate').ran).toBe(false);
+    expect(c.coverage).not.toBe('full');
+  });
+});
