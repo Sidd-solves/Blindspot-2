@@ -15,6 +15,7 @@ import { get, SID, usd, usdExact } from '../api';
 import { useStore, type Drill } from '../store';
 import { Card, CardHead, Chip, CountUp, Loading, stagger, fadeUp } from '../components/ui';
 import { go } from '../App';
+import { ProofReplay } from '../components/ProofReplay';
 
 interface Recon {
   expect: { value: number; what: string } | null;
@@ -344,6 +345,20 @@ export default function SourceData() {
         )}
       </AnimatePresence>
       {drill && scope === 'exact' && data?.recon && (data.recon.expect || data.recon.windows.length > 0) && (
+        <ProofReplay
+          key={JSON.stringify(drill)}
+          allRecords={dataset?.rows ?? data.total}
+          rowsUsed={data.total}
+          label={drill.label}
+          what={data.recon.expect?.what ?? data.recon.windows[0]?.label ?? 'amounts'}
+          actualCents={data.recon.expect ? data.recon.actualCents : data.recon.windows[0].actualCents}
+          expectCents={data.recon.expect ? data.recon.expectCents : data.recon.windows[0].expectCents}
+          amounts={data.rows
+            .map((r) => r[data.measure])
+            .filter((x): x is number => typeof x === 'number' && x > 0)}
+        />
+      )}
+      {drill && scope === 'exact' && data?.recon && data.recon.windows.length > 1 && (
         <motion.div
           initial={{ opacity: 0, y: -4 }}
           animate={{ opacity: 1, y: 0 }}
