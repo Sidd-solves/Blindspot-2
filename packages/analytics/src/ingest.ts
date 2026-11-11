@@ -85,6 +85,8 @@ export function parseNumber(raw: unknown, decimalComma = false): number | null {
   // strip currency marks and codes
   for (const [re] of SYMBOLS) s = s.replace(new RegExp(re.source, 'gi'), '');
   s = s.replace(/\b[A-Z]{3}\b/g, (m) => (CURRENCY_CODES.has(m) ? '' : m)).replace(/%$/, '').trim();
+  // currency and unit words: "40 dollars", "2 pcs", "x3", "3 units"
+  s = s.replace(/\s*\b(dollars?|bucks|euros?|pounds?|quid|rupees?|yen|yuan|pesos?|reais|francs?|kronor|kroner|pcs?|pieces?|units?|ea|each|items?|stk|st|uds?|unidades?)\.?\s*$/i, '').replace(/^x\s*(?=\d)|(?<=\d)\s*x$/i, '').trim();
   if (/^-/.test(s)) { neg = !neg; s = s.slice(1).trim(); }
   if (/^\+/.test(s)) s = s.slice(1).trim();
   if (/^\d+(\.\d+)?e[+-]?\d+$/i.test(s)) { const n = Number(s); return Number.isFinite(n) ? (neg ? -n : n) : null; }
@@ -198,7 +200,10 @@ function monthHeader(h: string, fallbackYear?: number): string | null {
 
 /* ------------------------------------------------------------------ table */
 
-export interface Table { headers: string[]; rows: string[][]; lines: number[]; delimiter: string; headerLine: number; droppedTotals: number[]; notes: number[]; how?: string; totalLines?: number }
+export interface Table { headers: string[]; rows: string[][]; lines: number[]; delimiter: string; headerLine: number; droppedTotals: number[]; notes: number[]; how?: string; totalLines?: number; secondTable?: { line: number; label: string } }
+
+/** Looks like a data value rather than a column name ("Jan 2026" and "2025" can be either, so they count as names). */
+const isDataCell = (c: string) => (parseNumber(c) !== null && !/^(19|20)\d{2}$/.test(c.trim())) || (parseDate(c) !== null && !monthHeader(c));
 
 const TOTAL_RE = /^(grand\s*|sub\s*|overall\s*)?(totals?|summe|gesamt(summe)?|gesamtbetrag|totale|totaal|somme|suma|sum|total general|total geral|importe total|totalt|yhteensa|razem|celkem)\s*:?\s*$|^total\s+(sales|revenue|amount|for .*)$/i;
 
@@ -223,39 +228,48 @@ export function readTable(text: string, limit?: number): Table {
   let h = 0;
   for (let k = 0; k < Math.min(40, nonEmpty.length); k++) {
     const cells = nonEmpty.at(k).r.filter((c) => c !== '');
-    const labels = cells.filter((c) => parseNumber(c) === null && !parseDate(c) && c.length <= 80).length;
+    const labels = cells.filter((c) => !isDataCell(c) && c.length <= 80).length;
     if (cells.length >= Math.max(2, Math.floor(typical * 0.6)) && labels / cells.length >= 0.7) { h = k; break; }
     if (k === Math.min(40, nonEmpty.length) - 1) h = 0;
   }
-  const headerRow = nonEmpty.at(h).r;
+  // No row looks like column names (the file starts straight with data): name the columns and keep that row as data.
+  const firstCells = nonEmpty.at(h).r.filter((c) => c !== '');
+  const headerless = firstCells.filter(isDataCell).length / Math.max(1, firstCells.length) >= 0.4;
+  const widest = Math.max(...Array.from({ length: Math.min(50, nonEmpty.length) }, (_, k) => nonEmpty.at(k).r.length));
+  const synth = Array.from({ length: widest }, (_, j) => `Column ${j < 26 ? String.fromCharCode(65 + j) : j + 1}`);
+  const headerRow = headerless ? synth : nonEmpty.at(h).r;
   let width = headerRow.length;
   while (width > 1 && headerRow[width - 1] === '' && !Array.from({ length: Math.min(49, nonEmpty.length - h - 1) }, (_, k) => nonEmpty.at(h + 1 + k).r).some((r) => (r[width - 1] ?? '') !== '')) width--;
   const seen = new Map<string, number>();
   const headers = headerRow.slice(0, width).map((c, i) => {
     let name = c.replace(/\s+/g, ' ').trim() || `Column ${i + 1}`;
-    const k = norm(name); const n = (seen.get(k) ?? 0) + 1; seen.set(k, n);
+    const k = norm(name) || name; const n = (seen.get(k) ?? 0) + 1; seen.set(k, n);
     if (n > 1) name = `${name} ${n}`;
     return name;
   });
   const rows: string[][] = [], lines: number[] = [], droppedTotals: number[] = [], notes: number[] = [];
-  const hnorm = headers.map((c) => norm(c)).join('|');
-  for (let k = h + 1; k < nonEmpty.length; k++) {
+  let secondTable: { line: number; label: string } | undefined;
+  const hnorm = headers.map((c) => norm(c)).join('|'), hset = new Set(headers.map((c) => norm(c)).filter(Boolean));
+  for (let k = headerless ? h : h + 1; k < nonEmpty.length; k++) {
     const { r, i } = nonEmpty.at(k);
     if (r.length !== headers.length) { r.length = headers.length; for (let j = 0; j < r.length; j++) if (r[j] === undefined) r[j] = ''; }
     const row = r;
     all[i] = null as any; // the row now lives in `rows`; let the parser's copy go
     if (row.every((c) => c === '')) continue;
-    if (norm(row[0]) === norm(headers[0]) && row.map((c) => norm(c)).join('|') === hnorm) continue; // header repeated (page breaks, stacked exports)
     const filled = row.filter((c) => c !== '');
+    // Header repeated (page breaks in PDFs, stacked exports), even if a heading or two went missing.
+    if (filled.length >= 2 && filled.filter((c) => hset.has(norm(c))).length >= Math.max(2, Math.ceil(filled.length * 0.6))) continue;
     if (filled.length === 1 && headers.length >= 3 && parseNumber(filled[0]) === null) { notes.push(i + 1); continue; } // "Page 2 of 5", notes, section titles
+    // A new set of column headings further down = a second table (e.g. a summary). Read only the first.
+    if (rows.length && filled.length >= 2 && filled.every((c) => !isDataCell(c)) && filled.filter((c) => ROLES.some((role) => nameScore(role, c) >= 0.7)).length >= 2 && row.map((c) => norm(c)).join('|') !== hnorm) { secondTable = { line: i + 1, label: filled.slice(0, 3).join(', ') }; break; }
     if (row.slice(0, 3).some((c) => TOTAL_RE.test(c))) { droppedTotals.push(i + 1); continue; }
     rows.push(row); lines.push(i + 1);
   }
   // Drop columns that are empty everywhere.
   const keep = headers.map((_, j) => rows.some((r) => r[j] !== ''));
-  const headerLine = nonEmpty.at(h).i + 1;
-  if (keep.every(Boolean)) return { headers, rows, lines, delimiter, headerLine, droppedTotals, notes, totalLines };
-  return { headers: headers.filter((_, j) => keep[j]), rows: rows.map((r) => r.filter((_, j) => keep[j])), lines, delimiter, headerLine, droppedTotals, notes, totalLines };
+  const headerLine = headerless ? 0 : nonEmpty.at(h).i + 1;
+  if (keep.every(Boolean)) return { headers, rows, lines, delimiter, headerLine, droppedTotals, notes, totalLines, secondTable };
+  return { headers: headers.filter((_, j) => keep[j]), rows: rows.map((r) => r.filter((_, j) => keep[j])), lines, delimiter, headerLine, droppedTotals, notes, totalLines, secondTable };
 }
 
 /** One column per month (a pivot/crosstab, e.g. from Tableau) → one row per item per month. */
@@ -319,7 +333,7 @@ const NAMES: Record<Role, { exact: string[]; contains: string[]; not?: string[] 
 };
 const MONEY: Role[] = ['amount', 'price', 'discount', 'refund', 'cost', 'profit'];
 
-interface ColStats { percent: number; numeric: number; integer: number; date: number; serial: number; distinct: number; country: number; code3: number; avgLen: number; n: number; status: number; negatives: number }
+interface ColStats { email: number; percent: number; numeric: number; integer: number; date: number; serial: number; distinct: number; country: number; code3: number; avgLen: number; n: number; status: number; negatives: number }
 function colStats(values: string[]): ColStats {
   const v = values.filter((x) => !blank(x)).slice(0, 600);
   const n = v.length || 1, dc = detectDecimalComma(v);
@@ -327,6 +341,7 @@ function colStats(values: string[]): ColStats {
   const order = detectDateOrder(v)?.order ?? 'mdy';
   return {
     percent: v.filter((x) => /%\s*$/.test(x)).length / n,
+    email: v.filter((x) => /^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(x.trim())).length / n,
     n: v.length,
     numeric: nums.filter((x) => x !== null).length / n,
     integer: nums.filter((x) => x !== null && Number.isInteger(x)).length / n,
@@ -341,11 +356,24 @@ function colStats(values: string[]): ColStats {
   };
 }
 
+/** Words in a header: "Total Paid" → total, paid; "customerID" → customer, id; "ship_country" → ship, country. */
+const words = (h: string) => h.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+
+/** Header keywords in scripts that have no Latin letters (Japanese, Chinese, Korean, Russian, Arabic). */
+const NATIVE: Partial<Record<Role, RegExp>> = {
+  date: /日付|日期|注文日|購入日|날짜|일자|дата|تاريخ/iu, order: /注文番号|注文ID|订单号|订单编号|订单|주문번호|номер заказа|заказ|رقم الطلب/iu, product: /商品|产品|製品|品名|品目|상품|제품|товар|продукт|наименование|منتج/iu,
+  customer: /顧客|客户|お客様|購入者|고객|구매자|клиент|покупатель|عميل/iu, quantity: /数量|個数|수량|количество|кол-во|كمية/iu, price: /単価|单价|단가|цена|سعر/iu,
+  amount: /金額|金额|売上|销售额|合計|总计|小計|금액|매출|합계|сумма|выручка|итого|المبلغ|الإجمالي/iu, country: /国|国家|국가|страна|البلد|الدولة/iu, cost: /原価|成本|원가|себестоимость|التكلفة/iu,
+};
+
 function nameScore(role: Role, h: string): number {
   const k = norm(h), spec = NAMES[role];
-  if (spec.not?.some((t) => k.includes(t)) && !spec.exact.includes(k)) return 0;
+  if (!k) return NATIVE[role]?.test(h) ? 0.9 : 0;
+  const w = words(h);
   if (spec.exact.includes(k)) return 1;
+  if (spec.not?.some((t) => w.some((x) => x.startsWith(t)))) return 0;
   if (spec.contains.some((t) => k.includes(t))) return 0.7;
+  if (NATIVE[role]?.test(h)) return 0.9;
   return 0;
 }
 
@@ -401,6 +429,7 @@ function detectRoles(t: Table, profile: Profile | null, overrides: Partial<Recor
         else if (role === 'country' && s.country >= 0.8) ns = 0.6;
         else if (role === 'currency' && s.code3 >= 0.95) ns = 0.6;
         else if (role === 'status' && s.status >= 0.8) ns = 0.5;
+        else if (role === 'customer' && s.email >= 0.8) ns = 0.6;
       }
       if (role === 'country' && ns && s.country < 0.3 && nameScore('country', col) < 1) ns *= 0.6;
       if (role === 'quantity' && ns < 1 && s.integer < 0.98) ns *= 0.8;
@@ -421,14 +450,36 @@ function detectRoles(t: Table, profile: Profile | null, overrides: Partial<Recor
   // Fallback product: the most varied remaining text column (shown to the person to confirm).
   if (!roles.product && !used.has('__none_product') && !profile) {
     const pick = t.headers.filter((h) => !used.has(h)).map((h) => ({ h, s: stats.get(h)! }))
-      .filter(({ s, h }) => s.numeric < 0.2 && s.date < 0.2 && s.country < 0.5 && s.code3 < 0.5 && s.status < 0.5 && s.distinct >= 2 && s.avgLen >= 3 && s.avgLen <= 80 && !/email|phone|address|zip|postal|note|comment|tag|url|link/i.test(h))
-      .sort((a, b) => b.s.distinct - a.s.distinct)[0];
+      .filter(({ s, h }) => s.numeric < 0.2 && s.date < 0.2 && s.country < 0.5 && s.code3 < 0.5 && s.status < 0.5 && s.email < 0.5 && s.distinct >= 2 && s.avgLen >= 3 && s.avgLen <= 80 && !/email|phone|address|zip|postal|note|comment|tag|url|link/i.test(h))
+      // products repeat across sales more than customers or notes do: prefer the column whose values repeat most (but not a 2-value flag)
+      .sort((a, b) => { const flag = (x: ColStats) => (t.rows.length >= 30 && x.distinct < 3 ? 1 : 0); return flag(a.s) - flag(b.s) || a.s.distinct - b.s.distinct; })[0];
     if (pick) { roles.product = pick.h; confidence.product = 0.45; used.add(pick.h); }
   }
   if (!roles.amount && !roles.price && !used.has('__none_amount') && !used.has('__none_price') && !profile) {
     const pick = t.headers.filter((h) => !used.has(h)).map((h) => ({ h, s: stats.get(h)! })).filter(({ s, h }) => s.numeric >= 0.95 && s.integer < 0.9 && !/id|code|zip|postal|phone|year|lat|lon/i.test(h))
       .sort((a, b) => (1 - b.s.integer) - (1 - a.s.integer))[0];
     if (pick) { roles.amount = pick.h; confidence.amount = 0.4; used.add(pick.h); }
+  }
+  // Unnamed quantity: a column of small whole numbers that isn't a running ID.
+  if (!roles.quantity && !used.has('__none_quantity') && !profile) {
+    const pick = t.headers.filter((h) => !used.has(h)).find((h) => {
+      const j = t.headers.indexOf(h), s = stats.get(h)!;
+      if (s.numeric < 0.95 || s.integer < 0.98 || /id|code|zip|postal|phone|year|no$|number|#/i.test(h)) return false;
+      const v = t.rows.slice(0, 500).map((r) => parseNumber(r[j])).filter((x): x is number => x !== null);
+      const max = Math.max(...v), min = Math.min(...v);
+      let rising = 0; for (let i = 1; i < v.length; i++) if (v[i] > v[i - 1]) rising++;
+      return max <= 1000 && min >= -1000 && new Set(v).size <= 60 && rising < v.length * 0.9;
+    });
+    if (pick) { roles.quantity = pick; confidence.quantity = 0.45; used.add(pick); }
+  }
+  // A guessed money column next to a quantity: unit price or line total? If a product's amount stays the same
+  // whatever the quantity, it's a unit price.
+  if (roles.amount && roles.quantity && !roles.price && (confidence.amount ?? 1) < 0.9 && roles.product) {
+    const ja = t.headers.indexOf(roles.amount), jq = t.headers.indexOf(roles.quantity), jp = t.headers.indexOf(roles.product);
+    const byP = new Map<string, Set<string>>(), qtyVaries = new Map<string, Set<string>>();
+    for (const r of t.rows.slice(0, 3000)) { (byP.get(r[jp]) ?? byP.set(r[jp], new Set()).get(r[jp])!).add(r[ja]); (qtyVaries.get(r[jp]) ?? qtyVaries.set(r[jp], new Set()).get(r[jp])!).add(r[jq]); }
+    const groups = [...byP.keys()].filter((p) => qtyVaries.get(p)!.size >= 2);
+    if (groups.length && groups.filter((p) => byP.get(p)!.size === 1).length / groups.length >= 0.7) { roles.price = roles.amount; confidence.price = confidence.amount; delete roles.amount; delete confidence.amount; }
   }
   return { roles, confidence };
 }
@@ -478,6 +529,15 @@ function parseFile(f: IngestInput, overrides: Partial<Record<Role, string | null
   const hn = new Set(table.headers.map(norm));
   let profile = PROFILES.find((p) => p.detect.every((d) => hn.has(d))) ?? null;
   if (!profile) { const u = unpivotMonths(table); if (u) table = u; }
+  // Separate first/last name columns and nothing else identifies the customer: join them into one.
+  if (!profile && !table.headers.some((h) => nameScore('customer', h) > 0)) {
+    const first = table.headers.findIndex((h) => /^(first|given|fore)\s*_?name$|^vorname$|^prenom$|^nombre$/i.test(h.trim()));
+    const last = table.headers.findIndex((h) => /^(last|family|sur)\s*_?name$|^surname$|^nachname$|^nom$|^apellidos?$/i.test(h.trim()));
+    if (first >= 0 && last >= 0) {
+      table.headers.push('Customer name');
+      for (const r of table.rows) r.push(`${r[first]} ${r[last]}`.trim());
+    }
+  }
   const { roles, confidence } = detectRoles(table, profile, overrides);
   return { name: f.name, table, profile, roles, confidence };
 }
@@ -490,6 +550,7 @@ export function ingest(files: IngestInput[], opts: IngestOptions = {}): { datase
   const issues: Issue[] = [];
   const fileInfo: IngestReport['files'] = [{ name: primary.name, format: profile?.label ?? (table.how ? 'Summary table' : 'Spreadsheet'), rows: table.rows.length, delimiter: table.delimiter, headerLine: table.headerLine, how: table.how }];
   if (table.headerLine > 1) issues.push({ kind: 'title-rows', severity: 'info', count: table.headerLine - 1, lines: [], message: `Skipped ${table.headerLine - 1} line(s) above the column headers (titles or notes). Headers are on line ${table.headerLine}.` });
+  if (table.secondTable) issues.push({ kind: 'second-table', severity: 'info', count: 1, lines: [table.secondTable.line], message: `A second table starts at line ${table.secondTable.line} (${table.secondTable.label}); only the first table, your sales, was read.` });
   if (table.notes.length) issues.push({ kind: 'notes', severity: 'info', count: table.notes.length, lines: table.notes.slice(0, 5), message: `Skipped ${table.notes.length} line(s) that were notes or page labels, not sales.` });
   if (table.droppedTotals.length) issues.push({ kind: 'totals', severity: 'info', count: table.droppedTotals.length, lines: table.droppedTotals.slice(0, 5), message: `Left out ${table.droppedTotals.length} total/summary line(s) so nothing is counted twice.` });
 
