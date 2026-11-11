@@ -3,7 +3,7 @@
 > **Work in progress, not part of any hackathon submission.** This branch holds features built *after* the
 > submissions were made. Judges: please evaluate the submitted version on the `main` branch and the live site.
 
-[![CI](https://github.com/Sidd-solves/BlindSpot/actions/workflows/ci.yml/badge.svg)](https://github.com/Sidd-solves/BlindSpot/actions/workflows/ci.yml) ![Tests](https://img.shields.io/badge/tests-247%20passing-34d399) ![Coverage](https://img.shields.io/badge/coverage-82%25%20engine%20%2B%20API-22d3ee) ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6) ![Lint](https://img.shields.io/badge/ESLint-0%20problems-8b5cf6) [![License: MIT](https://img.shields.io/badge/license-MIT-a78bfa)](LICENSE)
+[![CI](https://github.com/Sidd-solves/BlindSpot/actions/workflows/ci.yml/badge.svg)](https://github.com/Sidd-solves/BlindSpot/actions/workflows/ci.yml) ![Tests](https://img.shields.io/badge/tests-247%20passing-34d399) ![Coverage](https://img.shields.io/badge/coverage-84%25%20engine%20%2B%20API-22d3ee) ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6) ![Lint](https://img.shields.io/badge/ESLint-0%20problems-8b5cf6) [![License: MIT](https://img.shields.io/badge/license-MIT-a78bfa)](LICENSE)
 
 **The AI analyst for small businesses. See what your sales data is hiding.**
 
@@ -73,7 +73,7 @@ Every number comes from deterministic code. The model never calculates; it calls
 11. **Reading a dashboard's colors from a screenshot.** [`paletteFromPixels`](packages/analytics/src/color.ts#L197) bins the pixels, takes the most common as the background, keeps saturated colors, and merges anti-aliased edges by testing whether a color is a blend of a chart color and the background, all in the browser.
 12. **A free 512 MB server.** The case study is pre-cleaned at build time ([`build-case-study.ts`](scripts/build-case-study.ts)), uploads are capped per request, and the server [pings itself](services/api/src/uptime.ts) so the free plan never puts it to sleep.
 
-Design decisions and their trade-offs: [docs/DESIGN.md](docs/DESIGN.md).
+Design decisions and their trade-offs: [docs/DESIGN.md](docs/DESIGN.md). One finding validated end to end on the real shop (independent recalculation to the penny, replayed on the shop's own past, what stays unknown): [docs/VALIDATION.md](docs/VALIDATION.md).
 
 ## Run it
 Needs **Node.js 22+** and npm.
@@ -85,7 +85,9 @@ npm test        # 247 tests: statistics, file reading (incl. real PDFs), analyti
 npm run typecheck  # strict TypeScript, 0 errors
 npm run format:check
 npm run lint       # ESLint, 0 problems
-npm run coverage   # 82% of lines in the engine, tools and API
+npm run coverage   # 84% of lines in the engine, tools, API and request-state helper (not the React screens)
+npm run e2e        # 5 browser tests in installed Chrome: keyboard path finding → rows → CSV to the penny, late answers after a filter change, failure → retry, undefined accuracy, phone layout
+python3 scripts/validate_lapsed.py   # independent recalculation + back-test of the top finding (docs/VALIDATION.md)
 npm run bench      # speed test: 1M real rows read + cleaned in ~40 s, analyzed in ~6 s (2020 Intel i5 laptop)
 ```
 Add `ANTHROPIC_API_KEY=` to `.env` for Claude answers (optional; without it the analyst answers common questions with real queries). Try it with the sample files in `apps/web/public/samples/` (a 68-page PDF report and a CSV), or the **Try a 68-page PDF sales report** button on the start page. Production: see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).

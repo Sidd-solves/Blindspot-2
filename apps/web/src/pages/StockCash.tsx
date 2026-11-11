@@ -78,7 +78,7 @@ function GapPerformance({ perf }: { perf: SO['performance'] }) {
   return (
     <div className="mt-2.5 rounded-lg border p-2" style={{ borderColor: 'var(--line)' }}>
       <div className="flex flex-wrap items-baseline justify-between gap-1 text-[11.5px]">
-        <span className="font-bold">Real gaps caught in testing</span>
+        <span className="font-bold">Planted gaps caught in simulations</span>
         <span className="text-[var(--muted)]">
           false alarms: {perf.falseFlags.flagged} in {perf.falseFlags.histories.toLocaleString()}
         </span>

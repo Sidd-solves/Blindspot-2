@@ -4,5 +4,5 @@
     "strict": true, "esModuleInterop": true, "skipLibCheck": true, "noEmit": true,
     "jsx": "react-jsx", "lib": ["ES2022", "DOM", "DOM.Iterable"], "types": ["node"]
   },
-  "include": ["packages/*/src", "services/*/src", "tests", "apps/web/src"]
+  "include": ["packages/*/src", "services/*/src", "tests", "e2e", "apps/web/src", "playwright.config.ts"]
 }

@@ -24,3 +24,24 @@ jobs:
         run: npm run coverage
       - name: Build web app
         run: npm run build -w @blindspot/web
+
+  browser:
+    # The finished app in a real browser: keyboard path to a finding's rows, CSV download, late answers after a
+    # filter change, failure and retry, undefined accuracy, and phone layout.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      - name: Browser tests (installed Chrome)
+        run: npm run e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-traces
+          path: test-results/

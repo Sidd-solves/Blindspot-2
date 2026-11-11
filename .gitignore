@@ -12,3 +12,5 @@ docs/slides/png/
 docs/slides/qa/
 docs/slides/png_short/
 coverage/
+test-results/
+playwright-report/

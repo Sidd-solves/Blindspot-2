@@ -15,13 +15,15 @@
   "mcp": "npm run start -w @blindspot/mcp-server",
   "test": "vitest run",
   "typecheck": "tsc --noEmit -p tsconfig.json",
-  "format": "prettier --write \"{apps/web/src,services/*/src,packages/*/src,tests}/**/*.{ts,tsx}\"",
-  "format:check": "prettier --check \"{apps/web/src,services/*/src,packages/*/src,tests}/**/*.{ts,tsx}\"",
-  "lint": "eslint apps/web/src services/api/src services/mcp-server/src packages/analytics/src packages/tool-contracts/src tests",
+  "format": "prettier --write \"{apps/web/src,services/*/src,packages/*/src,tests,e2e}/**/*.{ts,tsx}\"",
+  "format:check": "prettier --check \"{apps/web/src,services/*/src,packages/*/src,tests,e2e}/**/*.{ts,tsx}\"",
+  "lint": "eslint apps/web/src services/api/src services/mcp-server/src packages/analytics/src packages/tool-contracts/src tests e2e",
   "coverage": "vitest run --coverage",
-  "bench": "tsx scripts/bench.ts"
+  "bench": "tsx scripts/bench.ts",
+  "e2e": "playwright test"
  },
  "devDependencies": {
+  "@playwright/test": "^1.49.1",
   "@types/node": "^22.0.0",
   "@vitest/coverage-v8": "^5.0.5",
   "concurrently": "^9.0.0",
