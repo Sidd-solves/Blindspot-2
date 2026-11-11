@@ -28,6 +28,7 @@ import { tool, usd, pct } from '../api';
 import { useStore } from '../store';
 import { Card, CardHead, Chip, CountUp, Tabs, stagger, Loading } from '../components/ui';
 import { ChartTip, axis } from '../components/charts';
+import { Confidence } from '../components/Confidence';
 
 type Levers = {
   churnReductionPct: number;
@@ -301,6 +302,12 @@ export default function Simulator() {
                   <Sparkles size={11} style={{ color: 'var(--fuchsia)' }} />
                   Extra profit {res.baseline.basis === 'observed' ? 'over this period' : 'per year'}{' '}
                   (estimate)
+                  <Confidence
+                    sure={{
+                      kind: 'estimate',
+                      note: 'Simple formulas on your numbers and the levers you set',
+                    }}
+                  />
                 </div>
                 <div className="flex items-baseline gap-1">
                   <span className="text-[30px] font-semibold" style={{ color: 'var(--emerald)' }}>

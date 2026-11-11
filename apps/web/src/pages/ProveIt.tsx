@@ -25,6 +25,7 @@ import { tool, usd } from '../api';
 import { useStore } from '../store';
 import { Card, CardHead, Chip, Dropdown, Loading, Tabs, stagger } from '../components/ui';
 import { ChartTip, axis } from '../components/charts';
+import { Confidence } from '../components/Confidence';
 
 type Impact = {
   ok: boolean;
@@ -581,6 +582,7 @@ function FactCheck({ weeks }: { weeks: string[] }) {
                   {V.label}
                 </motion.span>
                 <span className="text-[11.5px] text-[var(--muted)]">{fmtP(res.p)}</span>
+                {res.verdict !== 'inconclusive' && <Confidence sure={{ kind: 'tested', p: res.p }} />}
               </div>
               {ev?.a && ev?.b && (
                 <div className="mt-2.5 space-y-1.5">

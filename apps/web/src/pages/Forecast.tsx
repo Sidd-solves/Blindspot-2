@@ -16,6 +16,7 @@ import { tool, usd } from '../api';
 import { useStore } from '../store';
 import { Card, CardHead, Chip, CountUp, Empty, Loading, Ring, stagger } from '../components/ui';
 import { ChartTip, axis, glowDefs } from '../components/charts';
+import { Confidence } from '../components/Confidence';
 
 type F = {
   ok: boolean;
@@ -156,6 +157,12 @@ export default function Forecast() {
               value={next.value}
               format={(n) => usd(n)}
               className="grad-text text-[30px] font-semibold"
+            />
+            <Confidence
+              sure={{
+                kind: 'forecast',
+                note: `Replayed on ${acc.months} past months: ${((acc.wape ?? 0) * 100).toFixed(1)}% average miss`,
+              }}
             />
           </div>
           <div className="text-[12px] text-[var(--muted)]">

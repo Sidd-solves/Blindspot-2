@@ -54,6 +54,7 @@ import {
 } from '../components/ui';
 import { ChartTip, axis } from '../components/charts';
 import { go } from '../App';
+import { Confidence, sureOf } from '../components/Confidence';
 
 /** Plain names and the right format for every evidence value: money, percent, count, p-value or plain number. */
 type Kind = 'money' | 'pct' | 'count' | 'num' | 'p' | 'q' | 'text';
@@ -597,6 +598,7 @@ export default function Risk() {
                       <span className="text-[11px] font-semibold" style={{ color: BASIS[f.basis]?.c }}>
                         {evidenceText(f)}
                       </span>
+                      <Confidence sure={sureOf(f)} />
                     </span>
                   </span>
                   <span className="text-right">

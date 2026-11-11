@@ -36,6 +36,7 @@ import { pct, SEV, CAT, tool, usd, evidenceText, VERDICT, exposureText, impactCo
 import { Card, CardHead, Chip, CountUp, Meter, Ring, Sparkline, stagger, Loading } from '../components/ui';
 import { ChartTip, axis, glowDefs } from '../components/charts';
 import { go } from '../App';
+import { Confidence, sureOf } from '../components/Confidence';
 
 const KPI_STYLE = [
   { c: 'var(--violet)', icon: DollarSign },
@@ -550,6 +551,7 @@ export default function Overview() {
                     {exposureText(f) ? ` · ${exposureText(f)}` : ''}
                   </span>
                 </span>
+                <Confidence sure={sureOf(f)} />
                 <span
                   className="mono text-[11.5px] font-semibold"
                   style={{ color: impactColor(f, SEV[f.severity].c) }}

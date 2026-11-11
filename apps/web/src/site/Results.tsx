@@ -7,6 +7,7 @@ import { CountUp, Reveal } from '../components/ui';
 import { BeamCard } from './Effects';
 import { FinalCta } from './Home';
 import { SampleNotice } from './SampleNotice';
+import { Confidence, sureOf } from '../components/Confidence';
 
 // Verified on the FULL dataset (1,067,371 rows) by an independent Python script: docs/FACT_CHECK.md
 const FACTS = [
@@ -126,7 +127,10 @@ export default function Results() {
                   viewport={{ once: true }}
                   transition={{ duration: 0.9, delay: i * 0.05 }}
                 />
-                <div className="mt-1 text-[11px] text-[var(--faint)]">{evidenceText(f)}</div>
+                <div className="mt-1 flex items-center gap-1.5 text-[11px] text-[var(--faint)]">
+                  {evidenceText(f)}
+                  <Confidence sure={sureOf(f)} />
+                </div>
               </BeamCard>
             </Reveal>
           ))}

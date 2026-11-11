@@ -15,6 +15,7 @@ import {
 import { tool, usd } from '../api';
 import { useStore } from '../store';
 import { Card, CardHead, Chip, CountUp, Empty, Loading, stagger } from '../components/ui';
+import { Confidence } from '../components/Confidence';
 
 type EW = {
   ok: boolean;
@@ -254,6 +255,7 @@ export default function Customers() {
           <div className="flex items-baseline gap-2">
             <CountUp value={ew.total} className="text-[30px] font-semibold" />
             <span className="text-[12px] text-[var(--muted)]">repeat customers, 45–90 days silent</span>
+            {b && <Confidence sure={{ kind: 'tested', p: b.p }} className="ml-auto" />}
           </div>
           <div className="text-[12px] text-[var(--muted)]">
             They spent{' '}
@@ -338,6 +340,7 @@ export default function Customers() {
           <div className="flex items-baseline gap-2">
             <CountUp value={wb.customers.length} className="text-[30px] font-semibold" />
             <span className="text-[12px] text-[var(--muted)]">top customers, no order in 90 days</span>
+            <Confidence sure={{ kind: 'rule' }} className="ml-auto" />
           </div>
           <div className="text-[12px] text-[var(--muted)]">
             <CountUp value={wb.total} format={(n) => usd(n)} className="font-semibold text-[var(--text)]" />{' '}

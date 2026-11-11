@@ -14,6 +14,7 @@ import {
 import { tool, usd, pct, SEV, evidenceText } from '../api';
 import { useStore } from '../store';
 import { Card, Chip, CountUp, Loading, Markdown, stagger } from '../components/ui';
+import { Confidence, sureOf } from '../components/Confidence';
 
 const download = (name: string, text: string) => {
   const a = document.createElement('a');
@@ -159,8 +160,9 @@ export default function Reports() {
                     {i + 1}
                   </span>
                   <Chip c={SEV[f.severity].c}>{SEV[f.severity].label}</Chip>
-                  <span className="ml-auto text-[11px] font-semibold text-[var(--muted)]">
+                  <span className="ml-auto flex items-center gap-1.5 text-[11px] font-semibold text-[var(--muted)]">
                     {evidenceText(f)}
+                    <Confidence sure={sureOf(f)} />
                   </span>
                 </div>
                 <div className="mt-2 text-[12.5px] font-extrabold leading-snug">{f.title}</div>

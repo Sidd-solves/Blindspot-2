@@ -7,6 +7,7 @@ import { useStore } from '../store';
 import { Card, CardHead, Chip, CountUp, Empty, Loading, stagger } from '../components/ui';
 import { ChartTip, axis } from '../components/charts';
 import { go } from '../App';
+import { Confidence } from '../components/Confidence';
 
 type SO = {
   ok: boolean;
@@ -116,6 +117,12 @@ export default function StockCash() {
                 <span className="text-[12px] text-[var(--muted)]">
                   of {so.scanned.toLocaleString()} regular products went silent, then came back
                 </span>
+                {so.items.length > 0 && (
+                  <Confidence
+                    sure={{ kind: 'tested', p: Math.max(...so.items.map((x) => x.q)), pKind: 'q' }}
+                    className="ml-auto"
+                  />
+                )}
               </div>
               <div className="text-[12px] text-[var(--muted)]">
                 About{' '}
