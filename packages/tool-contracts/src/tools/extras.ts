@@ -11,6 +11,8 @@ import {
   detectFields,
   earlyWarning,
   winBackList,
+  stockOuts,
+  cashRadar,
 } from '@blindspot/analytics';
 import { defineTool, memo } from '../core';
 import { DashboardSpecSchema } from './design';
@@ -289,6 +291,72 @@ export const winBackTool = defineTool({
   },
 });
 
+export const stockOutsTool = defineTool({
+  name: 'stock-outs',
+  category: 'Business Intelligence',
+  core: false,
+  description:
+    "Likely stock-outs: products that usually sell most trading days, went silent for 5-60 trading days, then sold again. Each silence is tested against the product's usual daily rate (Poisson) with Benjamini-Hochberg correction across all products; lost sales are an estimate (usual daily sales x days silent).",
+  input: z.object({ top: z.number().int().min(1).max(200).default(30) }),
+  output: z.object({
+    ok: z.boolean(),
+    reason: z.string().optional(),
+    scanned: z.number(),
+    method: z.string(),
+    items: z.array(
+      z.object({
+        product: z.string(),
+        from: z.string(),
+        to: z.string(),
+        tradingDays: z.number(),
+        rateBefore: z.number(),
+        rateAfter: z.number(),
+        p: z.number(),
+        q: z.number(),
+        lostSales: z.number(),
+      }),
+    ),
+    found: z.number(),
+    totalLost: z.number(),
+    range: z.tuple([z.string(), z.string()]).nullable(),
+  }),
+  async handler(ctx, { top }) {
+    const v = ctx.state.view();
+    const r = memo(v.rows, 'stock-outs', () => stockOuts(v));
+    return { ...r, found: r.items.length, items: r.items.slice(0, top) };
+  },
+});
+
+export const cashRadarTool = defineTool({
+  name: 'cash-radar',
+  category: 'Business Intelligence',
+  core: false,
+  description:
+    'Cash-crunch radar: each calendar month as an index against an average month (from full 12-month years), how many years it ran below average, and the months that are at least 15% below average in every year with the money gap at the current sales level.',
+  input: z.object({}),
+  output: z.object({
+    ok: z.boolean(),
+    reason: z.string().optional(),
+    years: z.array(z.number()),
+    months: z.array(
+      z.object({
+        month: z.number(),
+        label: z.string(),
+        index: z.number(),
+        belowIn: z.number(),
+        typical: z.number(),
+      }),
+    ),
+    averageMonth: z.number(),
+    crunch: z.array(z.object({ label: z.string(), gap: z.number() })),
+    crunchGap: z.number(),
+  }),
+  async handler(ctx) {
+    const v = ctx.state.view();
+    return memo(v.rows, 'cash-radar', () => cashRadar(v));
+  },
+});
+
 export const EXTRA_TOOLS = [
   runScenario,
   recommendActions,
@@ -297,4 +365,6 @@ export const EXTRA_TOOLS = [
   forecastSalesTool,
   earlyWarningTool,
   winBackTool,
+  stockOutsTool,
+  cashRadarTool,
 ];

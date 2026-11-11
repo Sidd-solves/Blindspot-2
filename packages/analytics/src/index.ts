@@ -8,6 +8,7 @@ export * from './findings';
 export * from './scenario';
 export * from './forecast';
 export * from './customers';
+export * from './operations';
 export * from './recommend';
 export * from './color';
 export * from './charts';
