@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 
 /**
  * A live landscape behind the landing page, drawn by one WebGL fragment shader: sky, aurora ribbons, a sun or moon,
@@ -64,6 +65,11 @@ const VERT = 'attribute vec2 a;void main(){gl_Position=vec4(a,0.,1.);}';
 export function Scene() {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
+    // While the scene is up, the site wrapper's solid background steps aside so the scene shows behind the content.
+    document.documentElement.classList.add('scene-on');
+    return () => document.documentElement.classList.remove('scene-on');
+  }, []);
+  useEffect(() => {
     const c = ref.current!;
     const gl = c.getContext('webgl', { antialias: false, alpha: false, powerPreference: 'low-power' });
     if (!gl) return; // the CSS gradient underneath stays as the fallback
@@ -94,11 +100,15 @@ export function Scene() {
     const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
     let w = 0,
       hgt = 0;
+    let lastCW = 0,
+      lastCH = 0;
     const size = () => {
-      // Render at reduced resolution: the scene is soft, and phones stay cool.
-      const k = Math.min(1.25, devicePixelRatio) * (innerWidth < 700 ? 0.5 : 0.65);
-      w = Math.round(innerWidth * k);
-      hgt = Math.round(innerHeight * k);
+      // Render at reduced resolution: the scene is soft, and phones stay cool. Sized from what is actually shown.
+      const cw = c.clientWidth || innerWidth,
+        ch = c.clientHeight || innerHeight;
+      const k = Math.min(1.25, devicePixelRatio) * (cw < 700 ? 0.5 : 0.65);
+      w = Math.max(1, Math.round(cw * k));
+      hgt = Math.max(1, Math.round(ch * k));
       c.width = w;
       c.height = hgt;
       gl.viewport(0, 0, w, hgt);
@@ -118,6 +128,12 @@ export function Scene() {
       raf = 0;
     const t0 = performance.now();
     const frame = () => {
+      // Re-measure when the shown size changes (window resize, zoom, devtools, viewport emulation).
+      if (c.clientWidth !== lastCW || c.clientHeight !== lastCH) {
+        lastCW = c.clientWidth;
+        lastCH = c.clientHeight;
+        size();
+      }
       const max = Math.max(1, document.documentElement.scrollHeight - innerHeight);
       const prog01 = Math.min(1, scrollY / max);
       scene += (prog01 * 4 - scene) * 0.06; // ease between scenes
@@ -143,7 +159,8 @@ export function Scene() {
       document.removeEventListener('visibilitychange', vis);
     };
   }, []);
-  return (
+  // Rendered straight into <body>: inside the animated page wrapper, "fixed" would follow the page instead of the screen.
+  return createPortal(
     <div aria-hidden className="pointer-events-none fixed inset-0 -z-10">
       <div
         className="absolute inset-0"
@@ -155,6 +172,7 @@ export function Scene() {
         className="absolute inset-0"
         style={{ background: 'radial-gradient(120% 80% at 50% 30%, transparent, rgba(4,4,12,.55))' }}
       />
-    </div>
+    </div>,
+    document.body,
   );
 }

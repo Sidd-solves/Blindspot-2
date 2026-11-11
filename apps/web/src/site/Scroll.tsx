@@ -9,6 +9,7 @@ import {
   type MotionValue,
 } from 'framer-motion';
 import { useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { CountUp } from '../components/ui';
 import {
   BadgeCheck,
   BellRing,
@@ -301,15 +302,41 @@ function StepVisual({ i }: { i: number }) {
   );
 }
 
+const STATS: { v: number; f?: (n: number) => string; l: string }[][] = [
+  [
+    { v: 5, l: 'file types: CSV, Excel, PDF, Numbers, photo' },
+    { v: 261658, l: 'rows read from the real demo shop' },
+    { v: 0, f: () => 'Read-only', l: 'nothing is changed in your store' },
+  ],
+  [
+    { v: 10, l: 'areas checked when the data allows' },
+    { v: 40, l: 'analysis tools behind the checks' },
+    { v: 93531, f: (n) => `£${Math.round(n).toLocaleString()}`, l: 'top finding, ranked by money' },
+  ],
+  [
+    { v: 10, l: 'customers behind the top finding' },
+    { v: 1532, l: 'rows it was calculated from' },
+    { v: 0, f: (n) => `£${n.toFixed(2)}`, l: 'difference from the finding' },
+  ],
+  [
+    { v: 12, f: (n) => `${Math.round(n)} / 12`, l: 'figures matched in a real AI briefing' },
+    { v: 1, l: 'round of self-correction if one is wrong' },
+    { v: 0, f: () => 'Claude', l: 'writes the words; the engine does the math' },
+  ],
+];
+const STEP_ICONS = [FileSpreadsheet, Table2, BadgeCheck, Sparkles];
+const STEP_NAMES = ['upload.review', 'findings.ranked', 'rows.replay', 'analyst.factcheck'];
+
 export function PinnedStory() {
   const ref = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end end'] });
   const [step, setStep] = useState(0);
   useMotionValueEvent(scrollYProgress, 'change', (v) => setStep(Math.min(3, Math.floor(v * 4))));
   const bar = useTransform(scrollYProgress, [0, 1], ['0%', '100%']);
+  const lineW = useTransform(scrollYProgress, (p) => `calc((100% - 48px) * ${Math.min(1, p * 1.08)})`);
   return (
     <section ref={ref} className="relative h-[340vh]">
-      <div className="sticky top-0 flex h-screen items-center">
+      <div className="sticky top-0 flex h-screen flex-col justify-center gap-8 py-20">
         <div className="mx-auto grid w-full max-w-6xl items-center gap-8 px-4 md:grid-cols-2 md:px-6">
           <div>
             <div className="label" style={{ color: STEPS[step].c }}>
@@ -359,7 +386,107 @@ export function PinnedStory() {
               />
             </div>
           </div>
-          <StepVisual i={step} />
+          <div>
+            {/* product window */}
+            <div
+              className="flex items-center gap-1.5 rounded-t-xl border border-b-0 px-3 py-2"
+              style={{
+                borderColor: 'var(--line)',
+                background: 'color-mix(in srgb, var(--panel) 85%, transparent)',
+                backdropFilter: 'blur(18px)',
+              }}
+            >
+              {['#fb7185', '#fbbf24', '#34d399'].map((c) => (
+                <span key={c} className="h-2.5 w-2.5 rounded-full" style={{ background: c }} />
+              ))}
+              <AnimatePresence mode="wait">
+                <motion.span
+                  key={step}
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  className="mono ml-2 text-[11px] text-[var(--faint)]"
+                >
+                  blindspot / {STEP_NAMES[step]}
+                </motion.span>
+              </AnimatePresence>
+              <motion.span
+                className="ml-auto flex items-center gap-1 text-[10.5px] font-bold"
+                style={{ color: STEPS[step].c }}
+                animate={{ opacity: [1, 0.45, 1] }}
+                transition={{ duration: 1.6, repeat: Infinity }}
+              >
+                <span className="h-1.5 w-1.5 rounded-full" style={{ background: STEPS[step].c }} /> live
+              </motion.span>
+            </div>
+            <div className="[&>div]:rounded-t-none">
+              <StepVisual i={step} />
+            </div>
+            {/* live numbers for this step */}
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              {STATS[step].map((x, k) => (
+                <motion.div
+                  key={`${step}-${k}`}
+                  initial={{ opacity: 0, y: 14, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ delay: 0.15 + k * 0.08, type: 'spring', stiffness: 220, damping: 20 }}
+                  className="panel px-2.5 py-2"
+                  style={{
+                    backdropFilter: 'blur(18px)',
+                    background: 'color-mix(in srgb, var(--panel) 70%, transparent)',
+                  }}
+                >
+                  <div className="mono text-[17px] font-semibold" style={{ color: STEPS[step].c }}>
+                    {x.f && x.v === 0 ? x.f(0) : <CountUp value={x.v} format={x.f} duration={0.9} />}
+                  </div>
+                  <div className="mt-0.5 text-[10.5px] leading-snug text-[var(--muted)]">{x.l}</div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </div>
+        {/* the pipeline: four steps joined by a line, with a pulse travelling as you scroll */}
+        <div className="mx-auto hidden w-full max-w-6xl px-4 md:block md:px-6">
+          <div className="relative flex items-center justify-between">
+            <div className="absolute inset-x-6 top-1/2 h-px -translate-y-1/2 bg-[var(--line)]" />
+            <motion.div
+              className="absolute top-1/2 h-[2px] -translate-y-1/2 rounded-full"
+              style={{
+                left: 24,
+                width: lineW,
+                background:
+                  'linear-gradient(90deg, var(--cyan), var(--violet), var(--emerald), var(--fuchsia))',
+                boxShadow: '0 0 12px var(--violet)',
+              }}
+            />
+            {STEPS.map((s, k) => {
+              const Ic = STEP_ICONS[k];
+              const on = k <= step;
+              return (
+                <div key={s.t} className="relative z-10 flex flex-col items-center gap-1.5">
+                  <motion.span
+                    animate={{
+                      scale: k === step ? 1.15 : 1,
+                      background: on
+                        ? `color-mix(in srgb, ${s.c} 26%, var(--panel-solid))`
+                        : 'var(--panel-solid)',
+                      boxShadow: k === step ? `0 0 22px ${s.c}` : '0 0 0 transparent',
+                    }}
+                    className="grid h-11 w-11 place-items-center rounded-xl border"
+                    style={{ borderColor: on ? s.c : 'var(--line)', color: on ? s.c : 'var(--faint)' }}
+                  >
+                    <Ic size={18} />
+                  </motion.span>
+                  <span
+                    className="text-[11px] font-bold"
+                    style={{ color: k === step ? 'var(--text)' : 'var(--faint)' }}
+                  >
+                    {s.t.split(' ').slice(0, 3).join(' ')}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </section>

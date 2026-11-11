@@ -515,3 +515,8 @@ input[type='range']::-moz-range-thumb {
   outline-offset: 2px;
   border-radius: 8px;
 }
+
+/* Landing scene: the WebGL landscape sits behind the page, so the site wrapper is see-through while it shows. */
+.scene-on .site-dark {
+  background: transparent;
+}
