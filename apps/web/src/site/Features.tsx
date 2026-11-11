@@ -21,6 +21,7 @@ import { BeamCard } from './Effects';
 import { FinalCta, useHealth } from './Home';
 import { openApp } from './SiteLayout';
 import { SampleNotice } from './SampleNotice';
+import { ProvesItself } from './ProvesItself';
 
 const Head = ({ icon: I, c, t }: { icon: any; c: string; t: string }) => (
   <div className="flex items-center gap-2">
@@ -419,6 +420,7 @@ export default function Features() {
           </div>
         </Reveal>
       </section>
+      <ProvesItself />
       <FinalCta />
     </>
   );
