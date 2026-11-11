@@ -56,6 +56,22 @@ const adminToken = () => {
   }
 };
 
+/**
+ * The dataset id the page is showing (set by the store from /api/dataset). Any response stamped with a different
+ * id means the session's data changed behind the page's back, so the store reloads.
+ */
+let shownDatasetId: string | null = null;
+export const setShownDatasetId = (id: string | null) => {
+  shownDatasetId = id;
+};
+const watchDataset = (r: Response) => {
+  const id = r.headers.get('X-Dataset-Id');
+  if (id && shownDatasetId && id !== shownDatasetId) {
+    shownDatasetId = id;
+    window.dispatchEvent(new CustomEvent('blindspot:dataset-changed'));
+  }
+};
+
 export async function tool<T = any>(name: string, input: unknown = {}): Promise<ToolResult<T>> {
   const t = adminToken();
   // Never throws: a down or restarting server becomes a normal error result the UI can show.
@@ -69,6 +85,7 @@ export async function tool<T = any>(name: string, input: unknown = {}): Promise<
       },
       body: JSON.stringify(input),
     });
+    watchDataset(r);
     return await r.json();
   } catch {
     return {
@@ -84,6 +101,7 @@ export async function tool<T = any>(name: string, input: unknown = {}): Promise<
 }
 export async function get<T = any>(path: string): Promise<T> {
   const r = await fetch(path, { headers: hdr() });
+  if (path !== '/api/dataset') watchDataset(r);
   if (!r.ok) throw new Error((await r.json()).error?.message ?? r.statusText);
   return r.json();
 }

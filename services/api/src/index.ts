@@ -84,6 +84,21 @@ app.use('/api', cors({ origin: (o, cb) => cb(null, !o || ORIGINS.includes(o)), c
 app.use('/api', rateLimit({ windowMs: 60_000, limit: 300, standardHeaders: true, legacyHeaders: false }));
 const chatLimit = rateLimit({ windowMs: 60_000, limit: 20 });
 // Each visitor can pick a display currency (X-Display-Currency); money in findings and reports is converted for them.
+// Every response says which dataset this visitor's session holds right now. If it changed behind the page's back
+// (the session expired, the server restarted, or a memory cap moved an old upload back to the default), the page
+// sees a different id and reloads instead of showing one file's label over another file's numbers.
+const datasetIds = new WeakMap<object, string>();
+let nextDatasetId = 1;
+const STARTED_ID = Date.now().toString(36);
+app.use('/api', (req, res, next) => {
+  // Requests that replace the dataset aren't stamped: the page learns the new id from its reload right after.
+  if (req.method === 'POST' && req.path.startsWith('/dataset')) return next();
+  const ds = sessions.get(sid(req)).dataset;
+  let id = datasetIds.get(ds);
+  if (!id) datasetIds.set(ds, (id = `${STARTED_ID}-${nextDatasetId++}`));
+  res.setHeader('X-Dataset-Id', id);
+  next();
+});
 app.use('/api', (req, res, next) => {
   const cur = req.headers['x-display-currency'] ?? req.query.cur;
   if (!cur) return next();
@@ -203,6 +218,7 @@ app.get('/api/dataset', (req, res) => {
   const state = sessions.get(sid(req)),
     v = state.view();
   res.json({
+    datasetId: res.getHeader('X-Dataset-Id') ?? null,
     name: v.name,
     source: v.source,
     label: v.label,

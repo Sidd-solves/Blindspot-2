@@ -10,7 +10,7 @@ import {
 } from 'react';
 import type { IngestReport, Role, DateOrder } from '@blindspot/analytics';
 import { fileToText, type FileText } from './lib/fileText';
-import { baseCurrency, display, get, setCurrency, setDisplay, tool, SID } from './api';
+import { baseCurrency, display, get, setCurrency, setDisplay, setShownDatasetId, tool, SID } from './api';
 
 /** A finding's row selection; see packages/analytics DrillSpec. */
 export interface Drill {
@@ -75,6 +75,8 @@ export interface DatasetMeta {
   prep: Record<string, any> | null;
   citation: string | null;
   caseStudyAvailable: boolean;
+  /** Which dataset the server session holds; see setShownDatasetId. */
+  datasetId?: string | null;
   rows: number;
   totalRows: number;
   filters: Record<string, string[]>;
@@ -214,6 +216,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         tool('check-connection'),
       ]);
       await tool('clear-canvas');
+      setShownDatasetId(dataset.datasetId ?? null);
       setCurrency(dataset.currency);
       let fx: FxInfo | null = null;
       // Unknown currency ('XXX'): amounts are plain numbers and can't be converted until the person says what they are.
@@ -406,6 +409,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       await tool('apply-filter', { field, values: [], mode: 'clear', target: 'session' });
     await refresh();
   }, [refresh, s.dataset]);
+
+  // The session's data changed behind the page (it expired, the server restarted, or memory limits moved an old
+  // upload back to the default): reload so labels and numbers always describe the same data.
+  useEffect(() => {
+    const h = () => refreshRef.current();
+    window.addEventListener('blindspot:dataset-changed', h);
+    return () => window.removeEventListener('blindspot:dataset-changed', h);
+  }, []);
 
   useEffect(() => {
     refresh();

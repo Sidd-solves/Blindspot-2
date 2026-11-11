@@ -66,6 +66,27 @@ const post = (p: string, body: unknown) =>
   }).then(async (r) => ({ status: r.status, json: await r.json() }));
 
 describe('API + WebSocket bridge (real server, fake Tableau extension)', () => {
+  it('stamps responses with the session dataset id, and the id changes when the data does', async () => {
+    const h = { 'x-session-id': 'stamp-test-0001', 'Content-Type': 'application/json' };
+    const meta = await fetch(base + '/api/dataset', { headers: h }).then((r) => r.json());
+    const tool = await fetch(base + '/api/tools/profile-data', { method: 'POST', headers: h, body: '{}' });
+    expect(meta.datasetId).toBeTruthy();
+    expect(tool.headers.get('X-Dataset-Id')).toBe(meta.datasetId);
+    const csv =
+      'Order,Date,Customer,Product,Qty,Price\n1,2025-01-02,a@x.com,Mug,2,10\n2,2025-02-03,b@x.com,Cup,1,5\n';
+    await fetch(base + '/api/dataset/files', {
+      method: 'POST',
+      headers: h,
+      body: JSON.stringify({ files: [{ name: 't.csv', text: csv }] }),
+    });
+    const after = await fetch(base + '/api/dataset', { headers: h }).then((r) => r.json());
+    expect(after.datasetId).not.toBe(meta.datasetId);
+    // Another visitor is unaffected.
+    const other = await fetch(base + '/api/dataset', { headers: { 'x-session-id': 'stamp-test-0002' } }).then(
+      (r) => r.json(),
+    );
+    expect(other.name).not.toBe('t.csv');
+  });
   it('health reports 40 tools and a connected extension', async () => {
     const h = await fetch(base + '/api/health').then((r) => r.json());
     expect(h).toMatchObject({ ok: true, tools: 40, extension: true });

@@ -174,6 +174,54 @@ function FilterBar() {
   );
 }
 
+/** Tells the visitor why the page just reloaded its data. */
+function DatasetNotice() {
+  const { dataset } = useStore();
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    let t = 0;
+    const h = () => {
+      setShow(true);
+      clearTimeout(t);
+      t = window.setTimeout(() => setShow(false), 9000);
+    };
+    window.addEventListener('blindspot:dataset-changed', h);
+    return () => {
+      window.removeEventListener('blindspot:dataset-changed', h);
+      clearTimeout(t);
+    };
+  }, []);
+  return (
+    <AnimatePresence>
+      {show && (
+        <motion.div
+          initial={{ opacity: 0, y: 16, scale: 0.97 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 16 }}
+          role="status"
+          className="panel fixed bottom-4 right-4 z-[90] flex max-w-[340px] items-start gap-2 p-3 text-[12px]"
+          style={{
+            background: 'var(--panel-solid)',
+            borderColor: 'color-mix(in srgb, var(--amber) 50%, var(--line))',
+          }}
+        >
+          <RefreshCw size={14} className="mt-0.5 flex-none" style={{ color: 'var(--amber)' }} />
+          <span>
+            <b>Your data was reloaded.</b>{' '}
+            <span className="text-[var(--muted)]">
+              Your session had expired or was cleared to free memory, so you’re now seeing{' '}
+              {dataset?.name ?? 'the default data'}. Upload your file again to keep working on it.
+            </span>
+          </span>
+          <button onClick={() => setShow(false)} className="text-[var(--muted)]" aria-label="Dismiss">
+            <X size={13} />
+          </button>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
 export default function App() {
   const [page, setPage] = useState<PageId>(current());
   const [site, setSite] = useState<string | null>(siteRoute());
@@ -435,6 +483,7 @@ export default function App() {
         </main>
       </div>
       <Tour />
+      <DatasetNotice />
     </div>
   );
 }
