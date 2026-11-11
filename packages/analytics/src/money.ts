@@ -3,8 +3,17 @@
 export const NO_CURRENCY = 'XXX';
 export function money(n: number | null | undefined, currency = 'USD', compact = false) {
   if (n == null || !Number.isFinite(n)) return 'n/a';
-  if (currency === NO_CURRENCY) return new Intl.NumberFormat('en-US', { maximumFractionDigits: compact ? 1 : 0, ...(compact ? { notation: 'compact' } : {}) }).format(n);
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: compact ? 1 : 0, ...(compact ? { notation: 'compact' } : {}) }).format(n);
+  if (currency === NO_CURRENCY)
+    return new Intl.NumberFormat('en-US', {
+      maximumFractionDigits: compact ? 1 : 0,
+      ...(compact ? { notation: 'compact' } : {}),
+    }).format(n);
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency,
+    maximumFractionDigits: compact ? 1 : 0,
+    ...(compact ? { notation: 'compact' } : {}),
+  }).format(n);
 }
 export const pctStr = (n: number, d = 1) => `${(n * 100).toFixed(d)}%`;
 export function plural(dim: string) {
@@ -18,7 +27,9 @@ export function plural(dim: string) {
  */
 export function convertMoneyText(text: string, from: string, to: string, rate: number) {
   if (from === NO_CURRENCY) return text;
-  const sym = new Intl.NumberFormat('en-US', { style: 'currency', currency: from }).formatToParts(1).find((p) => p.type === 'currency')?.value;
+  const sym = new Intl.NumberFormat('en-US', { style: 'currency', currency: from })
+    .formatToParts(1)
+    .find((p) => p.type === 'currency')?.value;
   if (!sym) return text;
   const esc = sym.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const re = new RegExp(`(-?)${esc}\\s?(\\d+(?:,\\d{3})*(?:\\.\\d+)?)([KMBT])?(?![\\w])`, 'g');
@@ -33,6 +44,9 @@ export function convertMoneyText(text: string, from: string, to: string, rate: n
 export function convertMoneyDeep<T>(v: T, from: string, to: string, rate: number): T {
   if (typeof v === 'string') return convertMoneyText(v, from, to, rate) as T;
   if (Array.isArray(v)) return v.map((x) => convertMoneyDeep(x, from, to, rate)) as T;
-  if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, convertMoneyDeep(x, from, to, rate)])) as T;
+  if (v && typeof v === 'object')
+    return Object.fromEntries(
+      Object.entries(v).map(([k, x]) => [k, convertMoneyDeep(x, from, to, rate)]),
+    ) as T;
   return v;
 }

@@ -8,7 +8,16 @@ import { OPS_TOOLS } from './tools/ops';
 import { EXTRA_TOOLS } from './tools/extras';
 import { EXPLORE_TOOLS } from './tools/explore';
 
-export const ALL_TOOLS = [...DATA_TOOLS, ...VIZ_TOOLS, ...DESIGN_TOOLS, ...INTERACTION_TOOLS, ...INTERPRET_TOOLS, ...OPS_TOOLS, ...EXTRA_TOOLS, ...EXPLORE_TOOLS];
+export const ALL_TOOLS = [
+  ...DATA_TOOLS,
+  ...VIZ_TOOLS,
+  ...DESIGN_TOOLS,
+  ...INTERACTION_TOOLS,
+  ...INTERPRET_TOOLS,
+  ...OPS_TOOLS,
+  ...EXTRA_TOOLS,
+  ...EXPLORE_TOOLS,
+];
 registerTools(ALL_TOOLS);
 
 export * from './core';

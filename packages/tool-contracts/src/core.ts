@@ -3,23 +3,47 @@ import { generateSampleDataset, type Dataset, type Row } from '@blindspot/analyt
 import type { BridgeLike } from './protocol';
 import { redactSecrets } from './guardrails';
 
-export type Category = 'Data Analysis' | 'Visualization' | 'Design Analysis' | 'Interaction' | 'Interpretation' | 'Orchestration' | 'Documentation' | 'Utilities' | 'Business Intelligence';
+export type Category =
+  | 'Data Analysis'
+  | 'Visualization'
+  | 'Design Analysis'
+  | 'Interaction'
+  | 'Interpretation'
+  | 'Orchestration'
+  | 'Documentation'
+  | 'Utilities'
+  | 'Business Intelligence';
 
 export class ToolError extends Error {
-  constructor(public code: string, message: string) { super(message); }
+  constructor(
+    public code: string,
+    message: string,
+  ) {
+    super(message);
+  }
 }
 
-export interface CanvasItem { id: string; kind: string; title: string; spec: unknown; createdAt: string }
+export interface CanvasItem {
+  id: string;
+  kind: string;
+  title: string;
+  spec: unknown;
+  createdAt: string;
+}
 
 export class SessionState {
   dataset: Dataset;
-  constructor(dataset?: Dataset) { this.dataset = dataset ?? generateSampleDataset(); }
+  constructor(dataset?: Dataset) {
+    this.dataset = dataset ?? generateSampleDataset();
+  }
   filters = new Map<string, string[]>();
   canvas: CanvasItem[] = [];
   tooltips = true;
   lastImage: { base64: string; mediaType: string; at: string } | null = null;
   private seq = 0;
-  nextId(p: string) { return `${p}-${++this.seq}`; }
+  nextId(p: string) {
+    return `${p}-${++this.seq}`;
+  }
   private viewCache: { key: string; ds: Dataset } | null = null;
   /** Rows after session filters. Every analysis tool reads this, never the raw dataset. Memoized so analysis caches hit. */
   view(): Dataset {
@@ -27,28 +51,57 @@ export class SessionState {
     const key = JSON.stringify([...this.filters]);
     if (this.viewCache?.key === key) return this.viewCache.ds;
     const sets = [...this.filters].map(([f, vals]) => [f, new Set(vals)] as const);
-    const rows = this.dataset.rows.filter((r: Row) => sets.every(([f, vals]) => vals.has(String(r[f] ?? ''))));
+    const rows = this.dataset.rows.filter((r: Row) =>
+      sets.every(([f, vals]) => vals.has(String(r[f] ?? ''))),
+    );
     // Cleaning totals were measured on the whole file. Recount what can be recounted (reversed pairs) for this
     // filter, so a filtered view never mixes a whole-file numerator with a filtered denominator.
     const p = this.dataset.prep;
-    const prep = p && { ...p, scope: 'filtered' as const, ...(() => {
-      if (!p.reversed) return { cancelledPairs: 0, cancelledPairValue: 0 };
-      const kept = p.reversed.filter((r: Row) => sets.every(([f, vals]) => vals.has(String(r[f] ?? ''))));
-      return { cancelledPairs: kept.length, cancelledPairValue: Math.round(kept.reduce((s: number, r: Row) => s + ((r.Sales as number) || 0), 0)), reversed: kept };
-    })() };
+    const prep = p && {
+      ...p,
+      scope: 'filtered' as const,
+      ...(() => {
+        if (!p.reversed) return { cancelledPairs: 0, cancelledPairValue: 0 };
+        const kept = p.reversed.filter((r: Row) => sets.every(([f, vals]) => vals.has(String(r[f] ?? ''))));
+        return {
+          cancelledPairs: kept.length,
+          cancelledPairValue: Math.round(
+            kept.reduce((s: number, r: Row) => s + ((r.Sales as number) || 0), 0),
+          ),
+          reversed: kept,
+        };
+      })(),
+    };
     this.viewCache = { key, ds: { ...this.dataset, rows, prep } };
     return this.viewCache.ds;
   }
-  setDataset(d: Dataset) { this.dataset = d; this.filters.clear(); this.canvas = []; this.viewCache = null; }
+  setDataset(d: Dataset) {
+    this.dataset = d;
+    this.filters.clear();
+    this.canvas = [];
+    this.viewCache = null;
+  }
 }
 
 export interface LlmLike {
-  configured: boolean; model: string;
+  configured: boolean;
+  model: string;
   describeImage?(base64: string, mediaType: string, prompt: string): Promise<string>;
   /** Layer 3: propose testable hypotheses from a data schema. Every proposal is verified by code before being shown. */
-  proposeHypotheses?(schema: { columns: { name: string; type: string; distinct: number; examples?: string[] }[]; measure: string; date: string | null; rows: number; alreadyTested: string[] }): Promise<unknown[]>;
+  proposeHypotheses?(schema: {
+    columns: { name: string; type: string; distinct: number; examples?: string[] }[];
+    measure: string;
+    date: string | null;
+    rows: number;
+    alreadyTested: string[];
+  }): Promise<unknown[]>;
 }
-export interface RestConfig { serverUrl?: string; site?: string; patName?: string; patSecret?: string }
+export interface RestConfig {
+  serverUrl?: string;
+  site?: string;
+  patName?: string;
+  patSecret?: string;
+}
 
 export interface ToolContext {
   state: SessionState;
@@ -58,11 +111,18 @@ export interface ToolContext {
 }
 
 export interface ToolDef<I extends z.ZodType = z.ZodType, O extends z.ZodType = z.ZodType> {
-  name: string; category: Category; core: boolean; description: string;
-  input: I; output: O; handler: (ctx: ToolContext, input: z.infer<I>) => Promise<z.infer<O>>;
+  name: string;
+  category: Category;
+  core: boolean;
+  description: string;
+  input: I;
+  output: O;
+  handler: (ctx: ToolContext, input: z.infer<I>) => Promise<z.infer<O>>;
 }
 
-export function defineTool<I extends z.ZodType, O extends z.ZodType>(def: Omit<ToolDef<I, O>, 'core'> & { core?: boolean }): ToolDef<I, O> {
+export function defineTool<I extends z.ZodType, O extends z.ZodType>(
+  def: Omit<ToolDef<I, O>, 'core'> & { core?: boolean },
+): ToolDef<I, O> {
   return { core: true, ...def };
 }
 
@@ -72,20 +132,46 @@ export const getTool = (n: string) => REGISTRY.get(n);
 export const listTools = () => [...REGISTRY.values()];
 export const toolNames = () => new Set(REGISTRY.keys());
 
-export interface ToolResult<T = unknown> { ok: boolean; tool: string; ms: number; data?: T; error?: { code: string; message: string } }
+export interface ToolResult<T = unknown> {
+  ok: boolean;
+  tool: string;
+  ms: number;
+  data?: T;
+  error?: { code: string; message: string };
+}
 
-export async function callTool(ctx: ToolContext, name: string, raw: unknown, timeoutMs = 30_000): Promise<ToolResult> {
+export async function callTool(
+  ctx: ToolContext,
+  name: string,
+  raw: unknown,
+  timeoutMs = 30_000,
+): Promise<ToolResult> {
   const t0 = Date.now();
-  const fail = (code: string, message: string): ToolResult => ({ ok: false, tool: name, ms: Date.now() - t0, error: { code, message: redactSecrets(message) } });
+  const fail = (code: string, message: string): ToolResult => ({
+    ok: false,
+    tool: name,
+    ms: Date.now() - t0,
+    error: { code, message: redactSecrets(message) },
+  });
   const tool = REGISTRY.get(name);
   if (!tool) return fail('UNKNOWN_TOOL', `Tool "${name}" is not on the allowlist.`);
   let input: unknown;
-  try { input = tool.input.parse(raw ?? {}); }
-  catch (e) { return fail('INVALID_INPUT', e instanceof ZodError ? e.issues.map((i) => `${i.path.join('.') || 'input'}: ${i.message}`).join('; ') : 'Invalid input'); }
+  try {
+    input = tool.input.parse(raw ?? {});
+  } catch (e) {
+    return fail(
+      'INVALID_INPUT',
+      e instanceof ZodError
+        ? e.issues.map((i) => `${i.path.join('.') || 'input'}: ${i.message}`).join('; ')
+        : 'Invalid input',
+    );
+  }
   try {
     const data = await Promise.race([
       tool.handler(ctx, input),
-      new Promise<never>((_, rej) => setTimeout(() => rej(new ToolError('TIMEOUT', `Tool exceeded ${timeoutMs}ms`)), timeoutMs)),
+      new Promise<never>((_, rej) =>
+        setTimeout(() => rej(new ToolError('TIMEOUT', `Tool exceeded ${timeoutMs}ms`)), timeoutMs),
+      ),
     ]);
     const parsed = tool.output.safeParse(data);
     if (!parsed.success) return fail('INVALID_OUTPUT', 'Tool produced output that violates its schema.');
@@ -102,7 +188,10 @@ export const num = (v: unknown) => (typeof v === 'number' ? v : 0);
 const memoStore = new WeakMap<object, Map<string, unknown>>();
 export function memo<T>(rows: object, key: string, compute: () => T): T {
   let m = memoStore.get(rows);
-  if (!m) { m = new Map(); memoStore.set(rows, m); }
+  if (!m) {
+    m = new Map();
+    memoStore.set(rows, m);
+  }
   if (!m.has(key)) m.set(key, compute());
   return m.get(key) as T;
 }

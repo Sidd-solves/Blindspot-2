@@ -35,7 +35,18 @@ export type Severity = 'critical' | 'high' | 'medium' | 'low';
 
 export interface Finding {
   id: string;
-  category: 'concentration' | 'profitability' | 'trend' | 'outlier' | 'data-quality' | 'pricing' | 'returns' | 'retention' | 'product' | 'seasonality' | 'anomaly';
+  category:
+    | 'concentration'
+    | 'profitability'
+    | 'trend'
+    | 'outlier'
+    | 'data-quality'
+    | 'pricing'
+    | 'returns'
+    | 'retention'
+    | 'product'
+    | 'seasonality'
+    | 'anomaly';
   title: string;
   severity: Severity;
   /** 0..1 strength of evidence, used for ranking: 1 for measured facts, 1 − p for tested findings, 0.75 for rule-of-thumb checks. */
@@ -102,5 +113,6 @@ export interface CheckRun {
   ran: boolean;
   reason: string | null;
   /** The date range the check actually looked at, when it used one (ISO dates). */
-  from?: string; to?: string;
+  from?: string;
+  to?: string;
 }

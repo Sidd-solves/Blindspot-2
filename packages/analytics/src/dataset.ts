@@ -6,17 +6,39 @@ import { ingest } from './ingest';
 
 function rng(seed: number) {
   return () => {
-    seed |= 0; seed = (seed + 0x6d2b79f5) | 0;
+    seed |= 0;
+    seed = (seed + 0x6d2b79f5) | 0;
     let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
 
-const CATALOG: Record<string, { cat: string; margin: number; price: [number, number]; discount: [number, number]; items: string[] }> = {
-  Technology: { cat: 'Technology', margin: 0.26, price: [120, 900], discount: [0, 0.15], items: ['Phones', 'Accessories', 'Copiers', 'Laptops'] },
-  Furniture: { cat: 'Furniture', margin: 0.27, price: [90, 700], discount: [0.03, 0.2], items: ['Tables', 'Chairs', 'Bookcases', 'Furnishings'] },
-  'Office Supplies': { cat: 'Office Supplies', margin: 0.19, price: [15, 220], discount: [0, 0.2], items: ['Binders', 'Paper', 'Storage', 'Labels'] },
+const CATALOG: Record<
+  string,
+  { cat: string; margin: number; price: [number, number]; discount: [number, number]; items: string[] }
+> = {
+  Technology: {
+    cat: 'Technology',
+    margin: 0.26,
+    price: [120, 900],
+    discount: [0, 0.15],
+    items: ['Phones', 'Accessories', 'Copiers', 'Laptops'],
+  },
+  Furniture: {
+    cat: 'Furniture',
+    margin: 0.27,
+    price: [90, 700],
+    discount: [0.03, 0.2],
+    items: ['Tables', 'Chairs', 'Bookcases', 'Furnishings'],
+  },
+  'Office Supplies': {
+    cat: 'Office Supplies',
+    margin: 0.19,
+    price: [15, 220],
+    discount: [0, 0.2],
+    items: ['Binders', 'Paper', 'Storage', 'Labels'],
+  },
 };
 
 /**
@@ -37,7 +59,10 @@ export function generateSampleDataset(n = 1400, seed = 42): Dataset {
   const pick = (w: number[]) => {
     const t = w.reduce((a, b) => a + b, 0);
     let x = r() * t;
-    for (let i = 0; i < w.length; i++) { x -= w[i]; if (x <= 0) return i; }
+    for (let i = 0; i < w.length; i++) {
+      x -= w[i];
+      if (x <= 0) return i;
+    }
     return w.length - 1;
   };
   const rows: Row[] = [];
@@ -57,7 +82,8 @@ export function generateSampleDataset(n = 1400, seed = 42): Dataset {
     if (c < 4 && r() < 0.5) unit *= 1.8; // top accounts buy bigger
     const sales = unit * qty * (1 - disc);
     const margin = cat.margin - disc * 0.9 + (r() - 0.5) * 0.08;
-    const m = (month % 12) + 1, y = 2023 + Math.floor(month / 12);
+    const m = (month % 12) + 1,
+      y = 2023 + Math.floor(month / 12);
     rows.push({
       OrderDate: `${y}-${String(m).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
       Region: region,
@@ -71,7 +97,12 @@ export function generateSampleDataset(n = 1400, seed = 42): Dataset {
       Profit: Math.round(sales * margin * 100) / 100,
     });
   }
-  return { name: 'Demo online shop', source: 'sample', label: 'SYNTHETIC DEMO DATA, a fictional small online shop', rows };
+  return {
+    name: 'Demo online shop',
+    source: 'sample',
+    label: 'SYNTHETIC DEMO DATA, a fictional small online shop',
+    rows,
+  };
 }
 
 /** Reads any sales file through the universal reader; see ingest.ts for the report version. */

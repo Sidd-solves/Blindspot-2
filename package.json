@@ -14,11 +14,14 @@
   "web": "npm run dev -w @blindspot/web",
   "mcp": "npm run start -w @blindspot/mcp-server",
   "test": "vitest run",
-  "typecheck": "tsc --noEmit -p tsconfig.json"
+  "typecheck": "tsc --noEmit -p tsconfig.json",
+  "format": "prettier --write \"{apps/web/src,services/*/src,packages/*/src,tests}/**/*.{ts,tsx}\"",
+  "format:check": "prettier --check \"{apps/web/src,services/*/src,packages/*/src,tests}/**/*.{ts,tsx}\""
  },
  "devDependencies": {
   "@types/node": "^22.0.0",
   "concurrently": "^9.0.0",
+  "prettier": "^3.9.10",
   "tsx": "^4.19.0",
   "typescript": "^5.6.0",
   "vitest": "^5.0.5"
