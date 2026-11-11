@@ -11,7 +11,7 @@ export const CATCHES = [
 ];
 export const RULES = [
   { t: 'Same period last year', d: 'Recent weeks are compared with the same weeks a year earlier, so a holiday rush never looks like growth.' },
-  { t: 'Only real changes count', d: 'A drop is reported only if it passes a statistical test (Welch t of −2 or stronger), not random noise.' },
+  { t: 'Only real changes count', d: 'A drop counts only if it passes a statistical test, adjusted for checking many products at once. Weaker signals are shown as "not confirmed".' },
   { t: 'Every number is calculated', d: 'Totals, percentages and money come from code. AI explains and suggests; the code checks.' },
   { t: 'Estimates say so', d: 'What a fix could be worth is labeled an estimate, with the formula and your numbers shown.' },
 ];

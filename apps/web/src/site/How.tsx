@@ -37,7 +37,7 @@ function Pipeline() {
 const STEPS = [
   { c: 'var(--emerald)', icon: PlugZap, t: 'Connect your sales', d: 'Link Shopify (read-only), drop in Shopify\'s order export, or upload any CSV, Excel or PDF sales report. No setup, no account.', ex: 'A store with 50,000 orders is ready in seconds.' },
   { c: 'var(--cyan)', icon: Search, t: 'Blindspot hunts for problems', d: 'It cleans the data, runs every check, compares your main products, customers and countries with the rest of the business, and tests business ideas, all with real calculations.', ex: '1 million real sales analysed in about 6 seconds.' },
-  { c: 'var(--violet)', icon: Wrench, t: 'You get a plan', d: 'Each problem comes with what it costs, how sure Blindspot is, what fixing it could be worth, and a roadmap ordered from easy to hard.', ex: 'Plus a one-page report to send a partner or investor.' },
+  { c: 'var(--violet)', icon: Wrench, t: 'You get a plan', d: 'Each problem comes with what it costs, how it was proven, what fixing it could be worth, and a roadmap ordered from easy to hard.', ex: 'Plus a one-page report to send a partner or investor.' },
 ];
 
 const LAYERS = [
@@ -80,7 +80,7 @@ export default function How() {
       </section>
 
       <section className="mx-auto max-w-6xl px-4 pb-16 md:px-6">
-        <Reveal><div className="label" style={{ color: 'var(--emerald)' }}>The math</div><h2 className="mt-1.5 text-[26px] font-extrabold tracking-tight md:text-[34px]">Four rules so it never makes things up.</h2></Reveal>
+        <Reveal><div className="label" style={{ color: 'var(--emerald)' }}>The math</div><h2 className="mt-1.5 text-[26px] font-extrabold tracking-tight md:text-[34px]">Four rules that keep every number honest.</h2></Reveal>
         <div className="mt-6 grid gap-3 md:grid-cols-[1fr_1fr_1.1fr]">
           {RULES.slice(0, 2).map((r, i) => (
             <Reveal key={r.t}><BeamCard c={['var(--cyan)', 'var(--rose)'][i]} className="h-full p-5"><Calculator size={18} style={{ color: ['var(--cyan)', 'var(--rose)'][i] }} /><div className="mt-2 text-[14px] font-extrabold">{r.t}</div><p className="mt-1 text-[12.5px] text-[var(--muted)]">{r.d}</p></BeamCard></Reveal>
