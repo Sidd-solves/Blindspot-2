@@ -19,7 +19,7 @@ const server = new McpServer({ name: 'blindspot', version: '0.1.0' });
 
 for (const tool of listTools()) {
   // MCP wants an object shape; the strict schema (including unions) is enforced again inside callTool.
-  const shape = tool.input instanceof z.ZodObject ? (tool.input as z.AnyZodObject).shape : { component: z.string(), props: z.record(z.unknown()) };
+  const shape = tool.input instanceof z.ZodObject ? (tool.input as z.ZodObject<any>).shape : { component: z.string(), props: z.record(z.string(), z.unknown()) };
   server.registerTool(tool.name, { title: tool.name, description: `[${tool.category}] ${tool.description}`, inputSchema: shape }, async (args: unknown) => {
     const r = await callTool(ctx, tool.name, args);
     return { isError: !r.ok, content: [{ type: 'text' as const, text: JSON.stringify(r.ok ? r.data : r.error, null, 1) }] };

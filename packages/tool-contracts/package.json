@@ -1,1 +1,11 @@
-{ "name": "@blindspot/tool-contracts", "private": true, "version": "0.1.0", "type": "module", "main": "src/index.ts" , "dependencies": { "zod": "^3.23.8", "@blindspot/analytics": "*" } }
+{
+ "name": "@blindspot/tool-contracts",
+ "private": true,
+ "version": "0.1.0",
+ "type": "module",
+ "main": "src/index.ts",
+ "dependencies": {
+  "zod": "^4.6.7",
+  "@blindspot/analytics": "*"
+ }
+}

@@ -34,7 +34,7 @@ export const explainChangeTool = defineTool({
   name: 'explain-change', category: 'Business Intelligence', core: false,
   description: 'Driver analysis: compares recent revenue with the same period last year (or the previous period) and shows which products, customers, countries and segments drove the change, plus the orders x average-order-value split.',
   input: z.object({ days: z.number().int().min(14).max(365).optional() }),
-  output: z.object({ windows: z.object({ mode: z.string(), label: z.string() }).passthrough(), measure: z.string(), baseline: z.number(), current: z.number(), delta: z.number(), changePct: z.number(), decomposition: z.record(z.unknown()).optional(), byDimension: z.array(z.object({ dimension: z.string(), drags: z.array(z.record(z.unknown())), lifts: z.array(z.record(z.unknown())) })), currency: z.string() }),
+  output: z.object({ windows: z.object({ mode: z.string(), label: z.string() }).passthrough(), measure: z.string(), baseline: z.number(), current: z.number(), delta: z.number(), changePct: z.number(), decomposition: z.record(z.string(), z.unknown()).optional(), byDimension: z.array(z.object({ dimension: z.string(), drags: z.array(z.record(z.string(), z.unknown())), lifts: z.array(z.record(z.string(), z.unknown())) })), currency: z.string() }),
   async handler(ctx, { days }) {
     const v = ctx.state.view(), fm = detectFields(v);
     if (!fm.date) throw new ToolError('NO_DATES', 'This data has no date column, so changes over time cannot be explained.');
@@ -49,7 +49,7 @@ export const scanAnomaliesTool = defineTool({
   name: 'scan-anomalies', category: 'Business Intelligence', core: false,
   description: 'Scans every significant product, customer, country and segment for ones falling behind the business as a whole (25+ points worse, significant on weekly data). Finds problems nobody asked about.',
   input: z.object({ days: z.number().int().min(14).max(365).optional(), topN: z.number().int().min(5).max(100).default(40) }),
-  output: z.object({ window: z.string(), scanned: z.number(), anomalies: z.array(z.record(z.unknown())), currency: z.string() }),
+  output: z.object({ window: z.string(), scanned: z.number(), anomalies: z.array(z.record(z.string(), z.unknown())), currency: z.string() }),
   async handler(ctx, { days, topN }) {
     const v = ctx.state.view(), fm = detectFields(v);
     if (!fm.date) throw new ToolError('NO_DATES', 'This data has no date column to scan over time.');
@@ -70,7 +70,7 @@ export const testHypotheses = defineTool({
   name: 'test-hypotheses', category: 'Business Intelligence', core: false,
   description: 'AI suggests, math checks: runs the built-in hypothesis library and any supplied (or AI-proposed) hypotheses, returning supported / rejected / inconclusive with the statistic behind each verdict.',
   input: z.object({ hypotheses: z.array(GenericHypothesisSchema).max(10).optional(), useAI: z.boolean().default(false), includeLibrary: z.boolean().default(true) }),
-  output: z.object({ results: z.array(z.object({ id: z.string(), claim: z.string(), source: z.enum(['library', 'ai']), verdict: z.enum(['supported', 'rejected', 'inconclusive']), summary: z.string(), stat: z.object({ name: z.string(), value: z.number() }).nullable(), evidence: z.record(z.unknown()) })), aiUsed: z.boolean(), aiNote: z.string().nullable() }),
+  output: z.object({ results: z.array(z.object({ id: z.string(), claim: z.string(), source: z.enum(['library', 'ai']), verdict: z.enum(['supported', 'rejected', 'inconclusive']), summary: z.string(), stat: z.object({ name: z.string(), value: z.number() }).nullable(), evidence: z.record(z.string(), z.unknown()) })), aiUsed: z.boolean(), aiNote: z.string().nullable() }),
   async handler(ctx, i) {
     const v = ctx.state.view();
     const results = i.includeLibrary ? [...memo(v.rows, 'hypotheses', () => runHypothesisLibrary(v))] : [];

@@ -37,7 +37,7 @@ export const analyzeIronVizStyle = defineTool({
   name: 'analyze-iron-viz-style', category: 'Design Analysis',
   description: 'Expert-style critique of storytelling, clarity and analytical usefulness, inspired by Tableau community best practice. Not an official Iron Viz score.',
   input: z.object({ spec: DashboardSpecSchema.optional() }),
-  output: z.object({ disclaimer: z.string(), scores: z.record(z.number()), strengths: z.array(z.string()), improvements: z.array(z.string()) }),
+  output: z.object({ disclaimer: z.string(), scores: z.record(z.string(), z.number()), strengths: z.array(z.string()), improvements: z.array(z.string()) }),
   async handler(ctx, { spec }) { return critiqueStyle(spec ?? currentSpec(ctx), analyzeSmart(ctx.state.view()).length); },
 });
 
@@ -61,7 +61,7 @@ export const suggestAnnotations = defineTool({
   name: 'suggest-annotations', category: 'Design Analysis',
   description: 'Recommend chart annotations anchored to real data points: declines, outliers, losses and concentration.',
   input: z.object({ max: z.number().int().min(1).max(20).default(6) }),
-  output: z.object({ annotations: z.array(z.object({ kind: z.string(), anchor: z.record(z.unknown()), text: z.string(), severity: z.string() })) }),
+  output: z.object({ annotations: z.array(z.object({ kind: z.string(), anchor: z.record(z.string(), z.unknown()), text: z.string(), severity: z.string() })) }),
   async handler(ctx, { max }) {
     const v = ctx.state.view(), fm = detectFields(v);
     const out: { kind: string; anchor: Record<string, unknown>; text: string; severity: string }[] = [];

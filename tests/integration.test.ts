@@ -88,6 +88,20 @@ describe('API + WebSocket bridge (real server, fake Tableau extension)', () => {
     const b = await post('/api/chat', { message: 'show sales by month' });
     expect(b.json.answer).toMatch(/by month/);
   });
+  it('keeps each visitor\'s data private (separate sessions)', async () => {
+    const A = { 'X-Session-Id': 'visitor-aaaa-1111' }, B = { 'X-Session-Id': 'visitor-bbbb-2222' };
+    const csv = 'Customer,Sales\n' + Array.from({ length: 30 }, (_, i) => `P${i},${100 + i}`).join('\n');
+    const up = await fetch(base + '/api/dataset/csv?name=private', { method: 'POST', headers: { ...A, 'Content-Type': 'text/csv' }, body: csv }).then((x) => x.json());
+    expect(up.rows).toBe(30);
+    const a = await fetch(base + '/api/dataset', { headers: A }).then((x) => x.json());
+    const b = await fetch(base + '/api/dataset', { headers: B }).then((x) => x.json());
+    expect(a.name).toBe('private');
+    expect(b.name).not.toBe('private');
+    const fa = await fetch(base + '/api/tools/apply-filter', { method: 'POST', headers: { ...B, 'Content-Type': 'application/json' }, body: JSON.stringify({ field: 'Region', values: ['West'], target: 'session' }) }).then((x) => x.json());
+    expect(fa.ok).toBe(true);
+    const a2 = await fetch(base + '/api/dataset', { headers: A }).then((x) => x.json());
+    expect(Object.keys(a2.filters)).toHaveLength(0);
+  });
   it('accepts CSV uploads and analyses them', async () => {
     const csv = 'Customer,Sales,Profit\n' + Array.from({ length: 40 }, (_, i) => `C${i},${i < 3 ? 5000 : 100},${i % 7 === 0 ? -20 : 15}`).join('\n');
     const r = await fetch(base + '/api/dataset/csv?name=test', { method: 'POST', headers: { 'Content-Type': 'text/csv' }, body: csv }).then((x) => x.json());

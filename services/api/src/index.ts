@@ -29,14 +29,19 @@ const log = (m: string) => console.log(`[api] ${new Date().toISOString()} ${reda
 
 const app = express();
 const server = createServer(app);
-const state = new SessionState();
+import { Sessions, sidOf } from './sessions';
 const llm = makeLlm();
 const bridge = new BridgeHub(server, { token: env.BRIDGE_TOKEN, allowedOrigins: ORIGINS, log });
-const ctx: ToolContext = { state, bridge, llm, rest: { serverUrl: env.TABLEAU_SERVER_URL, site: env.TABLEAU_SITE, patName: env.TABLEAU_PAT_NAME, patSecret: env.TABLEAU_PAT_SECRET } };
+const sessions = new Sessions(generateSampleDataset(), { bridge, llm, rest: { serverUrl: env.TABLEAU_SERVER_URL, site: env.TABLEAU_SITE, patName: env.TABLEAU_PAT_NAME, patSecret: env.TABLEAU_PAT_SECRET } });
+const sid = (req: Request) => sidOf(req.headers['x-session-id'] ?? req.query.sid);
+let caseStudyCache: ReturnType<typeof loadCaseStudy> | null = null;
+const caseStudy = () => (caseStudyCache ??= loadCaseStudy());
 const activity: { tool: string; ok: boolean; ms: number; at: string }[] = [];
-const sse = new Set<Response>();
-const broadcast = (name: string, payload: unknown) => { for (const r of sse) r.write(`event: ${name}\ndata: ${JSON.stringify(payload)}\n\n`); };
-bridge.onEvent((e) => broadcast(e.name, e.payload));
+const sse = new Map<Response, string>();
+const send = (r: Response, name: string, payload: unknown) => r.write(`event: ${name}\ndata: ${JSON.stringify(payload)}\n\n`);
+/** Session-scoped events (dataset/filter changes) go only to that visitor; Tableau bridge events go to everyone. */
+const broadcastTo = (id: string, name: string, payload: unknown) => { for (const [r, s] of sse) if (s === id) send(r, name, payload); };
+bridge.onEvent((e) => { for (const r of sse.keys()) send(r, e.name, e.payload); });
 
 app.disable('x-powered-by');
 app.use((_req, res, next) => { res.set({ 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer', 'X-Frame-Options': 'SAMEORIGIN' }); next(); });
@@ -52,16 +57,17 @@ function requireAdmin(req: Request, res: Response, next: NextFunction) {
   res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Admin token required.' } });
 }
 
-app.get('/api/health', (_req, res) => res.json({ ok: true, tools: listTools().length, extension: bridge.isConnected(), ai: llm.configured ? llm.model : null }));
+app.get('/api/health', (_req, res) => res.json({ ok: true, ...sessions.count(), tools: listTools().length, extension: bridge.isConnected(), ai: llm.configured ? llm.model : null }));
 
 app.get('/api/tools', (_req, res) => res.json(listTools().map((t) => ({ name: t.name, category: t.category, core: t.core, description: t.description, sensitive: SENSITIVE.has(t.name), inputSchema: zodToJsonSchema(t.input) }))));
 
 app.post('/api/tools/:name', express.json({ limit: '8mb' }), (req, res, next) => (SENSITIVE.has(req.params.name) ? requireAdmin(req, res, next) : next()), async (req, res) => {
+  const id = sid(req), ctx = sessions.ctx(id), state = ctx.state;
   const r = await callTool(ctx, req.params.name, req.body ?? {});
   activity.unshift({ tool: r.tool, ok: r.ok, ms: r.ms, at: new Date().toISOString() });
   activity.length = Math.min(activity.length, 50);
   if (!r.ok) log(`tool ${r.tool} failed: ${r.error?.code}`);
-  if (r.ok && ['apply-filter', 'get-worksheet-data', 'clear-canvas'].includes(r.tool)) broadcast('state', { filters: Object.fromEntries(state.filters), rows: state.view().rows.length });
+  if (r.ok && ['apply-filter', 'get-worksheet-data', 'clear-canvas'].includes(r.tool)) broadcastTo(id, 'state', { filters: Object.fromEntries(state.filters), rows: state.view().rows.length });
   res.status(r.ok ? 200 : r.error?.code === 'UNKNOWN_TOOL' ? 404 : 400).json(r);
 });
 
@@ -75,14 +81,15 @@ app.post('/api/settings/model', express.json({ limit: '1kb' }), (req, res) => {
 
 app.get('/api/activity', (_req, res) => res.json(activity.slice(0, 20)));
 
-app.get('/api/dataset', (_req, res) => {
-  const v = state.view();
+app.get('/api/dataset', (req, res) => {
+  const state = sessions.get(sid(req)), v = state.view();
   res.json({ name: v.name, source: v.source, label: v.label, currency: v.currency ?? 'USD', prep: v.prep ?? null, citation: v.source === 'case-study' ? CASE_STUDY_CITATION : null, caseStudyAvailable: caseStudyAvailable(), rows: v.rows.length, totalRows: state.dataset.rows.length, filters: Object.fromEntries(state.filters), fields: detectFields(v), columns: profileData(v).columns.map((c) => ({ name: c.name, type: c.type, distinct: c.distinct, values: c.type === 'category' ? [...new Set(state.dataset.rows.map((r) => String(r[c.name] ?? '')))].sort().slice(0, 50) : undefined })) });
 });
 
 app.get('/api/crosstab', (req, res) => {
   const q = z.object({ row: z.string().max(100), col: z.string().max(100), measure: z.string().max(100), ratioOf: z.string().max(100).optional() }).safeParse(req.query);
   if (!q.success) return res.status(400).json({ error: { code: 'INVALID_INPUT', message: 'row, col, measure required' } });
+  const state = sessions.get(sid(req));
   const cols = new Set(profileData(state.view()).columns.map((c) => c.name));
   for (const f of [q.data.row, q.data.col, q.data.measure, q.data.ratioOf].filter(Boolean) as string[]) if (!cols.has(f)) return res.status(400).json({ error: { code: 'UNKNOWN_FIELD', message: `Unknown field ${f}` } });
   res.json(crosstab(state.view().rows, q.data.row, q.data.col, q.data.measure, q.data.ratioOf));
@@ -94,8 +101,8 @@ app.post('/api/dataset/csv', express.text({ type: ['text/csv', 'text/plain'], li
   const ds = parseCsv(req.body, name || 'Uploaded CSV');
   if (ds.rows.length < 2) return res.status(400).json({ error: { code: 'TOO_FEW_ROWS', message: 'CSV needs a header and at least 2 rows.' } });
   if (!detectFields(ds).measure) return res.status(400).json({ error: { code: 'NO_MEASURE', message: 'CSV needs at least one numeric column.' } });
-  state.setDataset(ds);
-  broadcast('state', { dataset: ds.name, rows: ds.rows.length });
+  sessions.setDataset(sid(req), ds, true);
+  broadcastTo(sid(req), 'state', { dataset: ds.name, rows: ds.rows.length });
   log(`dataset replaced: ${ds.rows.length} rows`);
   res.json({ ok: true, name: ds.name, rows: ds.rows.length });
 });
@@ -112,8 +119,8 @@ app.post('/api/connect/shopify', rateLimit({ windowMs: 60_000, limit: 6 }), expr
   try {
     const { dataset, orders } = await fetchShopifyDataset(p.data);
     if (dataset.rows.length < 2) return res.status(400).json({ error: { code: 'TOO_FEW_ORDERS', message: `Only ${orders} order(s) found in the last ${p.data.days} days.` } });
-    state.setDataset(dataset);
-    broadcast('state', { dataset: dataset.name, rows: dataset.rows.length });
+    sessions.setDataset(sid(req), dataset, true);
+    broadcastTo(sid(req), 'state', { dataset: dataset.name, rows: dataset.rows.length });
     log(`shopify connected: ${orders} orders, ${dataset.rows.length} line items`);
     res.json({ ok: true, name: dataset.name, orders, rows: dataset.rows.length, label: dataset.label });
   } catch (e: any) {
@@ -123,13 +130,13 @@ app.post('/api/connect/shopify', rateLimit({ windowMs: 60_000, limit: 6 }), expr
   }
 });
 
-app.post('/api/dataset/sample', (_req, res) => { state.setDataset(generateSampleDataset()); broadcast('state', { dataset: 'sample' }); res.json({ ok: true }); });
+app.post('/api/dataset/sample', (req, res) => { sessions.setDataset(sid(req), generateSampleDataset(), false); broadcastTo(sid(req), 'state', { dataset: 'sample' }); res.json({ ok: true }); });
 
-app.post('/api/dataset/case-study', (_req, res) => {
+app.post('/api/dataset/case-study', (req, res) => {
   if (!caseStudyAvailable()) return res.status(404).json({ error: { code: 'NO_CASE_STUDY', message: 'Case study data is not bundled with this server.' } });
-  const ds = loadCaseStudy();
-  state.setDataset(ds);
-  broadcast('state', { dataset: ds.name, rows: ds.rows.length });
+  const ds = caseStudy(); // one shared copy for every visitor
+  sessions.setDataset(sid(req), ds, false);
+  broadcastTo(sid(req), 'state', { dataset: ds.name, rows: ds.rows.length });
   res.json({ ok: true, name: ds.name, rows: ds.rows.length, citation: CASE_STUDY_CITATION });
 });
 
@@ -139,11 +146,12 @@ app.post('/api/chat', chatLimit, express.json({ limit: '32kb' }), async (req, re
   const screen = screenUserInput(parsed.data.message);
   if (!screen.allowed) { log(`guardrail blocked: ${screen.ids.join(',')}`); return res.json({ blocked: true, reasons: screen.reasons, answer: `Blocked by guardrails: ${screen.reasons.join('; ')}.`, evidence: [], mode: 'guardrail' }); }
   try {
+    const ctx = sessions.ctx(sid(req));
     const out = llm.configured ? await claudeChat(llm, ctx, parsed.data.message) : await deterministicAnswer(ctx, parsed.data.message);
     res.json(out);
   } catch (e: any) {
     log(`chat error: ${e?.status ?? ''} ${e?.message ?? e}`);
-    const fallback = await deterministicAnswer(ctx, parsed.data.message);
+    const fallback = await deterministicAnswer(sessions.ctx(sid(req)), parsed.data.message);
     res.json({ ...fallback, note: 'AI provider failed; answered in deterministic mode.' });
   }
 });
@@ -152,7 +160,7 @@ app.get('/api/events', (req, res) => {
   res.set({ 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
   res.flushHeaders();
   res.write(`event: hello\ndata: ${JSON.stringify({ extension: bridge.isConnected() })}\n\n`);
-  sse.add(res);
+  sse.set(res, sid(req));
   const t = setInterval(() => res.write(': keepalive\n\n'), 20_000);
   req.on('close', () => { clearInterval(t); sse.delete(res); });
 });
@@ -181,10 +189,11 @@ async function warmUp() {
   if ((env.DEFAULT_DATASET ?? (PROD ? 'case-study' : 'demo')) !== 'case-study' || !caseStudyAvailable()) return;
   const t = Date.now();
   try {
-    state.setDataset(loadCaseStudy()); profile(state.view()); analyzeSmart(state.view());
+    const ds = caseStudy(); sessions.setDefault(ds); profile(ds); analyzeSmart(ds);
+    const ctx = sessions.ctx('default');
     for (const [name, input] of [['build-dashboard', { title: 'Overview' }], ['explain-change', {}], ['test-hypotheses', { useAI: false }], ['recommend-actions', { top: 10 }]] as const) await callTool(ctx, name, input);
-    state.canvas = [];
-    log(`case study ready: ${state.dataset.rows.length} rows, caches warm in ${Date.now() - t}ms`);
+    ctx.state.canvas = [];
+    log(`case study ready: ${ds.rows.length} rows, caches warm in ${Date.now() - t}ms`);
   } catch (e: any) { log(`case study failed to load: ${e?.message}`); }
 }
 
@@ -192,4 +201,4 @@ void warmUp().then(() => server.listen(PORT, HOST, () => {
   log(`Blindspot API on http://${HOST}:${PORT} | tools=${listTools().length} | ai=${llm.configured ? llm.model : 'deterministic'} | bridge ws://${HOST}:${PORT}/bridge${env.BRIDGE_TOKEN ? ' (token required)' : ' (no token, dev only)'}`);
   if (PROD && !env.BRIDGE_TOKEN) log('WARNING: BRIDGE_TOKEN not set in production');
 }));
-export { app, server, state, bridge };
+export { app, server, sessions, bridge };

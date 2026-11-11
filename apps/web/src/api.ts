@@ -1,3 +1,10 @@
+/** A private, random visitor ID so each visitor's uploads and filters are their own. */
+export const SID = (() => {
+  const make = () => (crypto.randomUUID?.() ?? Math.random().toString(36).slice(2) + Date.now().toString(36)).replace(/[^A-Za-z0-9_-]/g, '');
+  try { let v = localStorage.getItem('bs-sid'); if (!v || !/^[A-Za-z0-9_-]{8,64}$/.test(v)) { v = make(); localStorage.setItem('bs-sid', v); } return v; } catch { return make(); }
+})();
+const H = { 'X-Session-Id': SID };
+
 export interface ToolResult<T = any> { ok: boolean; tool: string; ms: number; data?: T; error?: { code: string; message: string } }
 
 const adminToken = () => { try { return sessionStorage.getItem('ciq-admin') ?? ''; } catch { return ''; } };
@@ -6,15 +13,15 @@ export async function tool<T = any>(name: string, input: unknown = {}): Promise<
   const t = adminToken();
   // Never throws: a down or restarting server becomes a normal error result the UI can show.
   try {
-    const r = await fetch(`/api/tools/${name}`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(t ? { Authorization: `Bearer ${t}` } : {}) }, body: JSON.stringify(input) });
+    const r = await fetch(`/api/tools/${name}`, { method: 'POST', headers: { ...H, 'Content-Type': 'application/json', ...(t ? { Authorization: `Bearer ${t}` } : {}) }, body: JSON.stringify(input) });
     return await r.json();
   } catch {
     return { ok: false, tool: name, ms: 0, error: { code: 'UNREACHABLE', message: 'The server is starting up or unreachable. Try again in a moment.' } };
   }
 }
-export async function get<T = any>(path: string): Promise<T> { const r = await fetch(path); if (!r.ok) throw new Error((await r.json()).error?.message ?? r.statusText); return r.json(); }
+export async function get<T = any>(path: string): Promise<T> { const r = await fetch(path, { headers: H }); if (!r.ok) throw new Error((await r.json()).error?.message ?? r.statusText); return r.json(); }
 export async function post<T = any>(path: string, body: unknown, type = 'application/json'): Promise<T> {
-  const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': type }, body: type === 'application/json' ? JSON.stringify(body) : (body as string) });
+  const r = await fetch(path, { method: 'POST', headers: { ...H, 'Content-Type': type }, body: type === 'application/json' ? JSON.stringify(body) : (body as string) });
   const j = await r.json();
   if (!r.ok) throw new Error(j.error?.message ?? r.statusText);
   return j;

@@ -99,7 +99,7 @@ export const renderComponent = defineTool({
   name: 'render-component', category: 'Utilities',
   description: 'Render a UI component from a validated declarative spec (kpi, callout, bar, table, list). HTML is stripped and no code is ever executed.',
   input: ComponentSpec,
-  output: z.object({ id: z.string(), component: z.string(), props: z.record(z.unknown()) }),
+  output: z.object({ id: z.string(), component: z.string(), props: z.record(z.string(), z.unknown()) }),
   async handler(ctx, spec) {
     const id = ctx.state.nextId('cmp');
     ctx.state.canvas.push({ id, kind: `component:${spec.component}`, title: spec.component, spec, createdAt: new Date().toISOString() });

@@ -12,7 +12,7 @@ export const applyFilter = defineTool({
   name: 'apply-filter', category: 'Interaction',
   description: 'Apply a categorical filter. Target "tableau" calls worksheet.applyFilterAsync through the extension; target "session" filters Blindspot\'s own dataset so every analysis updates. Default: tableau when connected, else session.',
   input: z.object({ field: z.string().min(1).max(200), values: z.array(z.string().max(200)).max(200), mode: z.enum(['replace', 'add', 'remove', 'clear']).default('replace'), worksheet: z.string().max(200).optional(), target: z.enum(['auto', 'tableau', 'session']).default('auto') }),
-  output: z.object({ target: z.enum(['tableau', 'session']), field: z.string(), values: z.array(z.string()), rowsAfter: z.number().nullable(), activeFilters: z.record(z.array(z.string())) }),
+  output: z.object({ target: z.enum(['tableau', 'session']), field: z.string(), values: z.array(z.string()), rowsAfter: z.number().nullable(), activeFilters: z.record(z.string(), z.array(z.string())) }),
   async handler(ctx, i) {
     const target = i.target === 'auto' ? (ctx.bridge?.isConnected() ? 'tableau' : 'session') : i.target;
     if (target === 'tableau') {

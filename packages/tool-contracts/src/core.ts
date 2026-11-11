@@ -12,7 +12,8 @@ export class ToolError extends Error {
 export interface CanvasItem { id: string; kind: string; title: string; spec: unknown; createdAt: string }
 
 export class SessionState {
-  dataset: Dataset = generateSampleDataset();
+  dataset: Dataset;
+  constructor(dataset?: Dataset) { this.dataset = dataset ?? generateSampleDataset(); }
   filters = new Map<string, string[]>();
   canvas: CanvasItem[] = [];
   tooltips = true;
@@ -48,12 +49,12 @@ export interface ToolContext {
   rest?: RestConfig;
 }
 
-export interface ToolDef<I extends z.ZodTypeAny = z.ZodTypeAny, O extends z.ZodTypeAny = z.ZodTypeAny> {
+export interface ToolDef<I extends z.ZodType = z.ZodType, O extends z.ZodType = z.ZodType> {
   name: string; category: Category; core: boolean; description: string;
   input: I; output: O; handler: (ctx: ToolContext, input: z.infer<I>) => Promise<z.infer<O>>;
 }
 
-export function defineTool<I extends z.ZodTypeAny, O extends z.ZodTypeAny>(def: Omit<ToolDef<I, O>, 'core'> & { core?: boolean }): ToolDef<I, O> {
+export function defineTool<I extends z.ZodType, O extends z.ZodType>(def: Omit<ToolDef<I, O>, 'core'> & { core?: boolean }): ToolDef<I, O> {
   return { core: true, ...def };
 }
 

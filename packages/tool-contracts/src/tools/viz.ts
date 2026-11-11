@@ -19,7 +19,7 @@ export const buildDashboard = defineTool({
   name: 'build-dashboard', category: 'Visualization',
   description: 'Build an analytical dashboard: KPI cards, monthly trend, top segments and a detail table from the current data.',
   input: z.object({ title: z.string().max(120).default('Blindspot dashboard'), dimension: z.string().max(100).optional() }),
-  output: z.object({ id: z.string(), title: z.string(), kpis: z.array(z.object({ label: z.string(), value: z.number(), format: z.enum(['usd', 'pct', 'int']) })), charts: z.array(z.object({ id: z.string(), type: z.string(), title: z.string(), data: z.array(z.record(z.unknown())) })) }),
+  output: z.object({ id: z.string(), title: z.string(), kpis: z.array(z.object({ label: z.string(), value: z.number(), format: z.enum(['usd', 'pct', 'int']) })), charts: z.array(z.object({ id: z.string(), type: z.string(), title: z.string(), data: z.array(z.record(z.string(), z.unknown())) })) }),
   async handler(ctx, { title, dimension }) {
     const v = ctx.state.view(), fm = detectFields(v);
     if (!v.rows.length) throw new ToolError('NO_DATA', 'No rows match the current filters.');

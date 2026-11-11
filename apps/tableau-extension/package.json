@@ -1,3 +1,13 @@
-{ "name": "@blindspot/tableau-extension", "private": true, "version": "0.1.0", "type": "module",
-  "scripts": { "dev": "vite --port 8765 --host 127.0.0.1", "build": "vite build" },
-  "devDependencies": { "vite": "^5.4.0" } }
+{
+ "name": "@blindspot/tableau-extension",
+ "private": true,
+ "version": "0.1.0",
+ "type": "module",
+ "scripts": {
+  "dev": "vite --port 8765 --host 127.0.0.1",
+  "build": "vite build"
+ },
+ "devDependencies": {
+  "vite": "^8.3.5"
+ }
+}

@@ -2,13 +2,13 @@ import { z } from 'zod';
 import { analyzeSmart, detectFields, profileData, pearson, numeric, interpretSegments, round, type Dataset, type Row } from '@blindspot/analytics';
 import { defineTool, ToolError } from '../core';
 
-const FindingOut = z.object({ id: z.string(), category: z.string(), title: z.string(), severity: z.enum(['critical', 'high', 'medium', 'low']), confidence: z.number(), metric: z.string(), explanation: z.string(), evidence: z.record(z.unknown()), impactUsd: z.number().nullable(), impactBasis: z.string().nullable(), nextAction: z.string(), score: z.number() });
+const FindingOut = z.object({ id: z.string(), category: z.string(), title: z.string(), severity: z.enum(['critical', 'high', 'medium', 'low']), confidence: z.number(), metric: z.string(), explanation: z.string(), evidence: z.record(z.string(), z.unknown()), impactUsd: z.number().nullable(), impactBasis: z.string().nullable(), nextAction: z.string(), score: z.number() });
 
 export const analyzeDashboardSmart = defineTool({
   name: 'analyze-dashboard-smart', category: 'Data Analysis',
   description: 'Detect revenue concentration, negative profitability, unexpected trends, outliers, pricing erosion and data gaps, ranked by business importance.',
   input: z.object({ top: z.number().int().min(1).max(50).default(15) }),
-  output: z.object({ datasetLabel: z.string(), rowCount: z.number(), findings: z.array(FindingOut), bySeverity: z.record(z.number()) }),
+  output: z.object({ datasetLabel: z.string(), rowCount: z.number(), findings: z.array(FindingOut), bySeverity: z.record(z.string(), z.number()) }),
   async handler(ctx, { top }) {
     const v = ctx.state.view();
     const all = analyzeSmart(v);
@@ -62,7 +62,7 @@ export const getWorksheetData = defineTool({
   name: 'get-worksheet-data', category: 'Data Analysis',
   description: 'Fetch summary data from a connected Tableau worksheet through the Extensions API (via the WebSocket bridge). Optionally load it as the session dataset.',
   input: z.object({ worksheet: z.string().min(1).max(200), maxRows: z.number().int().min(1).max(200_000).default(50_000), ignoreSelection: z.boolean().default(true), loadIntoSession: z.boolean().default(false) }),
-  output: z.object({ worksheet: z.string(), rowCount: z.number(), truncated: z.boolean(), aggregated: z.literal(true), columns: z.array(z.object({ name: z.string(), dataType: z.string() })), sample: z.array(z.record(z.unknown())), loadedIntoSession: z.boolean() }),
+  output: z.object({ worksheet: z.string(), rowCount: z.number(), truncated: z.boolean(), aggregated: z.literal(true), columns: z.array(z.object({ name: z.string(), dataType: z.string() })), sample: z.array(z.record(z.string(), z.unknown())), loadedIntoSession: z.boolean() }),
   async handler(ctx, input) {
     if (!ctx.bridge?.isConnected()) throw new ToolError('TABLEAU_NOT_CONNECTED', 'No Tableau extension is connected to the bridge. Open the Blindspot extension in a dashboard.');
     let res: any;
@@ -96,7 +96,7 @@ export const getAnalysisStrategy = defineTool({
   name: 'get-analysis-strategy', category: 'Data Analysis',
   description: 'Return a structured analysis plan (ordered tool calls) based on the question, available columns and data volume.',
   input: z.object({ question: z.string().max(1000).default(''), businessContext: z.string().max(1000).optional() }),
-  output: z.object({ workflow: z.string(), steps: z.array(z.object({ tool: z.string(), args: z.record(z.unknown()), why: z.string() })), dataVolume: z.number(), llmCallsNeeded: z.number(), note: z.string() }),
+  output: z.object({ workflow: z.string(), steps: z.array(z.object({ tool: z.string(), args: z.record(z.string(), z.unknown()), why: z.string() })), dataVolume: z.number(), llmCallsNeeded: z.number(), note: z.string() }),
   async handler(ctx, { question }) { return buildStrategy(question, ctx.state.view()); },
 });
 

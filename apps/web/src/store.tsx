@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { get, setCurrency, tool } from './api';
+import { get, setCurrency, tool, SID } from './api';
 
 export interface Finding { id: string; category: string; title: string; severity: string; confidence: number; metric: string; explanation: string; evidence: any; impactUsd: number | null; impactBasis: string | null; nextAction: string; score: number }
 export interface Action { findingId: string; problem: string; intervention: string; expectedBenefitUsd: number | null; benefitKind: 'profit' | 'revenue'; benefitBasis: string; effort: 'low' | 'medium' | 'high'; risks: string; severity: string; benefitToEffort: number | null; evidence: any }
@@ -51,7 +51,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     refresh();
     let es: EventSource | null = null;
     try {
-      es = new EventSource('/api/events');
+      es = new EventSource(`/api/events?sid=${SID}`);
       const push = (name: string) => (e: MessageEvent) => {
         const payload = JSON.parse(e.data);
         setS((p) => ({ ...p, events: [{ name, payload, at: new Date().toISOString() }, ...p.events].slice(0, 30), extension: name === 'extensionStatus' ? !!payload.connected : name === 'hello' ? !!payload.extension : p.extension }));
