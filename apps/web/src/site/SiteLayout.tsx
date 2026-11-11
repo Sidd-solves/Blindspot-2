@@ -48,7 +48,7 @@ export const Logo = ({ size = 15 }: { size?: number }) => (
 
 export default function SiteLayout({ page, children }: { page: string; children: ReactNode }) {
   return (
-    <div className="site-dark relative min-h-screen overflow-x-hidden">
+    <div className="site-dark relative min-h-screen overflow-x-clip">
       <Spotlight />
       <header className="fixed inset-x-0 top-0 z-40">
         <div

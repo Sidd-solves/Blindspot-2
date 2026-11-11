@@ -17,6 +17,8 @@ import { CAT, SEV, tool, usd, VERDICT, impactColor } from '../api';
 import { useStore } from '../store';
 import { CountUp, Reveal, Ring } from '../components/ui';
 import { Aurora, BeamCard, Marquee } from './Effects';
+import { Scene } from './Scene';
+import { HorizontalGallery, KineticTitle, Magnetic, PinnedStory } from './Scroll';
 import { SampleNotice } from './SampleNotice';
 import { CATCHES } from './content';
 import { openApp, siteGo } from './SiteLayout';
@@ -119,104 +121,87 @@ export default function Home() {
   const decided = ideas.filter((h) => h.verdict !== 'inconclusive');
   const hero = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: hero, offset: ['start start', 'end start'] });
-  const y = useTransform(scrollYProgress, [0, 1], [0, 120]),
-    fade = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
-  const words = ['See', 'what', 'your', 'sales', 'data', 'is'];
+  const y = useTransform(scrollYProgress, [0, 1], [0, 160]),
+    fade = useTransform(scrollYProgress, [0, 0.75], [1, 0]),
+    tilt = useTransform(scrollYProgress, [0, 1], [0, -4]);
 
   return (
     <>
-      {/* Hero */}
-      <section ref={hero} className="relative -mt-20 overflow-hidden pt-28">
-        <Aurora />
-        <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-40"
-          style={{ background: 'linear-gradient(transparent, var(--bg))' }}
-        />
+      <Scene />
+      {/* Hero: full screen, the scene behind it */}
+      <section ref={hero} className="relative -mt-20 flex min-h-[100svh] items-center overflow-hidden pt-24">
         <motion.div
           style={{ y, opacity: fade }}
-          className="relative mx-auto grid max-w-6xl items-center gap-10 px-4 pb-16 md:grid-cols-[1.1fr_1fr] md:px-6 md:pb-24"
+          className="relative mx-auto grid w-full max-w-6xl items-center gap-10 px-4 pb-16 md:grid-cols-[1.15fr_1fr] md:px-6"
         >
           <div>
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               className="chip !py-1"
-              style={{ '--c': 'var(--violet)' } as CSSProperties}
+              style={{ '--c': 'var(--violet)', backdropFilter: 'blur(10px)' } as CSSProperties}
             >
-              <Sparkles size={11} />
-              The AI analyst for small businesses
-            </motion.div>
-            <h1 className="text-glow mt-5 text-[40px] font-extrabold leading-[1.02] tracking-tight md:text-[60px]">
-              {words.map((w, i) => (
-                <motion.span
-                  key={w + i}
-                  initial={{ opacity: 0, y: 24, filter: 'blur(8px)' }}
-                  animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-                  transition={{ delay: 0.1 + i * 0.07 }}
-                  className="mr-[0.25em] inline-block"
-                >
-                  {w}
-                </motion.span>
-              ))}
               <motion.span
-                initial={{ opacity: 0, y: 24, filter: 'blur(8px)' }}
-                animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-                transition={{ delay: 0.6 }}
-                className="grad-text inline-block"
-              >
-                hiding.
-              </motion.span>
-            </h1>
+                className="h-1.5 w-1.5 rounded-full"
+                style={{ background: 'var(--emerald)', boxShadow: '0 0 8px var(--emerald)' }}
+                animate={{ opacity: [1, 0.3, 1] }}
+                transition={{ duration: 1.6, repeat: Infinity }}
+              />
+              AI analyst for small online shops
+            </motion.div>
+            <KineticTitle
+              className="text-glow mt-5 text-[clamp(40px,6.2vw,84px)] font-extrabold leading-[0.98] tracking-[-0.035em]"
+              lines={[
+                ['Find', 'what', 'your'],
+                ['sales', 'are'],
+                [
+                  <span key="h" className="grad-text">
+                    hiding.
+                  </span>,
+                ],
+              ]}
+            />
             <motion.p
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.75 }}
-              className="mt-5 max-w-lg text-[14.5px] leading-relaxed text-[var(--muted)]"
+              transition={{ delay: 0.85 }}
+              className="mt-5 max-w-lg text-[15px] leading-relaxed text-[var(--muted)]"
             >
-              Connect your Shopify store or drop in a spreadsheet. Blindspot finds what's quietly costing you
-              money, shows the evidence behind it, and tells you what to fix first. In seconds.
+              Drop in your store's export. Blindspot finds what's quietly costing you money, proves each
+              amount down to the rows, and Claude explains it, with every figure checked.
             </motion.p>
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.85 }}
+              transition={{ delay: 1 }}
               className="mt-7 flex flex-wrap gap-2"
             >
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                whileHover={{ scale: 1.03 }}
+              <Magnetic
                 className="btn btn-primary !h-11 !px-5 text-[13px]"
                 onClick={() => sample.open('overview')}
               >
                 <Eye size={15} />
                 See it on a real shop
-              </motion.button>
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                whileHover={{ scale: 1.03 }}
-                className="btn !h-11 !px-5 text-[13px]"
-                onClick={() => openApp()}
-              >
-                <ShoppingBag size={15} style={{ color: 'var(--emerald)' }} />
-                Connect your store
-              </motion.button>
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                whileHover={{ scale: 1.03 }}
+              </Magnetic>
+              <Magnetic className="btn !h-11 !px-5 text-[13px]" onClick={() => (location.hash = '/signup')}>
+                <Sparkles size={15} style={{ color: 'var(--fuchsia)' }} />
+                Create a free account
+              </Magnetic>
+              <Magnetic
                 className="btn !h-11 !px-4 text-[13px]"
                 onClick={() => sample.open('overview?tour=1')}
               >
                 <Compass size={15} style={{ color: 'var(--cyan)' }} />
                 60-second tour
-              </motion.button>
+              </Magnetic>
             </motion.div>
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 1 }}
+              transition={{ delay: 1.15 }}
               className="mt-5 flex flex-wrap gap-4 text-[11.5px] text-[var(--muted)]"
             >
-              {['Free to try', 'No account needed', 'Read-only access'].map((t) => (
+              {['Free to try', 'Guest mode, no sign-up', 'Read-only access'].map((t) => (
                 <span key={t} className="flex items-center gap-1">
                   <Check size={12} style={{ color: 'var(--emerald)' }} />
                   {t}
@@ -225,13 +210,32 @@ export default function Home() {
             </motion.div>
           </div>
           <motion.div
-            initial={{ opacity: 0, scale: 0.94, y: 16 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ delay: 0.3, type: 'spring', stiffness: 140, damping: 20 }}
+            initial={{ opacity: 0, scale: 0.92, y: 24, rotateX: 12 }}
+            animate={{ opacity: 1, scale: 1, y: 0, rotateX: 0 }}
+            transition={{ delay: 0.4, type: 'spring', stiffness: 120, damping: 18 }}
+            style={{ rotate: tilt, transformPerspective: 1200 }}
           >
             <LivePreview />
           </motion.div>
         </motion.div>
+        <motion.button
+          onClick={() => window.scrollBy({ top: innerHeight * 0.9, behavior: 'smooth' })}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.6 }}
+          className="absolute bottom-6 left-1/2 flex -translate-x-1/2 flex-col items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-[0.2em] text-[var(--muted)]"
+          aria-label="Scroll down"
+        >
+          Scroll
+          <span className="relative h-9 w-px overflow-hidden bg-[var(--line)]">
+            <motion.span
+              className="absolute inset-x-0 top-0 h-3"
+              style={{ background: 'var(--text)' }}
+              animate={{ y: [-12, 36] }}
+              transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+            />
+          </span>
+        </motion.button>
       </section>
 
       {/* Marquee */}
@@ -239,6 +243,9 @@ export default function Home() {
         <div className="label mb-2 text-center">Ten areas checked whenever your data allows</div>
         <Marquee items={CATCHES.map((c) => ({ t: c.t, c: CAT[c.k].c }))} />
       </section>
+
+      <PinnedStory />
+      <HorizontalGallery />
 
       {/* Problem: bento with varied shapes */}
       <section className="mx-auto max-w-6xl px-4 py-16 md:px-6">

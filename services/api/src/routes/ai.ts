@@ -223,11 +223,9 @@ export function aiRoutes(app: Express, rc: RouteContext, llm: ReturnType<typeof 
         16000,
       );
       if (!out.isTable || !out.columns.length)
-        return res
-          .status(422)
-          .json({
-            error: { code: 'NOT_A_TABLE', message: 'No table of sales records was found in that image.' },
-          });
+        return res.status(422).json({
+          error: { code: 'NOT_A_TABLE', message: 'No table of sales records was found in that image.' },
+        });
       const esc = (x: unknown) => {
         const t = x == null ? '' : String(x);
         return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;

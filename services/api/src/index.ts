@@ -13,7 +13,6 @@ import { generateSampleDataset, profileData, detectFields, crosstab } from '@bli
 import { BridgeHub } from './bridge';
 import { makeLlm, claudeChat, MODELS, getModel, setModel, type ModelId } from './llm';
 import { factCheck } from './verify';
-import { aiCalls } from './ai-usage';
 import { deterministicAnswer } from './deterministic';
 import { zodToJsonSchema } from './zod-json';
 
@@ -24,7 +23,8 @@ import { convertMoneyDeep } from '@blindspot/analytics';
 
 // Load the repo-root .env for local runs (hosted platforms inject real env vars, which take precedence).
 const rootEnv = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../.env');
-if (existsSync(rootEnv)) process.loadEnvFile(rootEnv);
+// Tests never read .env, so they never call paid APIs with a real key.
+if (existsSync(rootEnv) && !process.env.VITEST) process.loadEnvFile(rootEnv);
 const env = process.env;
 const PROD = env.NODE_ENV === 'production';
 const PORT = Number(env.PORT ?? 8787);
