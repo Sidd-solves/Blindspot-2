@@ -349,9 +349,6 @@ async function warmUp() {
       ['recommend-actions', { top: 10 }],
       ['forecast-sales', { horizon: 3 }],
       ['forecast-sales', { horizon: 1 }],
-      ['early-warning', { top: 200 }],
-      ['stock-outs', { top: 200 }],
-      ['cash-radar', {}],
       ['generate-executive-summary', {}],
     ] as const)
       await callTool(ctx, name, input);
