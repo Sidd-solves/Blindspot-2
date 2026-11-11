@@ -10,6 +10,8 @@ import {
   type ToolContext,
   type LlmLike,
 } from '@blindspot/tool-contracts';
+import { factCheck } from './verify';
+import { recordAi } from './ai-usage';
 
 /** Switchable from Settings. Sonnet 5.5 by default to keep API cost down. */
 export const MODELS = ['claude-haiku-4-5', 'claude-sonnet-5-5', 'claude-opus-5-5'] as const;
@@ -72,6 +74,7 @@ export function makeLlm(): LlmLike & { client?: Anthropic } {
     },
     client,
     async proposeHypotheses(schema) {
+      const t0 = Date.now();
       const r = await client.messages.create({
         model: current,
         max_tokens: 4000,
@@ -80,6 +83,7 @@ export function makeLlm(): LlmLike & { client?: Anthropic } {
 Use only the listed columns and example values. Prefer surprising, decision-relevant ideas not already tested. ${UNTRUSTED_RULE}`,
         messages: [{ role: 'user', content: wrapUntrusted('schema', schema) }],
       });
+      recordAi('Business ideas', current, r.usage, Date.now() - t0);
       const text = r.content
         .filter((b) => b.type === 'text')
         .map((b: any) => b.text)
@@ -93,6 +97,7 @@ Use only the listed columns and example values. Prefer surprising, decision-rele
       }
     },
     async describeImage(base64, mediaType, prompt) {
+      const t0 = Date.now();
       const r = await client.messages.create({
         model: current,
         max_tokens: 4000,
@@ -109,6 +114,7 @@ Use only the listed columns and example values. Prefer surprising, decision-rele
           },
         ],
       });
+      recordAi('Dashboard review', current, r.usage, Date.now() - t0);
       return r.content
         .filter((b) => b.type === 'text')
         .map((b: any) => b.text)
@@ -137,7 +143,9 @@ export async function claudeChat(llm: ReturnType<typeof makeLlm>, ctx: ToolConte
   const messages: Anthropic.MessageParam[] = [{ role: 'user', content: question }];
   const evidence: Evidence[] = [];
   const allow = new Set(CHAT_TOOLS);
-  for (let turn = 0; turn < 6; turn++) {
+  let firstDraft: ReturnType<typeof factCheck> | null = null;
+  for (let turn = 0; turn < 7; turn++) {
+    const t0 = Date.now();
     const res: any = await (client.beta.messages.create as any)({
       model: current,
       max_tokens: 8000,
@@ -146,17 +154,38 @@ export async function claudeChat(llm: ReturnType<typeof makeLlm>, ctx: ToolConte
       messages,
       ...fallbackParams(current),
     });
+    recordAi('AI Analyst', current, res.usage, Date.now() - t0);
     if (res.stop_reason === 'refusal')
       return { answer: 'The model declined this request.', evidence, mode: 'claude' as const };
     messages.push({ role: 'assistant', content: res.content });
     if (res.stop_reason !== 'tool_use') {
+      const answer = res.content
+        .filter((b: any) => b.type === 'text')
+        .map((b: any) => b.text)
+        .join('\n');
+      const fc = factCheck(answer, evidence);
+      // One self-correction round: send the figures no tool returned back to the model to check or remove.
+      if (fc.unverified > 0 && !firstDraft && turn < 6) {
+        firstDraft = fc;
+        const bad = fc.claims.filter((c) => c.status === 'unverified').map((c) => c.text);
+        messages.push({
+          role: 'user',
+          content: `Automated fact-check: these figures in your answer do not appear in any tool result: ${bad.join(', ')}. Check each with a tool, or rewrite the answer without it. Reply with the corrected answer only.`,
+        });
+        continue;
+      }
       return {
-        answer: res.content
-          .filter((b: any) => b.type === 'text')
-          .map((b: any) => b.text)
-          .join('\n'),
+        answer,
         evidence,
         mode: 'claude' as const,
+        factCheck: fc,
+        corrected: firstDraft
+          ? {
+              before: firstDraft.unverified,
+              after: fc.unverified,
+              flagged: firstDraft.claims.filter((c) => c.status === 'unverified').map((c) => c.text),
+            }
+          : null,
       };
     }
     const results: Anthropic.ToolResultBlockParam[] = [];
@@ -189,5 +218,5 @@ export async function claudeChat(llm: ReturnType<typeof makeLlm>, ctx: ToolConte
     }
     messages.push({ role: 'user', content: results });
   }
-  return { answer: 'Stopped after 6 tool rounds without a final answer.', evidence, mode: 'claude' as const };
+  return { answer: 'Stopped after 7 rounds without a final answer.', evidence, mode: 'claude' as const };
 }

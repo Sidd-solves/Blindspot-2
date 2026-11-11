@@ -12,6 +12,8 @@ import { callTool, listTools, screenUserInput, redactSecrets } from '@blindspot/
 import { generateSampleDataset, profileData, detectFields, crosstab } from '@blindspot/analytics';
 import { BridgeHub } from './bridge';
 import { makeLlm, claudeChat, MODELS, getModel, setModel, type ModelId } from './llm';
+import { factCheck } from './verify';
+import { aiCalls } from './ai-usage';
 import { deterministicAnswer } from './deterministic';
 import { zodToJsonSchema } from './zod-json';
 
@@ -43,6 +45,7 @@ import { Sessions, sidOf } from './sessions';
 import { keepAwake } from './uptime';
 import { rowRoutes } from './routes/rows';
 import { uploadRoutes } from './routes/upload';
+import { aiRoutes } from './routes/ai';
 import type { RouteContext } from './routes/context';
 const llm = makeLlm();
 const bridge = new BridgeHub(server, { token: env.BRIDGE_TOKEN, allowedOrigins: ORIGINS, log });
@@ -281,6 +284,7 @@ app.get('/api/fx', async (req, res) => {
 const routeCtx: RouteContext = { sessions, sid, log, broadcastTo, caseStudy, uploadMaxRows: UPLOAD_MAX_ROWS };
 rowRoutes(app, routeCtx);
 uploadRoutes(app, routeCtx);
+aiRoutes(app, routeCtx, llm);
 
 app.post('/api/chat', chatLimit, express.json({ limit: '32kb' }), async (req, res) => {
   const parsed = z.object({ message: z.string().min(1).max(2000) }).safeParse(req.body);
@@ -301,9 +305,11 @@ app.post('/api/chat', chatLimit, express.json({ limit: '32kb' }), async (req, re
   }
   try {
     const ctx = sessions.ctx(sid(req));
-    const out = llm.configured
+    const out: any = llm.configured
       ? await claudeChat(llm, ctx, parsed.data.message)
       : await deterministicAnswer(ctx, parsed.data.message);
+    // Every answer, AI or not, carries a check of its figures against the tool results it used.
+    if (!out.factCheck) out.factCheck = factCheck(out.answer ?? '', out.evidence ?? []);
     res.json(out);
   } catch (e: any) {
     log(`chat error: ${e?.status ?? ''} ${e?.message ?? e}`);

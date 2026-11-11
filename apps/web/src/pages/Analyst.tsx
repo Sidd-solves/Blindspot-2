@@ -19,6 +19,7 @@ import {
 import { post, tool, VERDICT } from '../api';
 import { Card, CardHead, Chip, CountUp, Loading, Markdown, Meter, stagger } from '../components/ui';
 import { useStore } from '../store';
+import { FactCheckBar, highlighter, type Correction, type FactCheckResult } from '../components/FactCheck';
 
 interface Msg {
   role: 'user' | 'assistant';
@@ -27,6 +28,8 @@ interface Msg {
   evidence?: { tool: string; ok: boolean; summary: string; data?: any }[];
   note?: string;
   blocked?: boolean;
+  factCheck?: FactCheckResult;
+  corrected?: Correction | null;
 }
 let history: Msg[] = [];
 
@@ -345,6 +348,8 @@ export default function Analyst() {
           evidence: r.evidence,
           note: r.note,
           blocked: r.blocked,
+          factCheck: r.factCheck,
+          corrected: r.corrected,
         },
       ]);
     } catch (e: any) {
@@ -452,7 +457,7 @@ export default function Analyst() {
                       : undefined
                 }
               >
-                {m.role === 'assistant' ? <Markdown text={m.text} /> : m.text}
+                {m.role === 'assistant' ? <Markdown text={m.text} mark={highlighter(m.factCheck)} /> : m.text}
                 {m.role === 'assistant' && (
                   <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                     {m.blocked ? (
@@ -467,6 +472,9 @@ export default function Analyst() {
                     )}
                     {m.note && <span className="text-[11.5px] text-[var(--faint)]">{m.note}</span>}
                   </div>
+                )}
+                {m.role === 'assistant' && m.factCheck && !m.blocked && (
+                  <FactCheckBar fc={m.factCheck} corrected={m.corrected} />
                 )}
                 {m.evidence && m.evidence.length > 0 && <EvidenceDrawer ev={m.evidence} />}
               </div>

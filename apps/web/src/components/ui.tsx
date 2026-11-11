@@ -436,12 +436,13 @@ export function Empty({ icon, title, children }: { icon: ReactNode; title: strin
 }
 
 /** Tiny safe Markdown renderer (headings, bold, lists, quotes). No HTML passthrough. */
-export function Markdown({ text }: { text: string }) {
+export function Markdown({ text, mark }: { text: string; mark?: (s: string) => ReactNode }) {
+  const hl = (s: string) => (mark ? mark(s) : s);
   const inline = (s: string) =>
     s
       .split(/(\*\*[^*]+\*\*)/g)
       .map((p, i) =>
-        p.startsWith('**') ? <strong key={i}>{p.slice(2, -2)}</strong> : <span key={i}>{p}</span>,
+        p.startsWith('**') ? <strong key={i}>{hl(p.slice(2, -2))}</strong> : <span key={i}>{hl(p)}</span>,
       );
   const blocks: ReactNode[] = [];
   let list: ReactNode[] = [],
