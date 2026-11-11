@@ -115,7 +115,7 @@ export function runQuery(rows: Row[], q: QuerySpec): QueryResult {
         return v.length ? v.reduce((a, b) => Math.max(a, b)) : 0;
     }
   };
-  let out = [...groups.values()].map((g) => ({ keys: g.keys, value: round(agg(g), 2) }));
+  const out = [...groups.values()].map((g) => ({ keys: g.keys, value: round(agg(g), 2) }));
   const sort = q.sort ?? (q.timeGrain ? 'key' : 'desc');
   out.sort((a, b) =>
     sort === 'key'

@@ -359,7 +359,7 @@ export default function Analyst() {
       history = [];
       location.hash = '/analyst';
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <motion.div

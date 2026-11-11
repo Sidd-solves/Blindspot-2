@@ -4,7 +4,6 @@ import {
   Area,
   AreaChart,
   Bar,
-  BarChart,
   CartesianGrid,
   Cell,
   ComposedChart,
@@ -32,7 +31,7 @@ import {
   X,
 } from 'lucide-react';
 import { useStore } from '../store';
-import { ago, get, pct, SEV, CAT, tool, usd, evidenceText, VERDICT, exposureText, impactColor } from '../api';
+import { pct, SEV, CAT, tool, usd, evidenceText, VERDICT, exposureText, impactColor } from '../api';
 import { Card, CardHead, Chip, CountUp, Meter, Ring, Sparkline, stagger, Loading } from '../components/ui';
 import { ChartTip, axis, glowDefs } from '../components/charts';
 import { go } from '../App';
@@ -216,7 +215,6 @@ export default function Overview() {
     [concState, setConcState] = useState<'loading' | 'none' | 'ok'>('loading');
   useEffect(() => {
     if (!dataset) return;
-    const dim = dataset.fields.highCardDims[0];
     // Find customer/product columns by meaning, not by how many distinct values they have (a small shop may have 6 customers).
     const all = [...dataset.fields.highCardDims, ...dataset.fields.dims];
     const dim2 =
@@ -235,7 +233,7 @@ export default function Overview() {
       setConc(null);
       setConcState('none');
     }
-  }, [version]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [version]);
 
   if (!dash)
     return (

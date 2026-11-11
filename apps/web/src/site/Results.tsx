@@ -71,7 +71,7 @@ export default function Results() {
                 { l: 'Rows in the file', v: 1067371, c: 'var(--cyan)' },
                 { l: 'Countries', v: 43, c: 'var(--blue)' },
                 { l: 'Problems found', v: findings.length, c: 'var(--rose)' },
-                { l: 'Seconds to analyze', v: 5, c: 'var(--emerald)' },
+                { l: 'Seconds to analyze', v: 6, c: 'var(--emerald)' },
               ].map((s) => (
                 <div key={s.l} className="tint rounded-xl p-3" style={{ '--c': s.c } as CSSProperties}>
                   <div className="label">{s.l}</div>

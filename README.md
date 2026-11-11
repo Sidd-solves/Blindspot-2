@@ -1,6 +1,6 @@
 # Blindspot
 
-[![CI](https://github.com/Sidd-solves/BlindSpot/actions/workflows/ci.yml/badge.svg)](https://github.com/Sidd-solves/BlindSpot/actions/workflows/ci.yml) ![Tests](https://img.shields.io/badge/tests-187%20passing-34d399) ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6) [![License: MIT](https://img.shields.io/badge/license-MIT-a78bfa)](LICENSE)
+[![CI](https://github.com/Sidd-solves/BlindSpot/actions/workflows/ci.yml/badge.svg)](https://github.com/Sidd-solves/BlindSpot/actions/workflows/ci.yml) ![Tests](https://img.shields.io/badge/tests-187%20passing-34d399) ![Coverage](https://img.shields.io/badge/coverage-79%25%20engine%20%2B%20API-22d3ee) ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6) ![Lint](https://img.shields.io/badge/ESLint-0%20problems-8b5cf6) [![License: MIT](https://img.shields.io/badge/license-MIT-a78bfa)](LICENSE)
 
 **The AI analyst for small businesses. See what your sales data is hiding.**
 
@@ -42,6 +42,9 @@ npm run dev     # API on :8787, web on :5173 (open http://localhost:5173)
 npm test        # 187 tests: statistics, file reading (incl. real PDFs), analytics, all 34 tools, sessions, API + MCP
 npm run typecheck  # strict TypeScript, 0 errors
 npm run format:check
+npm run lint       # ESLint, 0 problems
+npm run coverage   # 79% of lines in the engine, tools and API
+npm run bench      # speed test: 1M real rows read + cleaned in ~40 s, analyzed in ~6 s (2020 Intel i5 laptop)
 ```
 Add `ANTHROPIC_API_KEY=` to `.env` for Claude answers (optional; without it the analyst answers common questions with real queries). Try it with the sample files in `apps/web/public/samples/` (a 68-page PDF report and a CSV), or the **Try a 68-page PDF sales report** button on the start page. Production: see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 

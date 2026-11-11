@@ -58,7 +58,7 @@ export function parseFile(
   if (!table.rows.length)
     throw new IngestError('TOO_FEW_ROWS', `${f.name}: found a header but no rows of data under it.`);
   const hn = new Set(table.headers.map(norm));
-  let profile = PROFILES.find((p) => p.detect.every((d) => hn.has(d))) ?? null;
+  const profile = PROFILES.find((p) => p.detect.every((d) => hn.has(d))) ?? null;
   if (!profile) {
     const u = unpivotMonths(table);
     if (u) table = u;
@@ -356,8 +356,8 @@ export function ingest(
   const dateVals = col('date');
   const auto = detectDateOrder(dateVals);
   const european = table.delimiter === ';' || Object.values(dc).some(Boolean);
-  let dateOrder: DateOrder | null = opts.dateOrder ?? auto?.order ?? null,
-    dateOrderAssumed = !opts.dateOrder && !!auto?.assumed;
+  let dateOrder: DateOrder | null = opts.dateOrder ?? auto?.order ?? null;
+  const dateOrderAssumed = !opts.dateOrder && !!auto?.assumed;
   if (!opts.dateOrder && auto?.assumed && european) dateOrder = 'dmy';
   const allowSerial = dateVals.length > 0 && dateVals.every((v) => /^\d+(\.\d+)?$/.test(v.trim()));
 
@@ -408,8 +408,8 @@ export function ingest(
       "Couldn't find a money column (like Total, Amount, Sales or Price). Pick it below, or check that the file has one.",
       partialReport(primary, issues, fileInfo),
     );
-  let cancelledOrders = new Set<string>(),
-    droppedStatus = 0;
+  const cancelledOrders = new Set<string>();
+  let droppedStatus = 0;
   const orderGross = new Map<string, number>(),
     orderLines = new Map<string, number[]>();
   const orderDisc = new Map<string, number>(),
@@ -472,7 +472,7 @@ export function ingest(
       );
       return;
     }
-    let ret = qty! < 0 || sales < 0 || /^C\d/.test(order) || (!!status && STATUS_RETURN.test(status));
+    const ret = qty! < 0 || sales < 0 || /^C\d/.test(order) || (!!status && STATUS_RETURN.test(status));
     if (ret) {
       if (sales > 0) sales = -sales;
       if (qty! > 0) qty = -qty!;
@@ -743,7 +743,7 @@ export function ingest(
   const span = dates.length ? (Date.parse(dates[dates.length - 1]) - Date.parse(dates[0])) / 86400000 : 0;
   const nReturns = rows.filter((r) => r.IsReturn === 1).length;
   const orders = new Set(rows.map((r) => String(r.Order ?? ''))).size;
-  const unlocks = whatItUnlocks({ roles, hasAmount, hasQty, hasCustomer, span, nReturns, orders });
+  const unlocks = whatItUnlocks({ roles, hasAmount, hasQty, hasCustomer, span, nReturns });
   const format =
     files.length > 1 ? `${fileInfo[0].format} + ${files.length - 1} more file(s)` : fileInfo[0].format;
   const report: IngestReport = {
@@ -804,9 +804,8 @@ function whatItUnlocks(f: {
   hasCustomer: boolean;
   span: number;
   nReturns: number;
-  orders: number;
 }): Unlock[] {
-  const { roles, hasAmount, hasQty, hasCustomer, span, nReturns, orders } = f;
+  const { roles, hasAmount, hasQty, hasCustomer, span, nReturns } = f;
   return [
     {
       key: 'sales',

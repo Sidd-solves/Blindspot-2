@@ -49,7 +49,6 @@ import {
   Empty,
   Meter,
   Reveal,
-  Ring,
   Tabs,
   stagger,
 } from '../components/ui';
@@ -306,7 +305,7 @@ function Heatmap() {
     get(`/api/crosstab?row=${encodeURIComponent(r)}&col=${encodeURIComponent(c)}&${q}`)
       .then(setData)
       .catch(() => setData(null));
-  }, [r, c, version]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [r, c, version]);
   const vals: number[] = data?.values.flat().filter((v: any) => v !== null) ?? [];
   const max = Math.max(...vals.map(Math.abs), 0.0001);
   const isRatio = !!data?.ratioOf;

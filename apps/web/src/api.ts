@@ -33,7 +33,8 @@ export function setDisplay(to: string, rate: number) {
   display.to = to;
   display.rate = to ? rate : 1;
   try {
-    to ? localStorage.setItem('bs-cur', to) : localStorage.removeItem('bs-cur');
+    if (to) localStorage.setItem('bs-cur', to);
+    else localStorage.removeItem('bs-cur');
   } catch {
     /* ignore */
   }

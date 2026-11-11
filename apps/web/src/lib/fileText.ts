@@ -47,7 +47,11 @@ export function decode(b: Uint8Array): string {
   const head = b.subarray(0, 400);
   let zerosOdd = 0,
     zerosEven = 0;
-  for (let i = 0; i < head.length; i++) if (head[i] === 0) i % 2 ? zerosOdd++ : zerosEven++;
+  for (let i = 0; i < head.length; i++)
+    if (head[i] === 0) {
+      if (i % 2) zerosOdd++;
+      else zerosEven++;
+    }
   if (zerosOdd > head.length / 4) return new TextDecoder('utf-16le').decode(b);
   if (zerosEven > head.length / 4) return new TextDecoder('utf-16be').decode(b);
   try {

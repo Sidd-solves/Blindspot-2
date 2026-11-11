@@ -533,7 +533,7 @@ describe('text from a PDF report', () => {
     'INV-03\tMar 9, 2026\tCandle\t1\t$12.00',
     'Total\t\t\t\t$51.00',
   ].join('\n');
-  const { dataset, report } = run(pdfText, 'report.pdf');
+  const { dataset } = run(pdfText, 'report.pdf');
   it('skips page labels, repeated headers and the total line', () => {
     expect(dataset.rows).toHaveLength(3);
     expect(sales(dataset.rows)).toBe(51);

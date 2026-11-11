@@ -86,7 +86,7 @@ const STEPS = [
     icon: Search,
     t: 'Blindspot hunts for problems',
     d: 'It cleans the data, runs every check, compares your main products, customers and countries with the rest of the business, and tests business ideas, all with real calculations.',
-    ex: '1 million real sales: analysis in about 5 seconds.',
+    ex: '1 million real sales: analysis in about 6 seconds.',
   },
   {
     c: 'var(--violet)',

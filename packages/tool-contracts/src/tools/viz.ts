@@ -176,7 +176,7 @@ export const renderVisualization = defineTool({
     if (!check.valid) throw new ToolError('INVALID_CHART', check.errors.join(' '));
     const data = aggregate(v.rows, i.x, i.y, i.aggregate, i.limit, type === 'line');
     const warnings = type === 'bar' ? ['Bar axis is rendered from zero.'] : [];
-    if (cols.find((c) => c.name === i.x)?.distinct! > i.limit)
+    if ((cols.find((c) => c.name === i.x)?.distinct ?? 0) > i.limit)
       warnings.push(`Showing top ${i.limit} of ${cols.find((c) => c.name === i.x)!.distinct} categories.`);
     const id = ctx.state.nextId('viz');
     ctx.state.canvas.push({

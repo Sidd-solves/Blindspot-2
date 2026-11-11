@@ -137,17 +137,16 @@ export class BridgeHub implements BridgeLike {
         for (const [id, p] of this.pending) {
           clearTimeout(p.timer);
           this.pending.delete(id);
-          p.relayTo
-            ? this.send(p.relayTo.ws, {
-                v: BRIDGE_VERSION,
-                kind: 'response',
-                id: p.relayTo.id,
-                ok: false,
-                error: { code: 'EXTENSION_DISCONNECTED', message: 'Extension disconnected' },
-              })
-            : p.reject(
-                Object.assign(new Error('Extension disconnected'), { code: 'EXTENSION_DISCONNECTED' }),
-              );
+          if (p.relayTo)
+            this.send(p.relayTo.ws, {
+              v: BRIDGE_VERSION,
+              kind: 'response',
+              id: p.relayTo.id,
+              ok: false,
+              error: { code: 'EXTENSION_DISCONNECTED', message: 'Extension disconnected' },
+            });
+          else
+            p.reject(Object.assign(new Error('Extension disconnected'), { code: 'EXTENSION_DISCONNECTED' }));
         }
         this.emit('extensionStatus', { connected: false });
         this.log('bridge: extension disconnected');

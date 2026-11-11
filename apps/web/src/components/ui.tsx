@@ -110,7 +110,7 @@ export function CountUp({
     });
     prev.current = value;
     return () => ctl.stop();
-  }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [value]);
   // Re-renders (e.g. a currency switch changes `format`) must show the current number, not reset to 0.
   return (
     <span ref={ref} className={`mono ${className}`}>

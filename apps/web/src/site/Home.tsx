@@ -387,7 +387,7 @@ export default function Home() {
                 { l: 'Records analyzed', v: dataset?.rows ?? 0, c: 'var(--cyan)' },
                 { l: 'Problems found', v: findings.length, c: 'var(--rose)' },
                 { l: 'Ideas tested by statistics', v: decided.length, c: 'var(--emerald)' },
-                { l: 'Seconds for 1M rows', v: 5, c: 'var(--violet)' },
+                { l: 'Seconds to analyze 1M rows', v: 6, c: 'var(--violet)' },
               ].map((s) => (
                 <div key={s.l} className="tint rounded-xl p-3" style={{ '--c': s.c } as CSSProperties}>
                   <div className="label">{s.l}</div>

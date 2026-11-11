@@ -18,7 +18,9 @@ jobs:
         run: npm run typecheck
       - name: Format check
         run: npm run format:check
-      - name: Tests
-        run: npm test
+      - name: Lint
+        run: npm run lint
+      - name: Tests with coverage
+        run: npm run coverage
       - name: Build web app
         run: npm run build -w @blindspot/web

@@ -9,7 +9,6 @@ import {
   welchTest,
   bootstrapTest,
   normCdf,
-  tCdf,
   fmtP,
   corrTest,
   type TestResult,
@@ -404,7 +403,11 @@ export function runHypothesisLibrary(ds: Dataset): HypothesisResult[] {
       const split = (win: [number, number]) => {
         let n = 0,
           e = 0;
-        for (const o of os) if (inWin(o.t, win)) firstSeen.get(o.c)! >= win[0] ? (n += o.v) : (e += o.v);
+        for (const o of os)
+          if (inWin(o.t, win)) {
+            if (firstSeen.get(o.c)! >= win[0]) n += o.v;
+            else e += o.v;
+          }
         return { n, e };
       };
       const B = split(w.baseline),

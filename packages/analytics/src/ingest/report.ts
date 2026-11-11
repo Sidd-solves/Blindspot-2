@@ -1,4 +1,4 @@
-import { prepareTransactions, type PrepReport } from '../retail';
+import { type PrepReport } from '../retail';
 
 export const ROLES = [
   'date',

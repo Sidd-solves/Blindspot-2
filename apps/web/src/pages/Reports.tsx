@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { tool, usd, pct, SEV, evidenceText } from '../api';
 import { useStore } from '../store';
-import { Card, CardHead, Chip, CountUp, Loading, Markdown, stagger } from '../components/ui';
+import { Card, Chip, CountUp, Loading, Markdown, stagger } from '../components/ui';
 
 const download = (name: string, text: string) => {
   const a = document.createElement('a');

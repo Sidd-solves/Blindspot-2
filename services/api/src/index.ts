@@ -8,33 +8,17 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
-import {
-  callTool,
-  listTools,
-  SessionState,
-  screenUserInput,
-  redactSecrets,
-  type ToolContext,
-} from '@blindspot/tool-contracts';
-import {
-  parseCsv,
-  generateSampleDataset,
-  profileData,
-  detectFields,
-  crosstab,
-  ingest,
-  IngestError,
-  ROLES,
-} from '@blindspot/analytics';
+import { callTool, listTools, screenUserInput, redactSecrets } from '@blindspot/tool-contracts';
+import { generateSampleDataset, profileData, detectFields, crosstab } from '@blindspot/analytics';
 import { BridgeHub } from './bridge';
 import { makeLlm, claudeChat, MODELS, getModel, setModel, type ModelId } from './llm';
 import { deterministicAnswer } from './deterministic';
 import { zodToJsonSchema } from './zod-json';
-import { fetchShopifyDataset, ShopifyError } from './shopify';
+
 import { loadCaseStudy, caseStudyAvailable, CASE_STUDY_CITATION } from './case-study';
 import { analyzeSmart, profileData as profile } from '@blindspot/analytics';
 import { CURRENCIES, ratesFor, displayRate } from './fx';
-import { convertMoneyDeep, toMs } from '@blindspot/analytics';
+import { convertMoneyDeep } from '@blindspot/analytics';
 
 // Load the repo-root .env for local runs (hosted platforms inject real env vars, which take precedence).
 const rootEnv = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../.env');
@@ -223,7 +207,7 @@ app.get('/api/dataset', (req, res) => {
     source: v.source,
     label: v.label,
     currency: v.currency ?? 'USD',
-    prep: v.prep ? (({ reversed, ...p }) => p)(v.prep) : null,
+    prep: v.prep ? (({ reversed: _reversed, ...p }) => p)(v.prep) : null,
     citation: v.source === 'case-study' ? CASE_STUDY_CITATION : null,
     caseStudyAvailable: caseStudyAvailable(),
     rows: v.rows.length,

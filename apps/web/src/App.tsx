@@ -164,7 +164,7 @@ function FilterBar() {
 export default function App() {
   const [page, setPage] = useState<PageId>(current());
   const [site, setSite] = useState<string | null>(siteRoute());
-  const { dataset, extension, health, loading, refresh } = useStore();
+  const { dataset, extension, loading, refresh } = useStore();
   useEffect(() => {
     const h = () => {
       setPage(current());

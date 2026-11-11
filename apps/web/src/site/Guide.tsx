@@ -392,7 +392,7 @@ interface Guide {
   link?: { label: string; href: string };
 }
 
-const fileStep = (c: string) => ({
+const fileStep = (_c: string) => ({
   t: 'Drop it into Blindspot',
   d: "Drag the file onto the box below. Column names don't need to match anything: Blindspot works out which column is the date, the money, the product and the customer.",
   mock: 'drop',

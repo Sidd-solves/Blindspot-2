@@ -2,18 +2,7 @@ import type { CheckRun, Dataset, Finding, Severity } from './types';
 import { detectFields, numeric, profileData } from './profile';
 import { interpretConcentration } from './concentration';
 import { interpretSegments } from './segments';
-import {
-  iqrBounds,
-  pearson,
-  round,
-  sum,
-  quantile,
-  welchTest,
-  tCdf,
-  fmtP,
-  roundStat,
-  corrTest,
-} from './stats';
+import { iqrBounds, pearson, round, sum, quantile, welchTest, fmtP, roundStat, corrTest } from './stats';
 import { money, pctStr, plural } from './money';
 import { explainChange, scanAnomalies, storeFindings } from './insights';
 import { comparisonWindows, inWin, toMs, DAY, pickWindowDays } from './time';

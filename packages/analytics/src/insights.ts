@@ -1,7 +1,7 @@
 import type { CheckRun, Dataset, Finding, FieldMap, Row } from './types';
 import { comparisonWindows, inWin, toMs, DAY, dateSpan, type Windows } from './time';
-import { mean, std, round, roundStat, sum, quantile, welchTest, propTest, bhAdjust, fmtP } from './stats';
-import { money, pctStr, plural } from './money';
+import { mean, round, roundStat, sum, quantile, welchTest, propTest, bhAdjust, fmtP } from './stats';
+import { money, pctStr } from './money';
 
 type Draft = Omit<Finding, 'score'>;
 const UNKNOWN = new Set(['Unknown customer', 'Guest checkout', '']);
@@ -268,7 +268,7 @@ export function scanAnomalies(
   }
   const q = bhAdjust(cands.map((x) => x.p));
   const all = cands.map((x, i) => ({ ...x, q: round(q[i], 4), p: round(x.p, 4) }));
-  const strip = ({ keep, ...a }: any) => a as Anomaly;
+  const strip = ({ keep: _keep, ...a }: any) => a as Anomaly;
   const out: Anomaly[] = all.filter((x) => x.keep && x.q < 0.05).map(strip);
   // Large drops that pass on their own (p < 0.05) but not after the many-comparisons adjustment: shown as unconfirmed.
   const watch: Anomaly[] = all.filter((x) => x.keep && x.q >= 0.05 && x.p < 0.05).map(strip);
