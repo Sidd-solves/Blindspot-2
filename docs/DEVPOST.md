@@ -13,7 +13,7 @@ Small businesses make high-stakes decisions on gut feeling. Big retailers pay da
 1. **Clean:** removes duplicates, separates returns and fees, reverses orders cancelled within 2 days, flags sales with no customer, and reports every change.
 2. **Check:** store-specific detectors (returns, lapsed best customers, 90-day repeat rate, products that stopped selling, order value, seasonality, loss-making products, concentration).
 3. **Scan:** compares every product, customer and country with the business as a whole, **year over year** (so seasonality isn't mistaken for growth), and reports a change only if it passes a **Welch t-test (t ≤ −2)**.
-4. **Prove:** a hypothesis engine tests business ideas, built-in or proposed by Claude, and labels each true, false or not enough evidence.
+4. **Prove:** a hypothesis engine tests business ideas, built-in or proposed by Claude, and labels each supported, not supported or not enough evidence.
 5. **Act:** a business health score, ranked findings with money at stake, a simulator with editable assumptions, and a one-page report with a roadmap from easy to hard.
 
 All numbers come from deterministic code; the AI explains results and proposes ideas, which the code verifies.

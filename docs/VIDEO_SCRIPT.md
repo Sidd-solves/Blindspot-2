@@ -55,7 +55,7 @@
 
 ### 2:25 – 2:45 · Proof
 🎬 Click **Source Data** (the four **Match** badges), then show Slide 13 (Proof, not promises).
-🎙️ "Every number is traceable to the exact rows. Seven of seven headline numbers match an independent check, and a hundred fifty-five automated tests pass."
+🎙️ "Every number is traceable to the exact rows. Seven of seven headline numbers match an independent check, and a hundred sixty-four automated tests pass."
 
 ### 2:45 – 2:55 · Close
 🎬 Slide 19 (Stop guessing. Start knowing.), then Slide 20 (Try it live + QR).
@@ -103,7 +103,7 @@
 
 ### 4:20 – 5:10 · AI Analyst
 🎬 **AI Analyst** → click **"Why did revenue change?"** → show the answer → point at **Agentic workflow** → click **AI ideas** (or scroll to **Ideas, checked by math**).
-🎙️ "This is where AI comes in. **AI suggests. Math checks.** I ask in plain English. Claude decides which of thirty-four analysis tools to call, runs them, and explains the real results. You can see every tool it used. Then I ask for new ideas. Claude proposes business theories, and Blindspot tests each one with statistics: true, false, or not enough evidence. **Ideas from AI. Proof from math.** It never invents a number."
+🎙️ "This is where AI comes in. **AI suggests. Math checks.** I ask in plain English. Claude decides which of thirty-four analysis tools to call, runs them, and explains the real results. You can see every tool it used. Then I ask for new ideas. Claude proposes business theories, and Blindspot tests each one with statistics: supported, not supported, or not enough evidence. **Ideas from AI. Proof from math.** It never invents a number."
 
 ### 5:10 – 5:50 · Decide what to fix
 🎬 **Risk Intelligence** (point at the risk map), then **Scenario Simulator** (move one lever, e.g. Keep more customers), then **Executive Reports**.
@@ -114,7 +114,7 @@
 🎙️ "And you never have to take it on faith. Every row it analysed is here, searchable, downloadable, and the totals match the dashboard exactly. **Showing your work builds trust.**"
 
 ### 6:15 – 6:45 · How it's built and proof (Slides 12 and 13, briefly 14)
-🎙️ "Under the hood: React and TypeScript in the browser, Node on the server, my own math engine kept separate from the AI so results are fast, free and repeatable, and Claude with thirty-four typed tools, also available over MCP. Seven of seven numbers match an independent Python check, a hundred fifty-five automated tests pass, and Shopify access is read-only. Your data stays yours."
+🎙️ "Under the hood: React and TypeScript in the browser, Node on the server, my own math engine kept separate from the AI so results are fast, free and repeatable, and Claude with thirty-four typed tools, also available over MCP. Seven of seven numbers match an independent Python check, a hundred sixty-four automated tests pass, and Shopify access is read-only. Your data stays yours."
 
 ### 6:45 – 7:05 · Challenges, learned, next (Slides 15, 16, 18, quickly)
 🎙️ "The hardest parts were messy real data, PDFs that don't store tables, and a free server with five hundred twelve megabytes. I learned that AI is best when it's checked. Next: more live connectors, weekly alerts, and comparing your store with similar shops."

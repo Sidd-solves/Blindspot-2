@@ -17,7 +17,7 @@ Dashboards show what happened. You still have to spot the problem yourself. Blin
 
 ## How it works
 **5. How does it find problems?**
-Four steps. First it cleans the data (duplicates, returns, fees). Then it checks the things that matter to shops, like returns and lost customers. Then it scans everything else, comparing each product, customer and country with the business as a whole. Finally it tests business ideas with statistics and says true, false, or not enough evidence.
+Four steps. First it cleans the data (duplicates, returns, fees). Then it checks the things that matter to shops, like returns and lost customers. Then it scans each product and country, comparing each one with the business as a whole. Finally it tests business ideas with statistics and says supported, not supported, or not enough evidence.
 
 **6. How do you avoid false alarms?**
 Two rules. We compare with the same period last year, so a holiday rush never looks like growth. And a drop only counts if it passes a statistical test, so random ups and downs aren't reported.
