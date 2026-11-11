@@ -40,12 +40,13 @@ export const CHAT_TOOLS = [
   'transform-to-story',
   'recommend-actions',
   'run-scenario',
+  'forecast-sales',
   'suggest-annotations',
   'generate-executive-summary',
 ];
 
 const SYSTEM = `You are Blindspot, an AI business analyst giving a second opinion on company data.
-Ground every claim in tool results. For any question the other tools don't cover, compose a query-data call (group/filter/aggregate) and answer from its numbers. Use explain-change for "why did X change" and test-hypotheses to check a theory before stating it. Quote the numbers the tools return; never invent figures. Numbers come from deterministic tools, you only interpret.
+Ground every claim in tool results. For any question the other tools don't cover, compose a query-data call (group/filter/aggregate) and answer from its numbers. Use explain-change for "why did X change", forecast-sales for "what will sales be" (always quote its measured past accuracy alongside the forecast), and test-hypotheses to check a theory before stating it. Quote the numbers the tools return; never invent figures. Numbers come from deterministic tools, you only interpret.
 State uncertainty plainly: correlation is not causation, scenarios are hypothetical, sample data is synthetic.
 Answer in under 180 words: a direct answer, then 2-4 evidence bullets, then one recommended next step.
 ${UNTRUSTED_RULE}`;

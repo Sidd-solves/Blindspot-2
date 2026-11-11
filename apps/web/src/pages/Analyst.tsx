@@ -35,6 +35,7 @@ const SUGGESTED = [
   { q: 'What is our biggest risk?', c: 'var(--violet)' },
   { q: 'Top 5 customers by sales', c: 'var(--cyan)' },
   { q: 'Show sales by month', c: 'var(--blue)' },
+  { q: 'What will sales be next month?', c: 'var(--sky)' },
   { q: 'Which fix gives the most benefit for the effort?', c: 'var(--emerald)' },
   { q: 'Average sales by weekday', c: 'var(--fuchsia)' },
 ];

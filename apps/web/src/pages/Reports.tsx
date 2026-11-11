@@ -264,6 +264,45 @@ export default function Reports() {
             </table>
           </div>
 
+          {rep.forecast?.ok && (
+            <>
+              <h3
+                className="mb-2 mt-5 text-[11px] font-extrabold uppercase tracking-[.1em]"
+                style={{ color: 'var(--cyan)' }}
+              >
+                Sales forecast · next 3 months
+              </h3>
+              <div className="grid gap-2 sm:grid-cols-3">
+                {rep.forecast.forecast.map((x: any, i: number) => (
+                  <motion.div
+                    key={x.month}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 + i * 0.07 }}
+                    className="tint rounded-lg px-3 py-2"
+                    style={{ '--c': 'var(--cyan)' } as CSSProperties}
+                  >
+                    <div className="text-[11px] font-bold text-[var(--muted)]">
+                      {new Date(`${x.month}-01T00:00:00Z`).toLocaleDateString('en-US', {
+                        month: 'long',
+                        year: 'numeric',
+                        timeZone: 'UTC',
+                      })}
+                    </div>
+                    <div className="mono text-[15px] font-semibold">{usd(x.value)}</div>
+                    <div className="text-[11px] text-[var(--faint)]">
+                      likely {usd(x.low, true)} to {usd(x.high, true)}
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+              <div className="mt-1.5 text-[11.5px] text-[var(--muted)]">
+                Track record: replayed on the last {rep.forecast.accuracy.months} months using only the data
+                available at the time, off by {(rep.forecast.accuracy.wape * 100).toFixed(1)}% on average.
+              </div>
+            </>
+          )}
+
           <h3
             className="mb-2 mt-5 text-[11px] font-extrabold uppercase tracking-[.1em]"
             style={{ color: 'var(--blue)' }}

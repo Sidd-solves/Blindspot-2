@@ -5,7 +5,7 @@ Each choice below has a cost. This page says what we chose, why, and what we gav
 ## 1. The math is separate from the AI
 **Choice.** All numbers come from deterministic TypeScript: cleaning, statistics, findings, scenarios and reports. Claude only picks tools, explains their results and proposes ideas.
 
-**Why.** A store owner acts on these numbers. Code gives the same answer every time, runs in seconds, costs nothing per run and can be tested (187 tests, 79% line coverage on the engine and API). A language model gives none of those guarantees for arithmetic.
+**Why.** A store owner acts on these numbers. Code gives the same answer every time, runs in seconds, costs nothing per run and can be tested (198 tests, 79% line coverage on the engine and API). A language model gives none of those guarantees for arithmetic.
 
 **Trade-off.** Every new kind of analysis has to be written as code, and the AI can't answer questions that no tool covers. It says so instead of guessing.
 
@@ -44,21 +44,28 @@ Each choice below has a cost. This page says what we chose, why, and what we gav
 
 **Trade-off.** The headline numbers are smaller and less exciting than they could be.
 
-## 7. Read the file the way it is
+## 7. A forecast is only shown with its track record
+**Choice.** The forecast replays four simple methods (last month, 3-month average, same month last year, last year × recent trend) on past months using only earlier data, chooses among them from past errors only, and shows every past month next to what really happened.
+
+**Why.** A forecast without a track record is a guess with a chart. Choosing the method in hindsight would make the accuracy look better than it is, so the choice itself is replayed.
+
+**Trade-off.** Simple methods can't use outside information (promotions, stock-outs, prices). With fewer than 6 full months of history, no forecast is shown at all, and with under a year, seasonal methods are skipped.
+
+## 8. Read the file the way it is
 **Choice.** No template to fill in. The reader scores every column by name (eight languages) and by its values, recognizes six store platforms' exports, unpivots month-per-column crosstabs and rebuilds tables from PDFs. Then it shows exactly how it read the file before showing any result.
 
 **Why.** Owners won't reformat exports. A wrong guess shown openly with a one-click fix beats a silent guess.
 
 **Trade-off.** The reader is the biggest part of the codebase. It has its own tests for 29 unusual file shapes.
 
-## 8. Read-only and private by default
+## 9. Read-only and private by default
 **Choice.** Shopify access asks only for `read_orders`, `read_products` and `read_inventory`. Keys are used for one request and never stored. Each visitor gets a private session, and uploads aren't kept.
 
 **Why.** Owners are handing over their business. Keeping no data at all is the simplest privacy policy to trust.
 
 **Trade-off.** Nothing is remembered between visits, so there's no history and no alerts yet. Weekly alerts are on the roadmap and would need opt-in storage.
 
-## 9. Built to run on a free 512 MB server
+## 10. Built to run on a free 512 MB server
 **Choice.** The real-data case study is pre-cleaned at build time and stored compactly. Uploads are capped per request, caches are warmed before the port opens, and the server pings itself so the free plan never sleeps.
 
 **Why.** It has to work instantly for anyone who clicks the link, on a budget of zero.

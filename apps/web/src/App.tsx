@@ -7,6 +7,7 @@ import {
   Sparkles,
   ShieldAlert,
   SlidersHorizontal,
+  LineChart,
   ScanEye,
   FileText,
   Settings as Cog,
@@ -24,6 +25,7 @@ const DataSources = lazy(() => import('./pages/DataSources'));
 const Analyst = lazy(() => import('./pages/Analyst'));
 const Risk = lazy(() => import('./pages/Risk'));
 const Simulator = lazy(() => import('./pages/Simulator'));
+const Forecast = lazy(() => import('./pages/Forecast'));
 const Audit = lazy(() => import('./pages/Audit'));
 const Reports = lazy(() => import('./pages/Reports'));
 const Settings = lazy(() => import('./pages/Settings'));
@@ -75,6 +77,7 @@ export const NAV = [
     c: 'var(--emerald)',
     el: Simulator,
   },
+  { id: 'forecast', label: 'Sales Forecast', icon: LineChart, c: 'var(--cyan)', el: Forecast },
   { id: 'audit', label: 'Dashboard Audit', icon: ScanEye, c: 'var(--amber)', el: Audit },
   { id: 'reports', label: 'Executive Reports', icon: FileText, c: 'var(--sky)', el: Reports },
   { id: 'settings', label: 'Settings', icon: Cog, c: 'var(--muted)', el: Settings },

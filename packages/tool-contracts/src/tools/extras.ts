@@ -7,8 +7,10 @@ import {
   baselineOf,
   auditDashboard,
   analyzeColors,
+  forecastSales,
+  detectFields,
 } from '@blindspot/analytics';
-import { defineTool } from '../core';
+import { defineTool, memo } from '../core';
 import { DashboardSpecSchema } from './design';
 
 export const runScenario = defineTool({
@@ -112,6 +114,7 @@ export const generateExecutiveSummary = defineTool({
     scenario: z.record(z.string(), z.unknown()),
     topics: z.array(z.record(z.string(), z.unknown())),
     roadmap: z.array(z.record(z.string(), z.unknown())),
+    forecast: z.record(z.string(), z.unknown()).optional(),
   }),
   async handler(ctx) {
     const v = ctx.state.view();
@@ -147,4 +150,64 @@ export const auditDashboardQuality = defineTool({
     };
   },
 });
-export const EXTRA_TOOLS = [runScenario, recommendActions, generateExecutiveSummary, auditDashboardQuality];
+
+const Month = z.string().regex(/^\d{4}-\d{2}$/);
+export const forecastSalesTool = defineTool({
+  name: 'forecast-sales',
+  category: 'Business Intelligence',
+  core: false,
+  description:
+    'Forecast monthly sales for the next 1-6 months with a proven track record: four simple methods are replayed on past months using only data available at the time, the method is chosen from past errors only, and the 80% range comes from real past misses. Returns the forecast, every past test month (forecast vs actual) and the measured accuracy.',
+  input: z.object({ horizon: z.number().int().min(1).max(6).default(3) }),
+  output: z.object({
+    ok: z.boolean(),
+    reason: z.string().optional(),
+    measure: z.string(),
+    history: z.array(z.object({ month: Month, value: z.number() })),
+    partialMonth: Month.nullable(),
+    method: z.object({ id: z.string(), label: z.string(), how: z.string() }).nullable(),
+    methods: z.array(
+      z.object({
+        id: z.string(),
+        label: z.string(),
+        how: z.string(),
+        wape: z.number().nullable(),
+        months: z.number(),
+      }),
+    ),
+    backtest: z.array(
+      z.object({
+        month: Month,
+        actual: z.number(),
+        predicted: z.number(),
+        method: z.string(),
+        error: z.number().nullable(),
+        low: z.number().nullable(),
+        high: z.number().nullable(),
+        inside: z.boolean().nullable(),
+      }),
+    ),
+    accuracy: z.object({
+      wape: z.number().nullable(),
+      months: z.number(),
+      hitRate: z.number().nullable(),
+      rangeTested: z.number(),
+      bias: z.number().nullable(),
+    }),
+    forecast: z.array(z.object({ month: Month, value: z.number(), low: z.number(), high: z.number() })),
+    coverage: z.number(),
+    notes: z.array(z.string()),
+  }),
+  async handler(ctx, { horizon }) {
+    const v = ctx.state.view(),
+      fm = detectFields(v);
+    return memo(v.rows, `forecast:${horizon}`, () => forecastSales(v.rows, fm.date, fm.measure, { horizon }));
+  },
+});
+export const EXTRA_TOOLS = [
+  runScenario,
+  recommendActions,
+  generateExecutiveSummary,
+  auditDashboardQuality,
+  forecastSalesTool,
+];

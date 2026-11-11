@@ -7,6 +7,7 @@ import { numeric } from './profile';
 import { sum } from './stats';
 
 import { money } from './money';
+import { forecastSales } from './forecast';
 
 /**
  * Yearly baseline for the simulator. Profit stays null when the data has no profit column (unknown is not zero).
@@ -272,6 +273,14 @@ export function executiveSummary(ds: Dataset, findings: Finding[]) {
     roadmap = roadmapFrom(recs);
   const top = findings.slice(0, 3);
   const sc = simulateScenario(base, { churnReductionPct: 5, opexReductionPct: 8 });
+  const fm = detectFields(ds);
+  const fc = forecastSales(ds.rows, fm.date, fm.measure, { horizon: 3 });
+  const monthLabel = (m: string) =>
+    new Date(`${m}-01T00:00:00Z`).toLocaleDateString('en-US', {
+      month: 'short',
+      year: 'numeric',
+      timeZone: 'UTC',
+    });
   const md = [
     `# Executive Summary: ${ds.name}`,
     `> Data: ${ds.label}. Figures are computed from ${ds.rows.length.toLocaleString()} rows; scenarios are hypothetical.`,
@@ -297,6 +306,18 @@ export function executiveSummary(ds: Dataset, findings: Finding[]) {
       sc.formulas.join('; ') +
       '.',
     '',
+    '## Sales forecast (next 3 months)',
+    ...(fc.ok
+      ? [
+          fc.forecast
+            .map(
+              (x) => `- **${monthLabel(x.month)}:** ${usd(x.value)} (likely ${usd(x.low)} to ${usd(x.high)})`,
+            )
+            .join('\n'),
+          `Method: ${fc.method!.label.toLowerCase()}. Track record: replayed on the last ${fc.accuracy.months} months using only the data available at the time, it was off by ${((fc.accuracy.wape ?? 0) * 100).toFixed(1)}% on average${fc.accuracy.rangeTested ? `, and ${Math.round((fc.accuracy.hitRate ?? 0) * fc.accuracy.rangeTested)} of ${fc.accuracy.rangeTested} months landed inside the 80% range` : ''}. A forecast assumes the coming months behave like the past ones.`,
+        ]
+      : [`Not shown: ${fc.reason}`]),
+    '',
     '## Every topic checked',
     ...topics.map(
       (t) =>
@@ -309,7 +330,15 @@ export function executiveSummary(ds: Dataset, findings: Finding[]) {
         `- **${p.when} (${p.title}):** ${p.items.length ? p.items.join(' ') : 'Nothing urgent in this phase.'}`,
     ),
   ].join('\n');
-  return { markdown: md, topFindings: top, recommendations: recs.slice(0, 3), scenario: sc, topics, roadmap };
+  return {
+    markdown: md,
+    topFindings: top,
+    recommendations: recs.slice(0, 3),
+    scenario: sc,
+    topics,
+    roadmap,
+    forecast: fc,
+  };
 }
 
 export function documentation(ds: Dataset, findings: Finding[], methods: string[] = []) {

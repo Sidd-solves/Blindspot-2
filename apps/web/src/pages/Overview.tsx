@@ -23,6 +23,7 @@ import {
   FlaskConical,
   Gauge,
   Layers,
+  LineChart,
   Lightbulb,
   PieChart,
   Radar,
@@ -213,6 +214,11 @@ export default function Overview() {
   const { dash, findings, bySeverity, actions, dataset, loading, version } = useStore();
   const [conc, setConc] = useState<any>(null),
     [concState, setConcState] = useState<'loading' | 'none' | 'ok'>('loading');
+  const [fc, setFc] = useState<any>(null);
+  useEffect(() => {
+    setFc(null);
+    tool('forecast-sales', { horizon: 1 }).then((r) => setFc(r.ok && r.data.ok ? r.data : null));
+  }, [version]);
   useEffect(() => {
     if (!dataset) return;
     // Find customer/product columns by meaning, not by how many distinct values they have (a small shop may have 6 customers).
@@ -368,6 +374,21 @@ export default function Overview() {
             <div className="flex items-center gap-1.5">
               {partialMonth && <Chip c="var(--faint)">{partialMonth} is a partial month</Chip>}
               <Chip c="var(--violet)">Shaded: last 6 months</Chip>
+              {fc && (
+                <motion.button
+                  initial={{ opacity: 0, x: 6 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => go('forecast')}
+                  className="chip cursor-pointer"
+                  style={{ '--c': 'var(--cyan)' } as CSSProperties}
+                  title={`Forecast replayed on ${fc.accuracy.months} past months: off by ${(fc.accuracy.wape * 100).toFixed(1)}% on average`}
+                >
+                  <LineChart size={11} />
+                  Next month ≈ {usd(fc.forecast[0].value, true)} · {(fc.accuracy.wape * 100).toFixed(0)}% avg
+                  miss
+                </motion.button>
+              )}
             </div>
           }
         />

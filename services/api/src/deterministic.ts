@@ -77,7 +77,31 @@ export async function deterministicAnswer(ctx: ToolContext, q: string) {
     cols.map((c) => c.name),
     fm,
   );
-  if (askAnything) {
+  if (
+    /forecast|predict|projection|next (month|quarter|few months)|will (my )?(sales|revenue)|expect(ed)? (sales|revenue)/.test(
+      s,
+    )
+  ) {
+    const f = await run('forecast-sales', { horizon: 3 });
+    const cur = ctx.state.view().currency ?? 'USD';
+    if (!f?.ok) answer = f?.reason ?? 'Not enough history to forecast.';
+    else {
+      const a = f.accuracy;
+      answer =
+        `Forecast (${f.method.label.toLowerCase()}):\n\n` +
+        f.forecast
+          .map(
+            (x: any) =>
+              `- ${x.month}: ${money(x.value, cur)} (likely ${money(x.low, cur)} to ${money(x.high, cur)})`,
+          )
+          .join('\n') +
+        `\n\nTrack record: replayed on the last ${a.months} months using only the data available at the time, it was off by ${pct(a.wape)} on average` +
+        (a.rangeTested
+          ? `, and ${Math.round(a.hitRate * a.rangeTested)} of ${a.rangeTested} months landed inside the range it would have shown.`
+          : '.') +
+        `\n\nA forecast assumes the next months behave like the past ones; a promotion, stock-out or price change will move it.`;
+    }
+  } else if (askAnything) {
     const r = await run('query-data', askAnything.spec);
     const cur = (r as any)?.currency ?? 'USD',
       fmt = (v: number) => (askAnything.money ? money(v, cur) : v.toLocaleString());
